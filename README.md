@@ -1,2 +1,3 @@
 # llama-cpp-cffi
-llama.cpp cffi python binding
+
+Python binding for llama.cpp using cffi

@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "llama-cpp-cffi"
+version = "0.1.0"
+description = "Python binding for llama.cpp using cffi"
+authors = ["Marko Tasic <mtasic85@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
