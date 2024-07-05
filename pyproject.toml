@@ -6,6 +6,10 @@ authors = ["Marko Tasic <mtasic85@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
+packages = [
+    { include = "llama_cpp_cffi" },
+]
+
 [tool.poetry.dependencies]
 python = "^3.11"
 cffi = "^1.16.0"
