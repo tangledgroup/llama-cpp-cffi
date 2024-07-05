@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.0"
+version = "0.0.1"
 description = "Python binding for llama.cpp using cffi"
 authors = ["Marko Tasic <mtasic85@gmail.com>"]
 license = "MIT"
@@ -8,6 +8,8 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+cffi = "^1.16.0"
+setuptools = "^70.2.0"
 
 
 [build-system]
