@@ -1,30 +1,15 @@
-name: Build Wheels
+name: Build
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+on: [push, pull_request]
 
 jobs:
-  build:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [ubuntu-latest]
-        python-version: ["cp310", "cp311", "cp312"]
-        include:
-          - os: ubuntu-latest
-            arch: x86_64
-          - os: ubuntu-latest
-            arch: aarch64
-          # - os: macos-latest
-          #   arch: arm64
-          # - os: windows-latest
-          #   arch: x86_64
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12']
 
     steps:
       - uses: actions/checkout@v3
@@ -32,30 +17,49 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'  # Use a fixed version for the runner
+          python-version: ${{ matrix.python-version }}
 
       - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+        run: |
+          pip install poetry
 
       - name: Install dependencies
-        run: poetry install --no-interaction --no-root
+        run: |
+          poetry install
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.12.3
+        uses: pypa/cibuildwheel@v2.16.2
         env:
-          CIBW_BUILD: ${{ matrix.python-version }}-*
-          CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
-          CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
-          CIBW_MUSLLINUX_AARCH64_IMAGE: musllinux_1_1
+          CIBW_BUILD: cp310-* cp311-* cp312-*
+          CIBW_ARCHS_LINUX: x86_64 aarch64
+          CIBW_ARCHS_MACOS: x86_64 arm64
+          CIBW_ARCHS_WINDOWS: AMD64
+          CIBW_SKIP: "*-win32 *-manylinux_i686"
+          CIBW_BEFORE_BUILD: poetry build
 
-      - name: Upload wheels
-        uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v3
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.arch }}
           path: ./wheelhouse/*.whl
+
+  build_pyodide:
+    name: Build for Pyodide
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry and Pyodide
+        run: |
+          pip install poetry pyodide-build
+
+      - name: Build for Pyodide
+        run: |
+          pyodide build
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./dist/*.whl
