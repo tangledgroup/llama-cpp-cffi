@@ -11,7 +11,7 @@ packages = [{include = "llama"}]
 include = [{path = "llama/libllama-cli.so"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 attrs = "^23.2.0"
 huggingface-hub = "^0.23.4"
 
