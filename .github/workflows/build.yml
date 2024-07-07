@@ -44,11 +44,16 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root
 
+      - name: Set CIBW_BUILD
+        run: |
+          python_version="${{ matrix.python-version }}"
+          cibw_build="cp${python_version/./}-*"
+          echo "CIBW_BUILD=$cibw_build" >> $GITHUB_ENV
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.12.3
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
-          CIBW_BUILD: "cp${{ matrix.python-version/./}}-*"
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
           CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
           CIBW_MUSLLINUX_X86_64_IMAGE: musllinux_1_1
