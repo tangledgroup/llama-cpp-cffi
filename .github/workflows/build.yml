@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
@@ -42,25 +42,25 @@ jobs:
         with:
           path: ./wheelhouse/*.whl
 
-  build_pyodide:
-    name: Build for Pyodide
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Install Poetry and Pyodide
-        run: |
-          pip install poetry pyodide-build
-
-      - name: Build for Pyodide
-        run: |
-          pyodide build
-
-      - uses: actions/upload-artifact@v3
-        with:
-          path: ./dist/*.whl
+  # build_pyodide:
+  #   name: Build for Pyodide
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.12'
+  #
+  #     - name: Install Poetry and Pyodide
+  #       run: |
+  #         pip install poetry pyodide-build
+  #
+  #     - name: Build for Pyodide
+  #       run: |
+  #         pyodide build
+  #
+  #     - uses: actions/upload-artifact@v3
+  #       with:
+  #         path: ./dist/*.whl
