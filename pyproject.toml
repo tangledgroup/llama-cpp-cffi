@@ -1,19 +1,20 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.0.1"
+version = "0.0.2"
 description = "Python binding for llama.cpp using cffi"
+homepage = "https://github.com/mtasic85/llama-cpp-cffi"
+repository = "https://github.com/mtasic85/llama-cpp-cffi"
 authors = ["Marko Tasic <mtasic85@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-
-packages = [
-    { include = "llama_cpp_cffi" },
-]
+packages = [{include = "llama"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 cffi = "^1.16.0"
 setuptools = "^70.2.0"
+huggingface-hub = "^0.23.4"
+attrs = "^23.2.0"
 
 
 [build-system]

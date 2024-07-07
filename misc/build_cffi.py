@@ -5,15 +5,15 @@ ffibuilder = FFI()
 
 # Define the function signature
 ffibuilder.cdef("""
-    void say_hello(void);
+    int llama_cli_main(int argc, char ** argv);
 """)
 
 # Provide the source code for the library
-ffibuilder.set_source("_example",
+ffibuilder.set_source("_llama_cli",
 """
-    #include "example.h"
+    #include "llama_cpp_cffi.h"
 """,
-    sources=["example.c"]
+    libraries=["./libllama-cli.so"]
 )
 
 if __name__ == "__main__":
