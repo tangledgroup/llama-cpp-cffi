@@ -26,6 +26,7 @@ jobs:
           python -m pip install -e .[all]
           python -m pip install poetry
           poetry install
+          poetry build
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.19.1
