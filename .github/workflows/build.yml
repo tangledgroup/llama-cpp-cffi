@@ -1,0 +1,53 @@
+name: Build Wheels
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-latest
+            arch: aarch64
+          - os: macos-latest
+            arch: arm64
+          - os: windows-latest
+            arch: x86_64
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          export PATH="$HOME/.local/bin:$PATH"
+          poetry install
+
+      - name: Build wheels
+        env:
+          CIBW_ARCHS: ${{ matrix.arch }}
+        run: |
+          poetry run cibuildwheel --output-dir wheelhouse
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: wheelhouse/*.whl
+
