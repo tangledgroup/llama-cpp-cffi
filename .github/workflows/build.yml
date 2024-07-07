@@ -45,12 +45,13 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
           CIBW_REPAIR_WHEEL_COMMAND: ""
         run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry install --with dev
-          poetry run build-llama-cpp
-          poetry build
-          python -m cibuildwheel --output-dir wheelhouse
+          python -m venv venv
+          venv/bin/pip install --upgrade pip
+          venv/bin/pip install poetry
+          venv/bin/poetry install --with dev
+          venv/bin/poetry run build-llama-cpp
+          venv/bin/poetry build
+          venv/bin/python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
         with:
