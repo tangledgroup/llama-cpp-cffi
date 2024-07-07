@@ -48,9 +48,12 @@ jobs:
           python -m venv venv
           venv/bin/pip install --upgrade pip
           venv/bin/pip install poetry
+          ls -l venv/bin/
           venv/bin/poetry install --with dev
+          ls -l venv/bin/
           venv/bin/poetry run build-llama-cpp
           venv/bin/poetry build
+          ls -l venv/bin/
           venv/bin/cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
