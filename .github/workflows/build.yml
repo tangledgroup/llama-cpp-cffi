@@ -20,10 +20,10 @@ jobs:
             arch: x86_64
           - os: ubuntu-latest
             arch: aarch64
-          - os: macos-latest
-            arch: arm64
-          - os: windows-latest
-            arch: x86_64
+          # - os: macos-latest
+          #   arch: arm64
+          # - os: windows-latest
+          #   arch: x86_64
 
     steps:
       - uses: actions/checkout@v2
@@ -42,6 +42,11 @@ jobs:
       - name: Build wheels
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
+          CIBW_BUILD: "cp3{10,11,12}-*"
+          CIBW_MANYLINUX_X86_64_IMAGE: "quay.io/pypa/manylinux2014_x86_64"
+          CIBW_MANYLINUX_AARCH64_IMAGE: "quay.io/pypa/manylinux2014_aarch64"
+          CIBW_MUSLLINUX_X86_64_IMAGE: "quay.io/pypa/musllinux_1_1_x86_64"
+          CIBW_MUSLLINUX_AARCH64_IMAGE: "quay.io/pypa/musllinux_1_1_aarch64"
         run: |
           poetry run cibuildwheel --output-dir wheelhouse
 
@@ -50,4 +55,3 @@ jobs:
         with:
           name: wheels
           path: wheelhouse/*.whl
-
