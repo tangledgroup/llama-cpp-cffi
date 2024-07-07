@@ -23,19 +23,34 @@ jobs:
       #   with:
       #     platforms: arm64
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
+      # - name: Install dependencies
+      #   run: |
+      #     python -m pip install --upgrade pip
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.1
+      # - name: Build wheels
+      #   uses: pypa/cibuildwheel@v2.19.1
+      #   env:
+      #     CIBW_ARCHS: ${{ matrix.arch }}
+      #     CIBW_BUILD: ${{ matrix.python }}-*
+      #     CIBW_SKIP_PYTHON_COMPATIBILITY_CHECK: 1
+      #     CIBW_BEFORE_BUILD: "pip install poetry && poetry run build-llama-cpp && poetry build"
+      #     CIBW_BUILD_VERBOSITY: 1
+      #     CIBW_REPAIR_WHEEL_COMMAND: ""
+
+      - name: Install dependencies
         env:
           CIBW_ARCHS: ${{ matrix.arch }}
           CIBW_BUILD: ${{ matrix.python }}-*
           CIBW_SKIP_PYTHON_COMPATIBILITY_CHECK: 1
-          CIBW_BEFORE_BUILD: "pip install poetry && poetry run build-llama-cpp && poetry build"
           CIBW_BUILD_VERBOSITY: 1
           CIBW_REPAIR_WHEEL_COMMAND: ""
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry
+          poetry install --with dev
+          poetry run build-llama-cpp
+          poetry build
+          python -m cibuildwheel --output-dir wheelhouse
 
       - uses: actions/upload-artifact@v4
         with:
