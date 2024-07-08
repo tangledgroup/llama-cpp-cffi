@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath('.'))
 
-from llama import llama_generate, LlamaOptions
+from llama.cffi import llama_generate, LlamaOptions
 
 
 options = LlamaOptions(
