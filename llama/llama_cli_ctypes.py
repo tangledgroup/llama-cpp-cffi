@@ -1,4 +1,4 @@
-__all__ = ['llama_generate']
+__all__ = ['llama_generate', 'LlamaOptions']
 
 from ctypes import *
 from queue import Queue
@@ -6,10 +6,12 @@ from typing import Iterator
 from threading import Thread
 from functools import partial
 
-from .llama_cpp_ctypes_options import LlamaOptions, convert_options_to_bytes
+from huggingface_hub import hf_hub_download
+
+from .llama_cli_options import LlamaOptions, convert_options_to_bytes
 
 
-lib = CDLL('./llama.cpp/libllama-cli.so')
+lib = CDLL('./llama/libllama-cli.so')
 lib.llama_cli_main.argtypes = [c_int, POINTER(c_char_p)]
 lib.llama_cli_main.restype = c_int
 
@@ -35,6 +37,18 @@ def _llama_cli_main(argc, argv, queue):
 
 
 def llama_generate(options: LlamaOptions) -> Iterator[str]:
+    # check hf_repo, hf_file
+    if options.hf_repo and options.hf_file:
+        options.model = hf_hub_download(repo_id=options.hf_repo, filename=options.hf_file)
+        options.hf_repo = None
+        options.hf_file = None
+    elif options.model:
+        pass
+    else:
+        raise ValueError(f'hf_repo = {options.hf_repo}, hf_file = {options.hf_file}')
+
+    assert options.model
+
     queue = Queue()
 
     fprintf = FPRINTF_FUNC(partial(fprintf_func, queue=queue))

@@ -16,7 +16,12 @@ attrs = "^23.2.0"
 huggingface-hub = "^0.23.4"
 
 [tool.poetry.scripts]
-build-llama-cpp = "scripts.build_llama_cpp:build"
+build-libllama-cli-shared = "scripts.build_libllama_cli:build_shared"
+build-libllama-cli-static = "scripts.build_libllama_cli:build_static"
+build-llama-cli-cffi-static = "scripts.build_llama_cli_cffi:build_static"
+
+# [tool.poetry.build]
+# generate-setup-file = true
 
 [tool.poetry.group.dev.dependencies]
 cffi = "^1.16.0"
@@ -24,5 +29,5 @@ setuptools = "^70.2.0"
 cibuildwheel = "^2.19.2"
 
 [build-system]
-requires = ["poetry-core", "setuptools", "cibuildwheel"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
