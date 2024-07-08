@@ -36,6 +36,9 @@ jobs:
           CIBW_SKIP: "*-win32 *-manylinux_i686"
           CIBW_BEFORE_BUILD: "pip install cffi"
         run: |
+          poetry run build-libllama-cli-shared
+          poetry run build-libllama-cli-static 
+          poetry run build-llama-cli-cffi-static
           poetry build
           cibuildwheel --output-dir wheelhouse
 
