@@ -11,6 +11,7 @@ from huggingface_hub import hf_hub_download
 from .llama_cli_options import LlamaOptions, convert_options_to_bytes
 from ._llama_cli import lib, ffi
 
+
 FPRINTF_FUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p)
 FFLUSH_FUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)
 

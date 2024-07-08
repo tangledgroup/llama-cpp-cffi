@@ -14,6 +14,7 @@ include = [{path = "llama/libllama-cli.so"}]
 python = "^3.10"
 attrs = "^23.2.0"
 huggingface-hub = "^0.23.4"
+cffi = "^1.16.0"
 
 [tool.poetry.scripts]
 build-libllama-cli-shared = "scripts.build_libllama_cli:build_shared"
@@ -24,7 +25,6 @@ build-llama-cli-cffi-static = "scripts.build_llama_cli_cffi:build_static"
 # generate-setup-file = true
 
 [tool.poetry.group.dev.dependencies]
-cffi = "^1.16.0"
 setuptools = "^70.2.0"
 cibuildwheel = "^2.19.2"
 
