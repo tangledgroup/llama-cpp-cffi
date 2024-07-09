@@ -31,6 +31,9 @@ ffibuilder.set_source(
 
 
 def build_static():
+    subprocess.run(['rm', '-rf', 'llama.cpp'], check=True)
+    subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
+    
     ffibuilder.compile(tmpdir="build", verbose=True)
     
     for file in glob.glob('build/*.so'):

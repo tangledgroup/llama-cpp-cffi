@@ -17,6 +17,8 @@ huggingface-hub = "^0.23.4"
 cffi = "^1.16.0"
 
 [tool.poetry.scripts]
+build-all = "scripts.build_all:build"
+build-clean = "scripts.build_clean:clean"
 build-libllama-cli-shared = "scripts.build_libllama_cli:build_shared"
 build-libllama-cli-static = "scripts.build_libllama_cli:build_static"
 build-llama-cli-cffi-static = "scripts.build_llama_cli_cffi:build_static"
