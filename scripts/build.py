@@ -38,10 +38,10 @@ ffibuilder.set_source(
 
 
 def build(*args, **kwargs):
-    subprocess.run(['rm', '-rf', 'llama.cpp'], check=True)
-    subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_shared_library_1.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/Makefile', 'makefile_static_library_0.patch'], check=True)
+    # subprocess.run(['rm', '-rf', 'llama.cpp'], check=True)
+    # subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
+    # subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_shared_library_1.patch'], check=True)
+    # subprocess.run(['patch', 'llama.cpp/Makefile', 'makefile_static_library_0.patch'], check=True)
 
     # cffi
     env = os.environ.copy()

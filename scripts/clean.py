@@ -7,5 +7,5 @@ def clean():
     subprocess.run(['rm', '-fv'] + files, check=True)
     subprocess.run(['rm', '-fr', 'build'], check=True)
     subprocess.run(['rm', '-fr', 'dist'], check=True)
-    subprocess.run(['rm', '-fr', 'llama.cpp'], check=True)
+    # subprocess.run(['rm', '-fr', 'llama.cpp'], check=True)
     subprocess.run(['rm', '-fr', 'wheelhouse'], check=True)
