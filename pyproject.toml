@@ -22,10 +22,11 @@ psutil = "^6.0.0"
 cibuildwheel = "^2.19.2"
 
 [tool.poetry.scripts]
-clean = "scripts.build_clean:clean"
+build = "scripts.build:build"
+clean = "scripts.clean:clean"
 
 [tool.poetry.build]
-script = "scripts/build_all.py"
+script = "scripts/build.py"
 
 [tool.cibuildwheel]
 build-frontend = "build"
