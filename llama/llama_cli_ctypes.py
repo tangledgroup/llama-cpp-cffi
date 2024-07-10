@@ -15,23 +15,24 @@ from .llama_cli_options import LlamaOptions, convert_options_to_bytes
 
 current_module_path = os.path.abspath(__file__)
 current_module_dir = os.path.dirname(current_module_path)
-libllama_cli_path = os.path.join(current_module_dir, 'libllama-cli.so')
+libllama_cli_path = os.path.join(current_module_dir, 'llama-cli.so')
 
 lib = CDLL(libllama_cli_path)
 
-lib.llama_cli_main.argtypes = [c_int, POINTER(c_char_p)]
-lib.llama_cli_main.restype = c_int
+# lib.llama_cli_main.argtypes = [c_int, POINTER(c_char_p)]
+# lib.llama_cli_main.restype = c_int
 
-lib.llama_get_metadata_as_json.argtypes = [c_int, POINTER(c_char_p)]
-lib.llama_get_metadata_as_json.restype = c_void_p
+# lib.llama_get_metadata_as_json.argtypes = [c_int, POINTER(c_char_p)]
+# lib.llama_get_metadata_as_json.restype = c_void_p
 
-lib.llama_free_metadata_as_json.argtypes = [c_void_p]
-lib.llama_free_metadata_as_json.restype = None
+# lib.llama_free_metadata_as_json.argtypes = [c_void_p]
+# lib.llama_free_metadata_as_json.restype = None
 
-FPRINTF_FUNC = CFUNCTYPE(c_int, c_void_p, c_char_p, c_char_p)
-FFLUSH_FUNC = CFUNCTYPE(c_int, c_void_p)
+# FPRINTF_FUNC = CFUNCTYPE(c_int, c_void_p, c_char_p, c_char_p)
+# FFLUSH_FUNC = CFUNCTYPE(c_int, c_void_p)
 
 
+'''
 def fprintf_func(file_obj, fmt, arg, queue=None, callback=None, metadata=None):
     content = arg.decode('utf-8')
 
@@ -58,7 +59,7 @@ def fprintf_func(file_obj, fmt, arg, queue=None, callback=None, metadata=None):
 
 def fflush_func(file_obj):
     return 0
-
+'''
 
 def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
     r = lib.llama_cli_main(argc, argv)

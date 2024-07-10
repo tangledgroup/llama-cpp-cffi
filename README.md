@@ -38,3 +38,7 @@ python -B examples/demo_cffi.py
 python -B examples/demo_ctypes.py
 python -m http.server -d examples/demo_pyonide -b "0.0.0.0" 5000
 ```
+
+```bash
+make -j llama-cli-shared llama-cli-static GGML_NO_OPENMP=1 GGML_NO_LLAMAFILE=1
+```
