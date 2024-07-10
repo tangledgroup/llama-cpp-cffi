@@ -1,0 +1,9 @@
+packages = [
+    "huggingface_hub",
+    "requests",
+    "llama_cpp_cffi-0.0.3-cp312-cp312-pyodide_2024_0_wasm32.whl",
+]
+
+[files]
+"https://huggingface.co/bartowski/Phi-3.1-mini-128k-instruct-GGUF/resolve/main/Phi-3.1-mini-128k-instruct-IQ2_M.gguf" = "./models/bartowski/Phi-3.1-mini-128k-instruct-GGUF/Phi-3.1-mini-128k-instruct-IQ2_M.gguf"
+# "https://huggingface.co/IndexTeam/Index-1.9B-Chat-GGUF/resolve/main/ggml-model-Q4_K_M.gguf" = "./models/IndexTeam/Index-1.9B-Chat-GGUF/ggml-model-Q4_K_M.gguf"

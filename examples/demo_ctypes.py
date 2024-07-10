@@ -1,22 +1,22 @@
-import os
-import sys
-sys.path.append(os.path.abspath('.'))
-
+import psutil
 from llama.ctypes import llama_generate, LlamaOptions
 
 
 options = LlamaOptions(
     no_display_prompt=True,
+    threads=psutil.cpu_count(logical=False),
     ctx_size=8192,
-    predict=-2,
+    predict=512,
     flash_attn=True,
     cont_batching=True,
     simple_io=True,
-    log_disable=True,
+    # log_disable=True,
     hf_repo='bartowski/Phi-3.1-mini-128k-instruct-GGUF',
     hf_file='Phi-3.1-mini-128k-instruct-Q4_K_M.gguf',
+    # hf_file='Phi-3.1-mini-128k-instruct-IQ2_M.gguf',
     chat_template='chatml',
-    prompt='<|im_start|>user\nWho is Novak Djokovic?<|im_end|>\n<|im_start|>assistant\n',
+    # prompt='<|im_start|>user\nEvaluate 1 + 2.<|im_end|>\n<|im_start|>assistant\n',
+    prompt='<|system|>\nYou are a helpful assistant.<|end|><|user|>\nEvaluate 1 + 2.<|end|>\n<|assistant|>\n',
 )
 
 for chunk in llama_generate(options):

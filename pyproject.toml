@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.0.2"
+version = "0.0.3"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/mtasic85/llama-cpp-cffi"
 repository = "https://github.com/mtasic85/llama-cpp-cffi"
@@ -16,28 +16,25 @@ attrs = "^23.2.0"
 huggingface-hub = "^0.23.4"
 cffi = "^1.16.0"
 setuptools = "^70.2.0"
-
-# [tool.poetry.scripts]
-# build-all = "scripts.build_all:build"
-# build-clean = "scripts.build_clean:clean"
-# build-libllama-cli = "scripts.build_libllama_cli:build"
-# build-llama-cli-cffi = "scripts.build_llama_cli_cffi:build"
+psutil = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 cibuildwheel = "^2.19.2"
+
+[tool.poetry.scripts]
+clean = "scripts.build_clean:clean"
 
 [tool.poetry.build]
 script = "scripts/build_all.py"
 
 [tool.cibuildwheel]
-# environment = { "CRYPTOGRAPHY_DONT_BUILD_RUST"=1, "CIBW_BUILD_VERBOSITY"=3 }
-# before-build = "yum install -y libffi-devel openssl-devel ; curl https://sh.rustup.rs -sSf | sh -s -- -y ; source $HOME/.cargo/env ; pip install poetry"
-before-build = "pip install poetry ; poetry install"
+build-frontend = "build"
+before-build = "pip install poetry"
 skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp*", "*-win32", "*i686"]
 build-verbosity=3
 
 [tool.cibuildwheel.pyodide]
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core", "cffi", "setuptools"]
 build-backend = "poetry.core.masonry.api"
