@@ -2,7 +2,7 @@ __all__ = ['llama_generate', 'Options']
 
 import os
 import json
-from ctypes import *
+import ctypes
 from queue import Queue
 from typing import Iterator
 from threading import Thread
@@ -17,13 +17,13 @@ from .llama_cli_options import Options, convert_options_to_bytes
 module_path = os.path.abspath(__file__)
 module_dir = os.path.dirname(module_path)
 llama_cli_lib_path = os.path.join(module_dir, 'llama-cli.so')
-lib = CDLL(llama_cli_lib_path)
+lib = ctypes.CDLL(llama_cli_lib_path)
 
-_LLAMA_YIELD_TOKEN_T = CFUNCTYPE(None, c_char_p)
-_LLAMA_SHOULD_STOP_T = CFUNCTYPE(c_int)
+_LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
+_LLAMA_SHOULD_STOP_T = ctypes.CFUNCTYPE(ctypes.c_int)
 
-lib._llama_cli_main.argtypes = [c_int, POINTER(c_char_p), _LLAMA_YIELD_TOKEN_T, _LLAMA_SHOULD_STOP_T, c_int]
-lib._llama_cli_main.restype = c_int
+lib._llama_cli_main.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_char_p), _LLAMA_YIELD_TOKEN_T, _LLAMA_SHOULD_STOP_T, ctypes.c_int]
+lib._llama_cli_main.restype = ctypes.c_int
 
 
 def _llama_yield_token_func(chunk: bytes, queue=None, callback=None, metadata=None):
@@ -47,7 +47,7 @@ def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
         callback(None)
 
 
-def llama_generate(options: Options, callback=None, metadata=None) -> Iterator[str] | None:
+def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
     # check hf_repo, hf_file
     if options.hf_repo and options.hf_file:
         options.model = hf_hub_download(repo_id=options.hf_repo, filename=options.hf_file)
@@ -69,7 +69,7 @@ def llama_generate(options: Options, callback=None, metadata=None) -> Iterator[s
 
     argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(options)
     argc = len(argv)
-    argv = (c_char_p * argc)(*argv)
+    argv = (ctypes.c_char_p * argc)(*argv)
 
     if callback:
         _llama_cli_main(argc, argv, queue, callback, metadata)

@@ -10,13 +10,9 @@ from clean import clean
 ffibuilder = FFI()
 
 ffibuilder.cdef('''
-    void llama_set_stdout(FILE* f);
-    void llama_set_stderr(FILE* f);
-    void llama_set_fprintf(int (*func)(FILE*, const char* format, ...));
-    void llama_set_fflush(int (*func)(FILE*));
-    const char* llama_get_metadata_as_json(int argc, char ** argv);
-    void llama_free_metadata_as_json(const char * c_output);
-    int llama_cli_main(int argc, char ** argv);
+    typedef void (*_llama_yield_token_t)(const char * token);
+    typedef int (*_llama_should_stop_t)(void);
+    int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
 ''')
 
 ffibuilder.set_source(
@@ -24,25 +20,42 @@ ffibuilder.set_source(
     '''
     #include <stdio.h>
     
-    void llama_set_stdout(FILE* f);
-    void llama_set_stderr(FILE* f);
-    void llama_set_fprintf(int (*func)(FILE*, const char* format, ...));
-    void llama_set_fflush(int (*func)(FILE*));
-    const char* llama_get_metadata_as_json(int argc, char ** argv);
-    void llama_free_metadata_as_json(const char * c_output);
-    int llama_cli_main(int argc, char ** argv);
+    typedef void (*_llama_yield_token_t)(const char * token);
+    typedef int (*_llama_should_stop_t)(void);
+    int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
     ''',
     libraries=['stdc++'],
-    extra_objects=['../llama.cpp/libllama-cli.a'],
+    extra_objects=['../llama.cpp/llama-cli.a'],
 )
 
 
 def build(*args, **kwargs):
-    # subprocess.run(['rm', '-rf', 'llama.cpp'], check=True)
-    # subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    # subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_shared_library_1.patch'], check=True)
-    # subprocess.run(['patch', 'llama.cpp/Makefile', 'makefile_static_library_0.patch'], check=True)
+    env = os.environ.copy()
+    
+    subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_3.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_3.patch'], check=True)
 
+    if 'PYODIDE' in env and env['PYODIDE'] == '1':
+        env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
+        env['UNAME_M'] = 'wasm'
+
+    subprocess.run(['make', '-C', 'llama.cpp', '-j', 'llama-cli-shared', 'llama-cli-static', 'GGML_NO_OPENMP=1', 'GGML_NO_LLAMAFILE=1'], check=True, env=env)
+    
+    # cffi
+    ffibuilder.compile(tmpdir='build', verbose=True)
+
+    # ctypes
+    for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
+        shutil.move(file, 'llama/')
+
+    for file in glob.glob('build/*.dll') + glob.glob('llama.cpp/*.dll'):
+        shutil.move(file, 'llama/')
+
+    for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
+        shutil.move(file, 'llama/')
+
+    '''
     # cffi
     env = os.environ.copy()
     env['CXXFLAGS'] = '-DSHARED_LIB'
@@ -73,6 +86,7 @@ def build(*args, **kwargs):
 
     for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
         shutil.move(file, 'llama/')
+    '''
 
 
 if __name__ == '__main__':

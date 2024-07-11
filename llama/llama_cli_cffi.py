@@ -3,25 +3,41 @@ __all__ = ['llama_generate', 'Options']
 import json
 import ctypes
 from queue import Queue
-from copy import deepcopy
 from typing import Iterator
 from threading import Thread
 from functools import partial
 
 from huggingface_hub import hf_hub_download
 
+from .llama_cli_model import Model
 from .llama_cli_options import Options, convert_options_to_bytes
 from ._llama_cli import lib, ffi
 
 
-FPRINTF_FUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p)
-FFLUSH_FUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)
+_LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
+_LLAMA_SHOULD_STOP_T = ctypes.CFUNCTYPE(ctypes.c_int)
 
 
+def _llama_yield_token_func(chunk: bytes, queue=None, callback=None, metadata=None):
+    chunk = chunk.decode()
+    print(chunk, flush=True, end='')
+
+
+def _llama_should_stop_func(queue=None, callback=None, metadata=None) -> int:
+    return 0
 
 
 def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
-    r = lib.llama_cli_main(argc, argv)
+    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, callback=callback, metadata=metadata))
+    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, callback=callback, metadata=metadata))
+
+    _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
+    _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
+
+    cffi__llama_yield_token_callback = ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
+    cffi__llama_should_stop_callback = ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
+
+    r = lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback, 1)
     assert r == 0
     
     if queue is not None:
@@ -48,32 +64,7 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
     else:
         queue = Queue()
 
-    # get bos, eos, and eot from metedata
-    metadata_options = deepcopy(options)
-    metadata_options.log_disable = True
-    metadata_argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(metadata_options)
-    metadata_argv = [ffi.new('char[]', n) for n in metadata_argv]
-    metadata_argc = len(metadata_argv)
-
-    c_metadata: 'const char*' = lib.llama_get_metadata_as_json(metadata_argc, metadata_argv)
-    metadata: bytes = ffi.string(c_metadata)
-    lib.llama_free_metadata_as_json(c_metadata)
-    metadata: str = metadata.decode('utf-8')
-    metadata: dict = json.loads(metadata)
-    print(f'{metadata = }')
-
-    # intercept token generation
-    fprintf = FPRINTF_FUNC(partial(fprintf_func, queue=queue, metadata=metadata))
-    fflush = FFLUSH_FUNC(fflush_func)
-
-    fprintf_address = ctypes.cast(fprintf, ctypes.c_void_p).value
-    fflush_address = ctypes.cast(fflush, ctypes.c_void_p).value
-
-    cffi_fprintf_callback = ffi.cast('int (*func)(FILE*, const char* format, ...)', fprintf_address)
-    cffi_fflush_callback = ffi.cast('int (*func)(FILE*)', fflush_address)
-
-    lib.llama_set_fprintf(cffi_fprintf_callback)
-    lib.llama_set_fflush(cffi_fflush_callback)
+    metadata: dict = {}
 
     argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(options)
     argv = [ffi.new('char[]', n) for n in argv]
