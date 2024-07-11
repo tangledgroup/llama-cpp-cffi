@@ -1,4 +1,4 @@
-__all__ = ['llama_generate', 'LlamaOptions']
+__all__ = ['llama_generate', 'Options']
 
 import json
 import ctypes
@@ -10,7 +10,7 @@ from functools import partial
 
 from huggingface_hub import hf_hub_download
 
-from .llama_cli_options import LlamaOptions, convert_options_to_bytes
+from .llama_cli_options import Options, convert_options_to_bytes
 from ._llama_cli import lib, ffi
 
 
@@ -18,32 +18,6 @@ FPRINTF_FUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_char_p, 
 FFLUSH_FUNC = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p)
 
 
-def fprintf_func(file_obj, fmt, arg, queue=None, callback=None, metadata=None):
-    content = arg.decode('utf-8')
-
-    if metadata:
-        eos = metadata.get('eos')
-        eot = metadata.get('eot')
-
-        if eos is not None and eos in content:
-            content = content[:content.index(eos)]
-        elif eot is not None and eot in content:
-            content = content[:content.index(eot)]
-
-    if queue is not None:
-        if content:
-            queue.put(content)
-        else:
-            queue.put(None)
-    elif callback is not None:
-        callback(content)
-
-    size = len(content)
-    return size
-
-
-def fflush_func(file_obj):
-    return 0
 
 
 def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
@@ -56,7 +30,7 @@ def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
         callback(None)
 
 
-def llama_generate(options: LlamaOptions, callback=None) -> Iterator[str] | None:
+def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
     # check hf_repo, hf_file
     if options.hf_repo and options.hf_file:
         options.model = hf_hub_download(repo_id=options.hf_repo, filename=options.hf_file)

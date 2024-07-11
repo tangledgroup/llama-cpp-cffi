@@ -1,68 +1,44 @@
-__all__ = ['llama_generate', 'LlamaOptions']
+__all__ = ['llama_generate', 'Options']
 
 import os
 import json
 from ctypes import *
 from queue import Queue
-from copy import deepcopy
 from typing import Iterator
 from threading import Thread
 from functools import partial
 
 from huggingface_hub import hf_hub_download
 
-from .llama_cli_options import LlamaOptions, convert_options_to_bytes
-
-current_module_path = os.path.abspath(__file__)
-current_module_dir = os.path.dirname(current_module_path)
-libllama_cli_path = os.path.join(current_module_dir, 'llama-cli.so')
-
-lib = CDLL(libllama_cli_path)
-
-# lib.llama_cli_main.argtypes = [c_int, POINTER(c_char_p)]
-# lib.llama_cli_main.restype = c_int
-
-# lib.llama_get_metadata_as_json.argtypes = [c_int, POINTER(c_char_p)]
-# lib.llama_get_metadata_as_json.restype = c_void_p
-
-# lib.llama_free_metadata_as_json.argtypes = [c_void_p]
-# lib.llama_free_metadata_as_json.restype = None
-
-# FPRINTF_FUNC = CFUNCTYPE(c_int, c_void_p, c_char_p, c_char_p)
-# FFLUSH_FUNC = CFUNCTYPE(c_int, c_void_p)
+from .llama_cli_model import Model
+from .llama_cli_options import Options, convert_options_to_bytes
 
 
-'''
-def fprintf_func(file_obj, fmt, arg, queue=None, callback=None, metadata=None):
-    content = arg.decode('utf-8')
+module_path = os.path.abspath(__file__)
+module_dir = os.path.dirname(module_path)
+llama_cli_lib_path = os.path.join(module_dir, 'llama-cli.so')
+lib = CDLL(llama_cli_lib_path)
 
-    if metadata:
-        eos = metadata.get('eos')
-        eot = metadata.get('eot')
+_LLAMA_YIELD_TOKEN_T = CFUNCTYPE(None, c_char_p)
+_LLAMA_SHOULD_STOP_T = CFUNCTYPE(c_int)
 
-        if eos is not None and eos in content:
-            content = content[:content.index(eos)]
-        elif eot is not None and eot in content:
-            content = content[:content.index(eot)]
-
-    if queue is not None:
-        if content:
-            queue.put(content)
-        else:
-            queue.put(None)
-    elif callback is not None:
-        callback(content)
-
-    size = len(content)
-    return size
+lib._llama_cli_main.argtypes = [c_int, POINTER(c_char_p), _LLAMA_YIELD_TOKEN_T, _LLAMA_SHOULD_STOP_T, c_int]
+lib._llama_cli_main.restype = c_int
 
 
-def fflush_func(file_obj):
+def _llama_yield_token_func(chunk: bytes, queue=None, callback=None, metadata=None):
+    chunk = chunk.decode()
+    print(chunk, flush=True, end='')
+
+
+def _llama_should_stop_func(queue=None, callback=None, metadata=None) -> int:
     return 0
-'''
+
 
 def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
-    r = lib.llama_cli_main(argc, argv)
+    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, callback=callback, metadata=metadata))
+    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, callback=callback, metadata=metadata))
+    r = lib._llama_cli_main(argc, argv, _llama_yield_token, _llama_should_stop, 1)
     assert r == 0
 
     if queue is not None:
@@ -71,7 +47,7 @@ def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
         callback(None)
 
 
-def llama_generate(options: LlamaOptions, callback=None, metadata=None) -> Iterator[str] | None:
+def llama_generate(options: Options, callback=None, metadata=None) -> Iterator[str] | None:
     # check hf_repo, hf_file
     if options.hf_repo and options.hf_file:
         options.model = hf_hub_download(repo_id=options.hf_repo, filename=options.hf_file)
@@ -89,25 +65,7 @@ def llama_generate(options: LlamaOptions, callback=None, metadata=None) -> Itera
     else:
         queue = Queue()
 
-    # get bos, eos, and eot from metedata
-    metadata_options = deepcopy(options)
-    metadata_options.log_disable = True
-    metadata_argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(metadata_options)
-    metadata_argc = len(metadata_argv)
-    metadata_argv = (c_char_p * metadata_argc)(*metadata_argv)
-
-    c_metadata: 'const char*' = lib.llama_get_metadata_as_json(metadata_argc, metadata_argv)
-    metadata: str = string_at(c_metadata)
-    lib.llama_free_metadata_as_json(c_metadata)
-    metadata: dict = json.loads(metadata)
-    print(f'{metadata = }')
-
-    # intercept token generation
-    fprintf = FPRINTF_FUNC(partial(fprintf_func, queue=queue, callback=callback, metadata=metadata))
-    fflush = FFLUSH_FUNC(fflush_func)
-
-    lib.llama_set_fprintf(fprintf)
-    lib.llama_set_fflush(fflush)
+    metadata: dict = {}
 
     argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(options)
     argc = len(argv)

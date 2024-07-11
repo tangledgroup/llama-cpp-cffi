@@ -1,10 +1,10 @@
-__all__ = ['LlamaOptions', 'convert_options_to_bytes']
+__all__ = ['Options', 'convert_options_to_bytes']
 
 import attr
 
 
 @attr.s
-class LlamaOptions:
+class Options:
     help = attr.ib(default=None, metadata={"description": "print usage and exit", "long_name": "--help", "alias": "-h"})
     version = attr.ib(default=None, metadata={"description": "show version and build info", "long_name": "--version"})
     verbose = attr.ib(default=None, metadata={"description": "print verbose information", "long_name": "--verbose", "alias": "-v"})
@@ -192,11 +192,11 @@ class LlamaOptions:
     method = attr.ib(default=None, metadata={"description": "dimensionality reduction method to be used", "long_name": "--method", "default": 'pca'})
 
 
-def convert_options_to_bytes(options: LlamaOptions) -> list[bytes]:
+def convert_options_to_bytes(options: Options) -> list[bytes]:
     result = []
 
     # Iterate over all attributes of the options class
-    for field in attr.fields(LlamaOptions):
+    for field in attr.fields(Options):
         value = getattr(options, field.name)
         if value is not None:
             long_name = field.metadata["long_name"]
