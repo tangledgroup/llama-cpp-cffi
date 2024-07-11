@@ -30,8 +30,9 @@ ffibuilder.set_source(
 
 
 def build(*args, **kwargs):
+    # build static and shared library
     env = os.environ.copy()
-    
+
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_3.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_3.patch'], check=True)
@@ -54,39 +55,6 @@ def build(*args, **kwargs):
 
     for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
         shutil.move(file, 'llama/')
-
-    '''
-    # cffi
-    env = os.environ.copy()
-    env['CXXFLAGS'] = '-DSHARED_LIB'
-
-    if 'PYODIDE' in env and env['PYODIDE'] == '1':
-        env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
-        env['UNAME_M'] = 'wasm'
-
-    subprocess.run(['make', '-C', 'llama.cpp', '-j', 'llama-cli-a', 'GGML_NO_OPENMP=1', 'GGML_NO_LLAMAFILE=1'], check=True, env=env)
-    ffibuilder.compile(tmpdir='build', verbose=True)
-
-    # ctypes
-    env = os.environ.copy()
-    env['CXXFLAGS'] = '-DSHARED_LIB'
-    env['LDFLAGS'] = '-shared -o libllama-cli.so'
-
-    if 'PYODIDE' in env and env['PYODIDE'] == '1':
-        env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
-        env['UNAME_M'] = 'wasm'
-
-    subprocess.run(['make', '-C', 'llama.cpp', '-j', 'llama-cli', 'GGML_NO_OPENMP=1', 'GGML_NO_LLAMAFILE=1'], check=True, env=env)
-    
-    for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
-        shutil.move(file, 'llama/')
-
-    for file in glob.glob('build/*.dll') + glob.glob('llama.cpp/*.dll'):
-        shutil.move(file, 'llama/')
-
-    for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
-        shutil.move(file, 'llama/')
-    '''
 
 
 if __name__ == '__main__':

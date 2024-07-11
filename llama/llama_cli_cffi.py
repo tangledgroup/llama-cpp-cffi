@@ -7,10 +7,12 @@ from typing import Iterator
 from threading import Thread
 from functools import partial
 
+from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
-from .llama_cli_model import Model
-from .llama_cli_options import Options, convert_options_to_bytes
+from .formatter import format_messages
+from .model import Model
+from .options import Options, convert_options_to_bytes
 from ._llama_cli import lib, ffi
 
 
@@ -47,17 +49,26 @@ def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
 
 
 def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
-    # check hf_repo, hf_file
+    creator_hf_repo: str | None = None
+    prompt: str
+
     if options.hf_repo and options.hf_file:
         options.model = hf_hub_download(repo_id=options.hf_repo, filename=options.hf_file)
+        creator_hf_repo = None
         options.hf_repo = None
         options.hf_file = None
-    elif options.model:
-        pass
+    elif options.model and isinstance(options.model, Model):
+        creator_hf_repo = model.creator_hf_repo
+        options.model = hf_hub_download(repo_id=model.hf_repo, filename=model.hf_file)
     else:
         raise ValueError(f'hf_repo = {options.hf_repo}, hf_file = {options.hf_file}')
 
     assert options.model
+
+    if creator_hf_repo and isinstance(options.prompt, list):
+        prompt = format_messages(creator_hf_repo, options.prompt)
+    else:
+        prompt = options.prompt
 
     if callback:
         queue = None

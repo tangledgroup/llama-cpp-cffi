@@ -1,4 +1,4 @@
-from llama.llama_cli_model import Model
+from llama.model import Model
 
 models = [
     Model(

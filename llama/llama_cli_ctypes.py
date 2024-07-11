@@ -8,10 +8,12 @@ from typing import Iterator
 from threading import Thread
 from functools import partial
 
+from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
-from .llama_cli_model import Model
-from .llama_cli_options import Options, convert_options_to_bytes
+from .formatter import format_messages
+from .model import Model
+from .options import Options, convert_options_to_bytes
 
 
 module_path = os.path.abspath(__file__)
