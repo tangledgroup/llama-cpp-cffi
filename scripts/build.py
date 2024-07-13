@@ -24,7 +24,10 @@ ffibuilder.set_source(
     typedef int (*_llama_should_stop_t)(void);
     int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
     ''',
-    libraries=['stdc++'],
+    libraries=[
+        'stdc++',
+        # 'openblas',
+    ],
     extra_objects=['../llama.cpp/llama-cli.a'],
 )
 
@@ -41,7 +44,17 @@ def build(*args, **kwargs):
         env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
         env['UNAME_M'] = 'wasm'
 
-    subprocess.run(['make', '-C', 'llama.cpp', '-j', 'llama-cli-shared', 'llama-cli-static', 'GGML_NO_OPENMP=1', 'GGML_NO_LLAMAFILE=1'], check=True, env=env)
+    subprocess.run([
+        'make',
+        '-C',
+        'llama.cpp',
+        '-j',
+        'llama-cli-shared',
+        'llama-cli-static',
+        'GGML_NO_OPENMP=1',
+        'GGML_NO_LLAMAFILE=1',
+        # 'GGML_OPENBLAS=1',
+    ], check=True, env=env)
     
     # cffi
     ffibuilder.compile(tmpdir='build', verbose=True)

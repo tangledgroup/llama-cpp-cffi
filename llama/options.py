@@ -132,8 +132,8 @@ class Options:
     model = attr.ib(default=None, metadata={"description": "model path", "long_name": "--model", "alias": "-m"})
     model_draft = attr.ib(default=None, metadata={"description": "draft model for speculative decoding", "long_name": "--model-draft", "alias": "-md"})
     model_url = attr.ib(default=None, metadata={"description": "model download url", "long_name": "--model-url", "alias": "-mu"})
-    hf_repo = attr.ib(default=None, metadata={"description": "Hugging Face model repository", "long_name": "--hf-repo", "alias": "-hfr"})
-    hf_file = attr.ib(default=None, metadata={"description": "Hugging Face model file", "long_name": "--hf-file", "alias": "-hff"})
+    # hf_repo = attr.ib(default=None, metadata={"description": "Hugging Face model repository", "long_name": "--hf-repo", "alias": "-hfr"})
+    # hf_file = attr.ib(default=None, metadata={"description": "Hugging Face model file", "long_name": "--hf-file", "alias": "-hff"})
 
     context_file = attr.ib(default=None, metadata={"description": "file to load context from", "long_name": "--context-file"})
     chunk_size = attr.ib(default=None, metadata={"description": "minimum length of embedded text chunks", "long_name": "--chunk-size", "default": 64})

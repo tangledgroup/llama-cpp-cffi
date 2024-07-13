@@ -37,14 +37,14 @@
 +                }
 +
 +                if (_llama_should_stop != NULL) {
-+                    if (_llama_should_stop()) {
++                    if (_llama_should_stop() == 1) {
++                        n_remain = 0;
 +                        break;
 +                    }
 +                }
 +
 +                if (stop_on_bos_eos_eot == 1) {
 +                    if (id == llama_token_bos(model) || id == llama_token_eos(model) || id == llama_token_eot(model)) {
-+                        LOG("found an BOS, EOS or EOT token\n");
 +                        break;
 +                    }
 +                }
