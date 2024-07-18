@@ -27,7 +27,7 @@
 +    LIB_CXXFLAGS := -DLLAMA_LIB
 +endif
 +
-+LIB_NAME := llama-cli.$(LIB_EXT)
++LIB_NAME := llama_cli.$(LIB_EXT)
 +
  # Architecture specific
  # TODO: probably these flags need to be tweaked on some architectures
@@ -44,7 +44,7 @@
 +llama-cli-static: examples/main/main.cpp \
 +	$(OBJ_ALL)
 +	$(CXX) $(CXXFLAGS) $(LIB_CXXFLAGS) -c $< -o $(call GET_OBJ_FILE, $<)
-+	ar rcs llama-cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
++	ar rcs llama_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
 +
  llama-infill: examples/infill/infill.cpp \
  	$(OBJ_ALL)

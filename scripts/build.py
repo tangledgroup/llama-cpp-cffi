@@ -37,7 +37,7 @@ def build_cpu(*args, **kwargs):
         # 'GGML_OPENBLAS=1',
     ], check=True, env=env)
 
-    subprocess.run(['mv', 'llama.cpp/llama-cli.so', 'llama/llama-cli-cpu.so'], check=True)
+    subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cpu.so'], check=True)
     
     #
     # cffi
@@ -59,10 +59,8 @@ def build_cpu(*args, **kwargs):
         typedef int (*_llama_should_stop_t)(void);
         int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
         ''',
-        libraries=[
-            'stdc++',
-        ],
-        extra_objects=['../llama.cpp/llama-cli.a'],
+        libraries=['stdc++'],
+        extra_objects=['../llama.cpp/llama_cli.a'],
     )
 
     ffibuilder.compile(tmpdir='build', verbose=True)
@@ -147,7 +145,7 @@ def build_cuda_12_5(*args, **kwargs):
         'GGML_CUDA=1',
     ], check=True, env=env)
 
-    subprocess.run(['mv', 'llama.cpp/llama-cli.so', 'llama/llama-cli-cuda-12_5.so'], check=True)
+    subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cuda_12_5.so'], check=True)
 
     #
     # cffi
@@ -171,8 +169,14 @@ def build_cuda_12_5(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
+            'cuda',
+            'cublas',
+            'culibos',
+            'cudart',
+            'cublasLt', 
         ],
-        extra_objects=['../llama.cpp/llama-cli.a'],
+        library_dirs=[f'{cuda_output_dir}/dist/lib64'],
+        extra_objects=['../llama.cpp/llama_cli.a'],
     )
 
     ffibuilder.compile(tmpdir='build', verbose=True)
@@ -197,8 +201,9 @@ def build(*args, **kwargs):
     build_cpu(*args, **kwargs)
 
     # cuda 12.5
-    clean_llama_cpp()
-    build_cuda_12_5(*args, **kwargs)
+    if os.environ['AUDITWHEEL_ARCH'] == 'x86_64':
+        clean_llama_cpp()
+        build_cuda_12_5(*args, **kwargs)
 
 
 if __name__ == '__main__':

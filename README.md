@@ -1,45 +1,73 @@
 # llama-cpp-cffi
 
-Python binding for llama.cpp using cffi
+<!--
+[![Build][build-image]]()
+[![Status][status-image]][pypi-project-url]
+[![Stable Version][stable-ver-image]][pypi-project-url]
+[![Coverage][coverage-image]]()
+[![Python][python-ver-image]][pypi-project-url]
+[![License][mit-image]][mit-url]
+-->
+[![Downloads](https://img.shields.io/pypi/dm/llama-cli-cffi)](https://pypistats.org/packages/llama-cli-cffi)
+[![Supported Versions](https://img.shields.io/pypi/pyversions/llama-cli-cffi)](https://pypi.org/project/llama-cli-cffi)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-## Build
+**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi** and **ctypes**. Supports **CPU** and **CUDA 12.5** execution.
+
+## Install
 
 ```bash
-#
-# setup venv
-#
-python -m venv venv
-source venv/bin/activate
-pip install poetry
+pip install llama-cli-cffi
+```
 
-#
-# build
-#
+## Example
 
-# x86_64
-poetry run cibuildwheel --output-dir wheelhouse --platform linux --arch x86_64 .
+```python
+from llama.llama_cli_cffi_cpu import llama_generate, Model, Options
+# from llama.llama_cli_cffi_cuda_12_5 import llama_generate, Model, Options
+# from llama.llama_cli_ctypes_cuda import llama_generate, Model, Options
+# from llama.llama_cli_ctypes_cuda_12_5 import llama_generate, Model, Options
 
-# aarch64
-docker run --rm --privileged linuxkit/binfmt:v0.8
-poetry run cibuildwheel --output-dir wheelhouse --platform linux --arch aarch64 .
+from llama.formatter import get_config
 
-# pyodide, pyscript, wasm (NOTE: cannot be published to PyPI)
-# poetry run cibuildwheel --output-dir wheelhouse --platform pyodide .
+model = Model(
+    'TinyLlama/TinyLlama-1.1B-Chat-v1.0',
+    'TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF',
+    'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
+)
 
-#
-# publish
-#
-poetry publish --dist-dir wheelhouse
+config = get_config(model.creator_hf_repo)
 
+messages = [
+    {'role': 'system', 'content': 'You are a helpful assistant.'},
+    {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
+]
+
+options = Options(
+    ctx_size=config.max_position_embeddings,
+    predict=-2,
+    model=model,
+    prompt=messages,
+)
+
+for chunk in llama_generate(options):
+    print(chunk, flush=True, end='')
+
+# newline
+print()
+```
+
+## Demos
+
+```BASH
 #
 # run demos
 #
-python -B examples/demo_cffi.py
+python -B examples/demo_cffi_cpu.py
+python -B examples/demo_cffi_cuda_12_5.py
+
 python -B examples/demo_ctypes_cpu.py
 python -B examples/demo_ctypes_cuda_12_5.py
-python -m http.server -d examples/demo_pyonide -b "0.0.0.0" 5000
-```
 
-```bash
-make -j llama-cli-shared llama-cli-static GGML_NO_OPENMP=1 GGML_NO_LLAMAFILE=1
+# python -m http.server -d examples/demo_pyonide -b "0.0.0.0" 5000
 ```

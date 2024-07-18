@@ -19,7 +19,7 @@ from .options import Options, convert_options_to_bytes
 
 module_path = os.path.abspath(__file__)
 module_dir = os.path.dirname(module_path)
-llama_cli_lib_path = os.path.join(module_dir, 'llama-cli-cuda-12_5.so')
+llama_cli_lib_path = os.path.join(module_dir, 'llama_cli_cuda_12_5.so')
 lib = ctypes.CDLL(llama_cli_lib_path)
 
 _LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
