@@ -1,6 +1,7 @@
 __all__ = ['Options', 'convert_options_to_bytes']
 
 import attr
+import psutil
 
 
 @attr.s
@@ -10,10 +11,10 @@ class Options:
     verbose = attr.ib(default=None, metadata={"description": "print verbose information", "long_name": "--verbose", "alias": "-v"})
     verbosity = attr.ib(default=None, metadata={"description": "set specific verbosity level", "long_name": "--verbosity", "default": 0})
     verbose_prompt = attr.ib(default=None, metadata={"description": "print a verbose prompt before generation", "long_name": "--verbose-prompt", "default": False})
-    no_display_prompt = attr.ib(default=None, metadata={"description": "don't print prompt at generation", "long_name": "--no-display-prompt", "default": False})
+    no_display_prompt = attr.ib(default=True, metadata={"description": "don't print prompt at generation", "long_name": "--no-display-prompt", "default": False})
     color = attr.ib(default=None, metadata={"description": "colorise output to distinguish prompt and user input from generations", "long_name": "--color", "alias": "-co", "default": False})
     seed = attr.ib(default=None, metadata={"description": "RNG seed", "long_name": "--seed", "alias": "-s", "default": -1})
-    threads = attr.ib(default=None, metadata={"description": "number of threads to use during generation", "long_name": "--threads", "alias": "-t", "default": 16})
+    threads = attr.ib(default=psutil.cpu_count(logical=False), metadata={"description": "number of threads to use during generation", "long_name": "--threads", "alias": "-t", "default": 16})
     threads_batch = attr.ib(default=None, metadata={"description": "number of threads to use during batch and prompt processing", "long_name": "--threads-batch", "alias": "-tb"})
     threads_draft = attr.ib(default=None, metadata={"description": "number of threads to use during generation", "long_name": "--threads-draft", "alias": "-td"})
     threads_batch_draft = attr.ib(default=None, metadata={"description": "number of threads to use during batch and prompt processing", "long_name": "--threads-batch-draft", "alias": "-tbd"})
@@ -27,7 +28,7 @@ class Options:
     ubatch_size = attr.ib(default=None, metadata={"description": "physical maximum batch size", "long_name": "--ubatch-size", "alias": "-ub", "default": 512})
     keep = attr.ib(default=None, metadata={"description": "number of tokens to keep from the initial prompt", "long_name": "--keep", "default": 0})
     chunks = attr.ib(default=None, metadata={"description": "max number of chunks to process", "long_name": "--chunks", "default": -1})
-    flash_attn = attr.ib(default=None, metadata={"description": "enable Flash Attention", "long_name": "--flash-attn", "alias": "-fa", "default": False})
+    flash_attn = attr.ib(default=True, metadata={"description": "enable Flash Attention", "long_name": "--flash-attn", "alias": "-fa", "default": False})
     prompt = attr.ib(default=None, metadata={"description": "prompt to start generation with", "long_name": "--prompt", "alias": "-p", "default": ''})
     file = attr.ib(default=None, metadata={"description": "a file containing the prompt", "long_name": "--file", "alias": "-f"})
     in_file = attr.ib(default=None, metadata={"description": "an input file", "long_name": "--in-file"})
@@ -111,7 +112,7 @@ class Options:
     defrag_thold = attr.ib(default=None, metadata={"description": "KV cache defragmentation threshold", "long_name": "--defrag-thold", "alias": "-dt", "default": -1.0})
     parallel = attr.ib(default=None, metadata={"description": "number of parallel sequences to decode", "long_name": "--parallel", "alias": "-np", "default": 1})
     sequences = attr.ib(default=None, metadata={"description": "number of sequences to decode", "long_name": "--sequences", "alias": "-ns", "default": 1})
-    cont_batching = attr.ib(default=None, metadata={"description": "enable continuous batching", "long_name": "--cont-batching", "alias": "-cb", "default": True})
+    cont_batching = attr.ib(default=True, metadata={"description": "enable continuous batching", "long_name": "--cont-batching", "alias": "-cb", "default": True})
 
     mmproj = attr.ib(default=None, metadata={"description": "path to a multimodal projector file for LLaVA", "long_name": "--mmproj"})
     image = attr.ib(default=None, metadata={"description": "path to an image file", "long_name": "--image"})
@@ -175,10 +176,10 @@ class Options:
     slot_save_path = attr.ib(default=None, metadata={"description": "path to save slot kv cache", "long_name": "--slot-save-path"})
     slot_prompt_similarity = attr.ib(default=None, metadata={"description": "how much the prompt of a request must match the prompt of a slot in order to use that slot", "long_name": "--slot-prompt-similarity", "alias": "-sps", "default": 0.50})
 
-    simple_io = attr.ib(default=None, metadata={"description": "use basic IO for better compatibility in subprocesses and limited consoles", "long_name": "--simple-io"})
+    simple_io = attr.ib(default=True, metadata={"description": "use basic IO for better compatibility in subprocesses and limited consoles", "long_name": "--simple-io"})
     logdir = attr.ib(default=None, metadata={"description": "path under which to save YAML logs", "long_name": "--logdir", "alias": "-ld"})
     log_test = attr.ib(default=None, metadata={"description": "Run simple logging test", "long_name": "--log-test"})
-    log_disable = attr.ib(default=None, metadata={"description": "Disable trace logs", "long_name": "--log-disable"})
+    log_disable = attr.ib(default=True, metadata={"description": "Disable trace logs", "long_name": "--log-disable"})
     log_enable = attr.ib(default=None, metadata={"description": "Enable trace logs", "long_name": "--log-enable"})
     log_file = attr.ib(default=None, metadata={"description": "Specify a log filename", "long_name": "--log-file"})
     log_new = attr.ib(default=None, metadata={"description": "Create a separate new log file on start", "long_name": "--log-new"})
