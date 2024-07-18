@@ -2,7 +2,7 @@
 # import sys
 # sys.path.append(os.path.abspath('.'))
 
-from llama.llama_cli_ctypes import llama_generate, Model, Options
+from llama.llama_cli_ctypes_cpu import llama_generate, Model, Options
 
 from demo_models import models
 
@@ -11,6 +11,7 @@ def demo_model(model: Model, messages: list[dict]):
     options = Options(
         ctx_size=2048,
         predict=-2,
+        log_disable=False,
         model=model,
         prompt=messages,
     )

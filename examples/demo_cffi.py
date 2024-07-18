@@ -11,6 +11,7 @@ def demo_model(model: Model, messages: list[dict]):
     options = Options(
         ctx_size=2048,
         predict=-2,
+        log_disable=False,
         model=model,
         prompt=messages,
     )
