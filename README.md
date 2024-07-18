@@ -8,8 +8,8 @@
 [![Python][python-ver-image]][pypi-project-url]
 [![License][mit-image]][mit-url]
 -->
-[![Downloads](https://img.shields.io/pypi/dm/llama-cli-cffi)](https://pypistats.org/packages/llama-cli-cffi)
-[![Supported Versions](https://img.shields.io/pypi/pyversions/llama-cli-cffi)](https://pypi.org/project/llama-cli-cffi)
+[![Downloads](https://img.shields.io/pypi/dm/llama-cpp-cffi)](https://pypistats.org/packages/llama-cpp-cffi)
+[![Supported Versions](https://img.shields.io/pypi/pyversions/llama-cpp-cffi)](https://pypi.org/project/llama-cpp-cffi)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 **Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi** and **ctypes**. Supports **CPU** and **CUDA 12.5** execution.
@@ -17,7 +17,7 @@
 ## Install
 
 ```bash
-pip install llama-cli-cffi
+pip install llama-cpp-cffi
 ```
 
 ## Example

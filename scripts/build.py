@@ -2,6 +2,7 @@ import os
 import glob
 import shutil
 import subprocess
+from pprint import pprint
 
 from cffi import FFI
 
@@ -17,6 +18,7 @@ def clone_llama_cpp():
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
+    pprint(env)
 
     #
     # build llama.cpp
@@ -86,12 +88,17 @@ def build_cuda_12_5(*args, **kwargs):
     cuda_file = 'cuda_12.5.1_555.42.06_linux.run'
     cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.5.1/local_installers/{cuda_file}'
     cuda_output_dir = os.path.abspath('./cuda-12.5.1')
+    cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
 
     env['PATH'] = env['PATH'] + f':{cuda_output_dir}/dist/bin'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
 
     # download cuda file
-    subprocess.run(['wget', '-N', cuda_url, '-P', cuda_output_dir], check=True)
+    if not os.path.exists(cuda_file_path):
+        cmd = ['mkdir', '-p', f'{cuda_output_dir}']
+        
+        subprocess.run(cmd, check=True)
+        subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
     
     # extract cuda file
     cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
@@ -169,11 +176,11 @@ def build_cuda_12_5(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
-            'cuda',
-            'cublas',
-            'culibos',
-            'cudart',
-            'cublasLt', 
+            # 'cuda',
+            # 'cublas',
+            # 'culibos',
+            # 'cudart',
+            # 'cublasLt',
         ],
         library_dirs=[f'{cuda_output_dir}/dist/lib64'],
         extra_objects=['../llama.cpp/llama_cli.a'],
@@ -201,7 +208,7 @@ def build(*args, **kwargs):
     build_cpu(*args, **kwargs)
 
     # cuda 12.5
-    if os.environ['AUDITWHEEL_ARCH'] == 'x86_64':
+    if os.environ['AUDITWHEEL_POLICY'] == 'manylinux2014' and os.environ['AUDITWHEEL_ARCH'] == 'x86_64':
         clean_llama_cpp()
         build_cuda_12_5(*args, **kwargs)
 

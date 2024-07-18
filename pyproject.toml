@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.0.4"
+version = "0.1.0"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/mtasic85/llama-cpp-cffi"
 repository = "https://github.com/mtasic85/llama-cpp-cffi"
@@ -35,8 +35,11 @@ script = "scripts/build.py"
 [tool.cibuildwheel]
 build-frontend = "build"
 before-build = "pip install poetry"
+# before-build = "pip install poetry; yum -y install wget"
 skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp*", "*-win32", "*i686"]
 build-verbosity=3
+repair-wheel-command = ""
+# environment = {"LD_LIBRARY_PATH" = "/project/cuda-12.5.1/dist/lib64:$LD_LIBRARY_PATH", "CUDA_HOME" = "/project/cuda-12.5.1/dist"}
 
 [tool.cibuildwheel.pyodide]
 
