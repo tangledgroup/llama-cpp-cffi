@@ -15,18 +15,11 @@ from huggingface_hub import hf_hub_download
 from .formatter import get_tokenizer, get_special_tokens, format_messages
 from .model import Model
 from .options import Options, convert_options_to_bytes
+from ._llama_cli_cuda_12_5 import lib, ffi
 
-
-module_path = os.path.abspath(__file__)
-module_dir = os.path.dirname(module_path)
-llama_cli_lib_path = os.path.join(module_dir, 'llama-cli-cpu.so')
-lib = ctypes.CDLL(llama_cli_lib_path)
 
 _LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 _LLAMA_SHOULD_STOP_T = ctypes.CFUNCTYPE(ctypes.c_int)
-
-lib._llama_cli_main.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_char_p), _LLAMA_YIELD_TOKEN_T, _LLAMA_SHOULD_STOP_T, ctypes.c_int]
-lib._llama_cli_main.restype = ctypes.c_int
 
 
 def _llama_yield_token_func(chunk_bytes: bytes, queue=None, callback=None, metadata=None):
@@ -90,12 +83,19 @@ def _llama_should_stop_func(queue=None, callback=None, metadata=None) -> int:
 def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
     _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, callback=callback, metadata=metadata))
     _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, callback=callback, metadata=metadata))
-    r = lib._llama_cli_main(argc, argv, _llama_yield_token, _llama_should_stop, 1)
+
+    _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
+    _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
+
+    cffi__llama_yield_token_callback = ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
+    cffi__llama_should_stop_callback = ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
+
+    r = lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback, 1)
     
     if r != 0:
         queue.put(None)
         return
-
+    
     if queue is not None:
         queue.put(None)
     elif callback is not None:
@@ -131,8 +131,8 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
     }
 
     argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(options)
+    argv = [ffi.new('char[]', n) for n in argv]
     argc = len(argv)
-    argv = (ctypes.c_char_p * argc)(*argv)
 
     if callback:
         _llama_cli_main(argc, argv, queue, callback, metadata)

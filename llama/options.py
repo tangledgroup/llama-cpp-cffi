@@ -121,6 +121,20 @@ class Options:
     mlock = attr.ib(default=None, metadata={"description": "force system to keep model in RAM rather than swapping or compressing", "long_name": "--mlock"})
     no_mmap = attr.ib(default=None, metadata={"description": "do not memory-map model", "long_name": "--no-mmap"})
     numa = attr.ib(default=None, metadata={"description": "attempt optimizations that help on some NUMA systems", "long_name": "--numa"})
+    
+    gpu_layers = attr.ib(default=None, metadata={"description": "number of layers to store in VRAM", "long_name": "--gpu-layers"})
+    gpu_layers_draft = attr.ib(default=None, metadata={"description": "number of layers to store in VRAM for the draft model", "long_name": "--gpu-layers-draft"})
+    split_mode = attr.ib(default=None, metadata={"description": """
+        how to split the model across multiple GPUs, one of:
+          - none: use one GPU only
+          - layer (default): split layers and KV across GPUs
+          - row: split rows across GPUs
+    """, "long_name": "--split-mode"})
+    tensor_split = attr.ib(default=None, metadata={"description": "fraction of the model to offload to each GPU, comma-separated list of proportions, e.g. 3,1", "long_name": "--tensor-split"})
+    main_gpu = attr.ib(default=None, metadata={"description": """
+        the GPU to use for the model (with split-mode = none),
+        or for intermediate results and KV (with split-mode = row) (default: 0)
+    """, "long_name": "--main-gpu"})
 
     check_tensors = attr.ib(default=None, metadata={"description": "check model tensor data for invalid values", "long_name": "--check-tensors", "default": False})
     override_kv = attr.ib(default=None, metadata={"description": "advanced option to override model metadata by key", "long_name": "--override-kv"})

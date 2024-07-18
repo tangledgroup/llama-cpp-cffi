@@ -1,25 +1,26 @@
 from llama.model import Model
 
 models = [
-    # Model(
-    #     '01-ai/Yi-1.5-9B-Chat-16K',
-    #     'mradermacher/Yi-1.5-9B-Chat-16K-i1-GGUF',
-    #     # 'Yi-1.5-9B-Chat-16K.i1-IQ2_M.gguf',
-    #     # 'Yi-1.5-9B-Chat-16K.i1-IQ3_M.gguf',
-    #     'Yi-1.5-9B-Chat-16K.i1-IQ4_XS.gguf',
-    #     # 'Yi-1.5-9B-Chat-16K.i1-Q4_K_M.gguf',
-    # ),
-    # Model(
-    #     'mistralai/Mistral-7B-Instruct-v0.3',
-    #     'bartowski/Mistral-7B-Instruct-v0.3-GGUF',
-    #     # 'Mistral-7B-Instruct-v0.3-IQ2_M.gguf',
-    #     # 'Mistral-7B-Instruct-v0.3-IQ3_M.gguf',
-    #     'Mistral-7B-Instruct-v0.3-IQ4_XS.gguf',
-    #     # 'Mistral-7B-Instruct-v0.3-Q4_K_M.gguf',
-    # ),
+    Model(
+        '01-ai/Yi-1.5-9B-Chat-16K',
+        'mradermacher/Yi-1.5-9B-Chat-16K-i1-GGUF',
+        # 'Yi-1.5-9B-Chat-16K.i1-IQ2_M.gguf',
+        # 'Yi-1.5-9B-Chat-16K.i1-IQ3_M.gguf',
+        'Yi-1.5-9B-Chat-16K.i1-IQ4_XS.gguf',
+        # 'Yi-1.5-9B-Chat-16K.i1-Q4_K_M.gguf',
+    ),
+    Model(
+        'mistralai/Mistral-7B-Instruct-v0.3',
+        'bartowski/Mistral-7B-Instruct-v0.3-GGUF',
+        # 'Mistral-7B-Instruct-v0.3-IQ2_M.gguf',
+        # 'Mistral-7B-Instruct-v0.3-IQ3_M.gguf',
+        'Mistral-7B-Instruct-v0.3-IQ4_XS.gguf',
+        # 'Mistral-7B-Instruct-v0.3-Q4_K_M.gguf',
+    ),
     Model(
         'microsoft/Phi-3-mini-128k-instruct',
         'bartowski/Phi-3.1-mini-128k-instruct-GGUF',
+        # 'Phi-3.1-mini-128k-instruct-IQ2_XS.gguf',
         # 'Phi-3.1-mini-128k-instruct-Q4_K_S.gguf',
         'Phi-3.1-mini-128k-instruct-Q4_K_M.gguf',
     ),

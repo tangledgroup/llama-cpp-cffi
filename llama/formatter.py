@@ -1,9 +1,9 @@
-__all__ = ['get_tokenizer', 'get_special_tokens', 'format_messages']
+__all__ = ['get_config', 'get_tokenizer', 'get_special_tokens', 'format_messages']
 
 from copy import deepcopy
 
 import jinja2
-from transformers import AutoTokenizer
+from transformers import AutoConfig, AutoTokenizer
 
 
 FALLBACK_MODEL_ID = 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
@@ -58,6 +58,11 @@ def get_fallback_chat_template(tokenizer: AutoTokenizer) -> str:
         return CHATML_CHAT_TEMPLATE
     else:
         return ZEPHYR_CHAT_TEMPLATE
+
+
+def get_config(model_id: str) -> AutoConfig:
+    config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+    return config
 
 
 def get_special_tokens(tokenizer: AutoTokenizer) -> list[str]:

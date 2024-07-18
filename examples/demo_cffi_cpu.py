@@ -2,16 +2,20 @@
 # import sys
 # sys.path.append(os.path.abspath('.'))
 
-from llama.llama_cli_cffi import llama_generate, Model, Options
+from llama.llama_cli_cffi_cpu import llama_generate, Model, Options
+from llama.formatter import get_config
 
 from demo_models import models
 
 
 def demo_model(model: Model, messages: list[dict]):
+    config = get_config(model.creator_hf_repo)
+    
     options = Options(
-        ctx_size=2048,
+        # ctx_size=32 * 1024 if model.creator_hf_repo == 'microsoft/Phi-3-mini-128k-instruct' else config.max_position_embeddings,
+        ctx_size=config.max_position_embeddings,
         predict=-2,
-        log_disable=False,
+        # log_disable=False,
         model=model,
         prompt=messages,
     )
@@ -29,6 +33,7 @@ if __name__ == '__main__':
     ]
 
     for model in models:
-        print(f'{model = }')
+        config = get_config(model.creator_hf_repo)
+        print(f'{model = }, {config.max_position_embeddings = }')
         demo_model(model, messages)
         print('-' * 80)
