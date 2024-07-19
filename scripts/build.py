@@ -90,8 +90,16 @@ def build_cuda_12_5(*args, **kwargs):
     cuda_output_dir = os.path.abspath('./cuda-12.5.1')
     cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
 
-    env['PATH'] = env['PATH'] + f':{cuda_output_dir}/dist/bin'
+    env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
+    env['CUDA_DOCKER_ARCH'] = 'compute_75'
+    env['NVCCFLAGS'] = '\
+            -gencode arch=compute_75,code=sm_75 \
+            -gencode arch=compute_80,code=sm_80 \
+            -gencode arch=compute_86,code=sm_86 \
+            -gencode arch=compute_89,code=sm_89 \
+            -gencode arch=compute_90,code=sm_90 \
+            -gencode arch=compute_90,code=compute_90'
 
     # download cuda file
     if not os.path.exists(cuda_file_path):
@@ -107,7 +115,8 @@ def build_cuda_12_5(*args, **kwargs):
     cmd = [
         f'{cuda_output_dir}/{cuda_file}',
         '--tar',
-        'mxvf',
+        # 'mxvf',
+        'mxf',
         '--wildcards',
         './builds/cuda_cccl/*',
         './builds/cuda_cudart/*',
@@ -132,6 +141,15 @@ def build_cuda_12_5(*args, **kwargs):
 
     cmd = f'cp -r {cuda_output_dir}/builds/libcublas/* {cuda_output_dir}/dist'
     subprocess.run(cmd, shell=True, check=True)
+
+    # cmd = 'pwd'
+    # subprocess.run(cmd, check=True)
+
+    # cmd = 'ls -l'
+    # subprocess.run(cmd, check=True, shell=True)
+
+    # cmd = f'ls -l {cuda_output_dir}/dist'
+    # subprocess.run(cmd, check=True, shell=True)
 
     #
     # build llama.cpp
@@ -176,13 +194,17 @@ def build_cuda_12_5(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
-            # 'cuda',
-            # 'cublas',
-            # 'culibos',
-            # 'cudart',
-            # 'cublasLt',
+            'cuda',
+            'cublas',
+            'culibos',
+            'cudart',
+            'cublasLt',
         ],
-        library_dirs=[f'{cuda_output_dir}/dist/lib64'],
+        library_dirs=[
+            f'{cuda_output_dir}/dist/lib64',
+            f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
+            f'{cuda_output_dir}/dist/lib64/stubs',
+        ],
         extra_objects=['../llama.cpp/llama_cli.a'],
     )
 
@@ -203,14 +225,15 @@ def build(*args, **kwargs):
     clean()
     clone_llama_cpp()
 
+    # cuda 12.5
+    if os.environ.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and os.environ.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+        clean_llama_cpp()
+        build_cuda_12_5(*args, **kwargs)
+
     # cpu
     clean_llama_cpp()
     build_cpu(*args, **kwargs)
 
-    # cuda 12.5
-    if os.environ['AUDITWHEEL_POLICY'] == 'manylinux2014' and os.environ['AUDITWHEEL_ARCH'] == 'x86_64':
-        clean_llama_cpp()
-        build_cuda_12_5(*args, **kwargs)
 
 
 if __name__ == '__main__':

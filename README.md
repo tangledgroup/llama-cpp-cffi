@@ -16,11 +16,23 @@
 
 ## Install
 
+Basic library install:
+
 ```bash
 pip install llama-cpp-cffi
 ```
 
+In case you want [Chat Completions API by OpenAI ©](https://platform.openai.com/docs/overview) compatible API:
+
+```bash
+pip install llama-cpp-cffi[openai]
+```
+
 ## Example
+
+### Library Usage
+
+`examples/demo_0.py`
 
 ```python
 from llama.llama_cli_cffi_cpu import llama_generate, Model, Options
@@ -31,9 +43,9 @@ from llama.llama_cli_cffi_cpu import llama_generate, Model, Options
 from llama.formatter import get_config
 
 model = Model(
-    'TinyLlama/TinyLlama-1.1B-Chat-v1.0',
-    'TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF',
-    'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
+    creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
+    hf_repo='TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF',
+    hf_file='tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
 )
 
 config = get_config(model.creator_hf_repo)
@@ -55,6 +67,14 @@ for chunk in llama_generate(options):
 
 # newline
 print()
+
+```
+
+### OpenAI © compatible Chat Completions
+
+`examples/demo_1.py`
+
+```python
 ```
 
 ## Demos

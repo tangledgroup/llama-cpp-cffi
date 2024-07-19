@@ -4,6 +4,7 @@ import os
 import json
 import ctypes
 from queue import Queue
+from copy import deepcopy
 from typing import Iterator
 from threading import Thread
 from functools import partial
@@ -110,6 +111,7 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
 
     assert options.model and isinstance(options.model, Model)
 
+    options: Options = deepcopy(options)
     model: Model = options.model
     tokenizer = get_tokenizer(model.creator_hf_repo)
     options.model = hf_hub_download(repo_id=model.hf_repo, filename=model.hf_file)
