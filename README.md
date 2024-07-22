@@ -70,7 +70,7 @@ print()
 
 ```
 
-### OpenAI © compatible Chat Completions
+### OpenAI © compatible Chat Completions (TBD)
 
 `examples/demo_1.py`
 
@@ -88,6 +88,4 @@ python -B examples/demo_cffi_cuda_12_5.py
 
 python -B examples/demo_ctypes_cpu.py
 python -B examples/demo_ctypes_cuda_12_5.py
-
-# python -m http.server -d examples/demo_pyonide -b "0.0.0.0" 5000
 ```

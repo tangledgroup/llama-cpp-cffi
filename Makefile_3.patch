@@ -11,20 +11,20 @@
 +ifeq ($(UNAME_S), Linux)
 +    LIB_EXT := so
 +    LIB_LDFLAGS := -shared
-+    LIB_CXXFLAGS := -fPIC -DLLAMA_LIB
++    LIB_CXXFLAGS := -fPIC -DLLAMA_LIB -Os
 +endif
 +
 +ifeq ($(UNAME_S), Darwin)
 +    LIB_EXT := dylib
 +    LIB_LDFLAGS := -dynamiclib
-+    LIB_CXXFLAGS := -fPIC -DLLAMA_LIB
++    LIB_CXXFLAGS := -fPIC -DLLAMA_LIB -Os
 +endif
 +
 +# For Windows (assuming MinGW)
 +ifeq ($(OS), Windows_NT)
 +    LIB_EXT := dll
 +    LIB_LDFLAGS := -shared
-+    LIB_CXXFLAGS := -DLLAMA_LIB
++    LIB_CXXFLAGS := -DLLAMA_LIB -Os
 +endif
 +
 +LIB_NAME := llama_cli.$(LIB_EXT)

@@ -18,29 +18,41 @@ def clone_llama_cpp():
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
+    env['CXXFLAGS'] = '-fno-rtti'
     pprint(env)
 
     #
     # build llama.cpp
     #
-    if 'PYODIDE' in env and env['PYODIDE'] == '1':
-        env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
-        env['UNAME_M'] = 'wasm'
+    
+    # if 'PYODIDE' in env and env['PYODIDE'] == '1':
+    #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
+    #     env['UNAME_M'] = 'wasm'
 
+    # subprocess.run([
+    #     'make',
+    #     '-C',
+    #     'llama.cpp',
+    #     '-j',
+    #     'llama-cli-shared',
+    #     'llama-cli-static',
+    #     'GGML_NO_OPENMP=1',
+    #     'GGML_NO_LLAMAFILE=1',
+    #     # 'GGML_OPENBLAS=1',
+    # ], check=True, env=env)
+    #
+    # subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cpu.so'], check=True)
+    
     subprocess.run([
         'make',
         '-C',
         'llama.cpp',
         '-j',
-        'llama-cli-shared',
         'llama-cli-static',
         'GGML_NO_OPENMP=1',
         'GGML_NO_LLAMAFILE=1',
-        # 'GGML_OPENBLAS=1',
     ], check=True, env=env)
 
-    subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cpu.so'], check=True)
-    
     #
     # cffi
     #
@@ -63,6 +75,8 @@ def build_cpu(*args, **kwargs):
         ''',
         libraries=['stdc++'],
         extra_objects=['../llama.cpp/llama_cli.a'],
+        extra_compile_args=['-Os'],
+        extra_link_args=['-O3', '-Os', '-flto', '-ffunction-sections', '-fdata-sections', '-Wl,--gc-sections'],
     )
 
     ffibuilder.compile(tmpdir='build', verbose=True)
@@ -78,7 +92,7 @@ def build_cpu(*args, **kwargs):
         shutil.move(file, 'llama/')
 
 
-def build_cuda_12_5(*args, **kwargs):
+def build_linux_cuda_12_5(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
 
@@ -92,14 +106,30 @@ def build_cuda_12_5(*args, **kwargs):
 
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
-    env['CUDA_DOCKER_ARCH'] = 'compute_75'
+    # env['CUDA_DOCKER_ARCH'] = 'compute_61'
+    env['CUDA_DOCKER_ARCH'] = 'compute_90'
+    # env['NVCCFLAGS'] = '\
+    #         -gencode arch=compute_61,code=sm_61 \
+    #         -gencode arch=compute_70,code=sm_70 \
+    #         -gencode arch=compute_75,code=sm_75 \
+    #         -gencode arch=compute_80,code=sm_80 \
+    #         -gencode arch=compute_86,code=sm_86 \
+    #         -gencode arch=compute_89,code=sm_89 \
+    #         -gencode arch=compute_90,code=sm_90'
+    env['CXXFLAGS'] = '-fno-rtti'
     env['NVCCFLAGS'] = '\
+            -gencode arch=compute_61,code=sm_61 \
+            -gencode arch=compute_70,code=sm_70 \
             -gencode arch=compute_75,code=sm_75 \
             -gencode arch=compute_80,code=sm_80 \
             -gencode arch=compute_86,code=sm_86 \
             -gencode arch=compute_89,code=sm_89 \
-            -gencode arch=compute_90,code=sm_90 \
-            -gencode arch=compute_90,code=compute_90'
+            -Xcompiler -s \
+            -Xcompiler -fno-exceptions -Xcompiler -fno-rtti \
+            -Xcompiler -ffunction-sections -Xcompiler -fdata-sections \
+            -Xlinker --gc-sections'
+
+    pprint(env)
 
     # download cuda file
     if not os.path.exists(cuda_file_path):
@@ -115,7 +145,6 @@ def build_cuda_12_5(*args, **kwargs):
     cmd = [
         f'{cuda_output_dir}/{cuda_file}',
         '--tar',
-        # 'mxvf',
         'mxf',
         '--wildcards',
         './builds/cuda_cccl/*',
@@ -142,21 +171,27 @@ def build_cuda_12_5(*args, **kwargs):
     cmd = f'cp -r {cuda_output_dir}/builds/libcublas/* {cuda_output_dir}/dist'
     subprocess.run(cmd, shell=True, check=True)
 
-    # cmd = 'pwd'
-    # subprocess.run(cmd, check=True)
-
-    # cmd = 'ls -l'
-    # subprocess.run(cmd, check=True, shell=True)
-
-    # cmd = f'ls -l {cuda_output_dir}/dist'
-    # subprocess.run(cmd, check=True, shell=True)
-
     #
     # build llama.cpp
     #
-    if 'PYODIDE' in env and env['PYODIDE'] == '1':
-        env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
-        env['UNAME_M'] = 'wasm'
+
+    # if 'PYODIDE' in env and env['PYODIDE'] == '1':
+    #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
+    #     env['UNAME_M'] = 'wasm'
+
+    # subprocess.run([
+    #     'make',
+    #     '-C',
+    #     'llama.cpp',
+    #     '-j',
+    #     'llama-cli-static',
+    #     'llama-cli-shared',
+    #     'GGML_NO_OPENMP=1',
+    #     'GGML_NO_LLAMAFILE=1',
+    #     'GGML_CUDA=1',
+    # ], check=True, env=env)
+    #
+    # subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cuda_12_5.so'], check=True)
 
     subprocess.run([
         'make',
@@ -164,13 +199,10 @@ def build_cuda_12_5(*args, **kwargs):
         'llama.cpp',
         '-j',
         'llama-cli-static',
-        'llama-cli-shared',
         'GGML_NO_OPENMP=1',
         'GGML_NO_LLAMAFILE=1',
         'GGML_CUDA=1',
     ], check=True, env=env)
-
-    subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cuda_12_5.so'], check=True)
 
     #
     # cffi
@@ -206,6 +238,8 @@ def build_cuda_12_5(*args, **kwargs):
             f'{cuda_output_dir}/dist/lib64/stubs',
         ],
         extra_objects=['../llama.cpp/llama_cli.a'],
+        extra_compile_args=['-O3'],
+        extra_link_args=['-O3', '-flto'],
     )
 
     ffibuilder.compile(tmpdir='build', verbose=True)
@@ -228,7 +262,7 @@ def build(*args, **kwargs):
     # cuda 12.5
     if os.environ.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and os.environ.get('AUDITWHEEL_ARCH') in ('x86_64', None):
         clean_llama_cpp()
-        build_cuda_12_5(*args, **kwargs)
+        build_linux_cuda_12_5(*args, **kwargs)
 
     # cpu
     clean_llama_cpp()
