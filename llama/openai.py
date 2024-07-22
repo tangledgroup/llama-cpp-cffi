@@ -3,14 +3,12 @@ import asyncio
 
 from aiohttp import web
 
+from llama import llama_generate, get_config, Model, Options
 
-async def generate_response(prompt):
-    # This is a mock function. Replace with your actual generation logic.
-    words = prompt.split()
-    
-    for word in words:
-        yield f'<{word}>'
-        await asyncio.sleep(0.5)  # Simulate delay
+
+async def generate_response(options: Options):
+    for chunk in llama_generate(options):
+        yield chunk
 
 
 async def chat_completions(request):
@@ -50,9 +48,21 @@ async def chat_completions(request):
     assert stream_options is None
     assert top_p is None or ininstance(top_p, (int, float))
 
-    print('!!!', model.split(':'))
-    prompt = messages[-1]['content']
-
+    model = Model(*model.split(':'))
+    config = get_config(model.creator_hf_repo)
+    
+    if max_tokens:
+        ctx_size = max_tokens
+    else:
+        ctx_size = config.max_position_embeddings
+    
+    options = Options(
+        ctx_size=ctx_size,
+        predict=-2,
+        model=model,
+        prompt=messages,
+    )
+    
     if stream:
         response = web.StreamResponse()
         response.headers['Content-Type'] = 'text/event-stream'
@@ -61,7 +71,7 @@ async def chat_completions(request):
         await response.prepare(request)
         chunk_bytes: bytes
 
-        async for chunk in generate_response(prompt):
+        async for chunk in generate_response(options):
             event_data = {
                 'choices': [{
                     'delta': {'content': chunk},
@@ -78,7 +88,7 @@ async def chat_completions(request):
         await response.write(chunk_bytes)
         return response
     else:
-        full_response = ''.join([chunk async for chunk in generate_response(prompt)])
+        full_response = ''.join([chunk async for chunk in generate_response(options)])
         
         return web.json_response({
             'choices': [{

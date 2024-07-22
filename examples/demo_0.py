@@ -1,9 +1,5 @@
-from llama.llama_cli_cffi_cpu import llama_generate, Model, Options
-# from llama.llama_cli_cffi_cuda_12_5 import llama_generate, Model, Options
-# from llama.llama_cli_ctypes_cuda import llama_generate, Model, Options
-# from llama.llama_cli_ctypes_cuda_12_5 import llama_generate, Model, Options
-
-from llama.formatter import get_config
+from llama import llama_generate, Model, Options
+from llama import get_config
 
 model = Model(
     creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
@@ -15,6 +11,8 @@ config = get_config(model.creator_hf_repo)
 
 messages = [
     {'role': 'system', 'content': 'You are a helpful assistant.'},
+    {'role': 'user', 'content': '1 + 1 = ?'},
+    {'role': 'assistant', 'content': '2'},
     {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
 ]
 

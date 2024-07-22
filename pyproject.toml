@@ -24,6 +24,7 @@ protobuf = "^5.27.2"
 openai = {version = "^1.35.15", optional = true}
 aiohttp = {extras = ["speedups"], version = "^3.9.5", optional = true}
 uvloop = {version = "^0.19.0", optional = true}
+numba = "^0.60.0"
 
 [tool.poetry.extras]
 openai = ["openai", "aiohttp"]
@@ -47,8 +48,8 @@ before-build = """
 pip install poetry
 if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then dnf update -y && dnf install -y epel-release && dnf install -y upx zip unzip p7zip p7zip-plugins; else apk -U add upx zip unzip 7zip; fi
 """
-# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
-skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp*", "*i686"]
+skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
+# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp*", "*i686"]
 manylinux-x86_64-image = "manylinux_2_28"
 manylinux-aarch64-image = "manylinux_2_28"
 manylinux-pypy_x86_64-image = "manylinux_2_28"

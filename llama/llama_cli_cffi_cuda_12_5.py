@@ -1,6 +1,5 @@
 __all__ = ['llama_generate', 'Options']
 
-import os
 import json
 import ctypes
 from queue import Queue
@@ -9,7 +8,6 @@ from typing import Iterator
 from threading import Thread
 from functools import partial
 
-os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = '1'
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 

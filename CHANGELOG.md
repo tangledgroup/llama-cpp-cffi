@@ -9,6 +9,10 @@ Changed:
     - Disabled GitHub Actions.
     - Uses `upx -9` to compress shared/dynamic libraries.
     - Repacks `whl` with better compression rate.
+    - Auto-detect CUDA support.
+
+Removed:
+    - ctypes version and demos.
 
 ## v0.1.2
 

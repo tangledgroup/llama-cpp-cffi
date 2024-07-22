@@ -28,6 +28,8 @@ In case you want [Chat Completions API by OpenAI ©](https://platform.openai.com
 pip install llama-cpp-cffi[openai]
 ```
 
+**IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12.5**. If you don't have CUDA 12.5 installed follow instructions here: https://developer.nvidia.com/cuda-downloads
+
 ## Example
 
 ### Library Usage
@@ -35,12 +37,8 @@ pip install llama-cpp-cffi[openai]
 `examples/demo_0.py`
 
 ```python
-from llama.llama_cli_cffi_cpu import llama_generate, Model, Options
-# from llama.llama_cli_cffi_cuda_12_5 import llama_generate, Model, Options
-# from llama.llama_cli_ctypes_cuda import llama_generate, Model, Options
-# from llama.llama_cli_ctypes_cuda_12_5 import llama_generate, Model, Options
-
-from llama.formatter import get_config
+from llama import llama_generate, Model, Options
+from llama import get_config
 
 model = Model(
     creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
@@ -52,6 +50,8 @@ config = get_config(model.creator_hf_repo)
 
 messages = [
     {'role': 'system', 'content': 'You are a helpful assistant.'},
+    {'role': 'user', 'content': '1 + 1 = ?'},
+    {'role': 'assistant', 'content': '2'},
     {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
 ]
 
@@ -67,25 +67,81 @@ for chunk in llama_generate(options):
 
 # newline
 print()
-
 ```
 
 ### OpenAI © compatible Chat Completions (TBD)
 
-`examples/demo_1.py`
+Run OpenAI compatible server:
+
+```bash
+python -B llama/openai.py
+```
+
+Run example `examples/demo_1.py` using OpenAI module:
 
 ```python
+from openai import OpenAI
+from llama import Model
+
+client = OpenAI(
+    base_url = 'http://localhost:11434/v1',
+    api_key='llama-cpp-cffi',
+)
+
+model = Model(
+    creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
+    hf_repo='TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF',
+    hf_file='tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
+)
+
+messages = [
+    {'role': 'system', 'content': 'You are a helpful assistant.'},
+    {'role': 'user', 'content': '1 + 1 = ?'},
+    {'role': 'assistant', 'content': '2'},
+    {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'}
+]
+
+
+def demo_chat_completions():
+    print('demo_chat_completions:')
+
+    response = client.chat.completions.create(
+        model=str(model),
+        messages=messages,
+        temperature=0.0,
+    )
+
+    print(response.choices[0].message.content)
+
+
+def demo_chat_completions_stream():
+    print('demo_chat_completions_stream:')
+
+    response = client.chat.completions.create(
+        model=str(model),
+        messages=messages,
+        temperature=0.0,
+        stream=True,
+    )
+
+    for chunk in response:
+        print(chunk.choices[0].delta.content, flush=True, end='')
+
+    print()
+
+
+if __name__ == '__main__':
+    demo_chat_completions()
+    demo_chat_completions_stream()
 ```
 
 ## Demos
 
-```BASH
+```bash
 #
 # run demos
 #
+python -B examples/demo_0.py
 python -B examples/demo_cffi_cpu.py
 python -B examples/demo_cffi_cuda_12_5.py
-
-python -B examples/demo_ctypes_cpu.py
-python -B examples/demo_ctypes_cuda_12_5.py
 ```

@@ -1,5 +1,5 @@
 from openai import OpenAI
-from llama.model import Model
+from llama import Model
 
 client = OpenAI(
     base_url = 'http://localhost:11434/v1',
@@ -14,9 +14,9 @@ model = Model(
 
 messages = [
     {'role': 'system', 'content': 'You are a helpful assistant.'},
-    {'role': 'user', 'content': 'Who won the world series in 2020?'},
-    {'role': 'assistant', 'content': 'The LA Dodgers won in 2020.'},
-    {'role': 'user', 'content': 'Where was it played?'}
+    {'role': 'user', 'content': '1 + 1 = ?'},
+    {'role': 'assistant', 'content': '2'},
+    {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'}
 ]
 
 
