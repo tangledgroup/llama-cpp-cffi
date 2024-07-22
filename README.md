@@ -12,7 +12,7 @@
 [![Supported Versions](https://img.shields.io/pypi/pyversions/llama-cpp-cffi)](https://pypi.org/project/llama-cpp-cffi)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi** and **ctypes**. Supports **CPU** and **CUDA 12.5** execution.
+**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU** and **CUDA 12.5** execution.
 
 ## Install
 
@@ -69,7 +69,7 @@ for chunk in llama_generate(options):
 print()
 ```
 
-### OpenAI © compatible Chat Completions (TBD)
+### OpenAI © compatible Chat Completions
 
 Run OpenAI compatible server:
 
