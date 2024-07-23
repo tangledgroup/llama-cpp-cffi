@@ -1,5 +1,5 @@
-from llama import llama_generate, Model, Options
-from llama import get_config
+from llama import llama_generate, get_config, Model, Options
+
 
 model = Model(
     creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',

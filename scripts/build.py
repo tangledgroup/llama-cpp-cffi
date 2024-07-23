@@ -19,30 +19,16 @@ def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
     env['CXXFLAGS'] = '-fno-rtti'
-    pprint(env)
-
-    #
-    # build llama.cpp
-    #
     
     # if 'PYODIDE' in env and env['PYODIDE'] == '1':
     #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
     #     env['UNAME_M'] = 'wasm'
 
-    # subprocess.run([
-    #     'make',
-    #     '-C',
-    #     'llama.cpp',
-    #     '-j',
-    #     'llama-cli-shared',
-    #     'llama-cli-static',
-    #     'GGML_NO_OPENMP=1',
-    #     'GGML_NO_LLAMAFILE=1',
-    #     # 'GGML_OPENBLAS=1',
-    # ], check=True, env=env)
+    pprint(env)
+
     #
-    # subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cpu.so'], check=True)
-    
+    # build llama.cpp
+    #
     subprocess.run([
         'make',
         '-C',
@@ -81,7 +67,9 @@ def build_cpu(*args, **kwargs):
 
     ffibuilder.compile(tmpdir='build', verbose=True)
 
-    # ctypes
+    #
+    # copy compiled modules
+    #
     for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
         shutil.move(file, 'llama/')
 
@@ -96,6 +84,10 @@ def build_linux_cuda_12_5(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
 
+    # if 'PYODIDE' in env and env['PYODIDE'] == '1':
+    #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
+    #     env['UNAME_M'] = 'wasm'
+
     #
     # cuda env
     #
@@ -106,16 +98,7 @@ def build_linux_cuda_12_5(*args, **kwargs):
 
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
-    # env['CUDA_DOCKER_ARCH'] = 'compute_61'
     env['CUDA_DOCKER_ARCH'] = 'compute_90'
-    # env['NVCCFLAGS'] = '\
-    #         -gencode arch=compute_61,code=sm_61 \
-    #         -gencode arch=compute_70,code=sm_70 \
-    #         -gencode arch=compute_75,code=sm_75 \
-    #         -gencode arch=compute_80,code=sm_80 \
-    #         -gencode arch=compute_86,code=sm_86 \
-    #         -gencode arch=compute_89,code=sm_89 \
-    #         -gencode arch=compute_90,code=sm_90'
     env['CXXFLAGS'] = '-fno-rtti'
     env['NVCCFLAGS'] = '\
             -gencode arch=compute_61,code=sm_61 \
@@ -174,25 +157,6 @@ def build_linux_cuda_12_5(*args, **kwargs):
     #
     # build llama.cpp
     #
-
-    # if 'PYODIDE' in env and env['PYODIDE'] == '1':
-    #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
-    #     env['UNAME_M'] = 'wasm'
-
-    # subprocess.run([
-    #     'make',
-    #     '-C',
-    #     'llama.cpp',
-    #     '-j',
-    #     'llama-cli-static',
-    #     'llama-cli-shared',
-    #     'GGML_NO_OPENMP=1',
-    #     'GGML_NO_LLAMAFILE=1',
-    #     'GGML_CUDA=1',
-    # ], check=True, env=env)
-    #
-    # subprocess.run(['mv', 'llama.cpp/llama_cli.so', 'llama/llama_cli_cuda_12_5.so'], check=True)
-
     subprocess.run([
         'make',
         '-C',
@@ -244,7 +208,9 @@ def build_linux_cuda_12_5(*args, **kwargs):
 
     ffibuilder.compile(tmpdir='build', verbose=True)
 
-    # ctypes
+    #
+    # copy compiled modules
+    #
     for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
         shutil.move(file, 'llama/')
 
@@ -256,6 +222,7 @@ def build_linux_cuda_12_5(*args, **kwargs):
 
 
 def build(*args, **kwargs):
+    # clean, clone
     clean()
     clone_llama_cpp()
 
@@ -267,7 +234,6 @@ def build(*args, **kwargs):
     # cpu
     clean_llama_cpp()
     build_cpu(*args, **kwargs)
-
 
 
 if __name__ == '__main__':

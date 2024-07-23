@@ -1,12 +1,13 @@
 import json
 import asyncio
+from typing import AsyncIterator
 
 from aiohttp import web
 
-from llama import llama_generate, get_config, Model, Options
+from llama import llama_generate, get_config, Model, Options, AutoConfig
 
 
-async def generate_response(options: Options):
+async def generate_response(options: Options) -> AsyncIterator[str]:
     for chunk in llama_generate(options):
         yield chunk
 
@@ -19,7 +20,7 @@ async def chat_completions(request):
     logit_bias = data.get('logit_bias')
     logprobs = data.get('logprobs', False)
     top_logprobs = data.get('top_logprobs')
-    max_tokens = data.get('max_tokens')
+    max_tokens = data.get('max_tokens') # https://platform.openai.com/docs/api-reference/chat/create#chat-create-max_tokens
     n = data.get('n', 1)
     presence_penalty = data.get('presence_penalty')
     response_format = data.get('response_format') # TODO: https://platform.openai.com/docs/api-reference/chat/create#chat-create-response_format
@@ -49,20 +50,18 @@ async def chat_completions(request):
     assert top_p is None or ininstance(top_p, (int, float))
 
     model = Model(*model.split(':'))
-    config = get_config(model.creator_hf_repo)
-    
-    if max_tokens:
-        ctx_size = max_tokens
-    else:
-        ctx_size = config.max_position_embeddings
+    config: AutoConfig = get_config(model.creator_hf_repo)
+    ctx_size: int = config.max_position_embeddings
     
     options = Options(
+        seed=seed,
         ctx_size=ctx_size,
-        predict=-2,
-        model=model,
+        predict=max_tokens,
         prompt=messages,
+        top_p=top_p,
+        model=model,
     )
-    
+
     if stream:
         response = web.StreamResponse()
         response.headers['Content-Type'] = 'text/event-stream'

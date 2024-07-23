@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v0.1.4
+
+Added:
+    - README: supported GPU Compute Capability for CUDA.
+
+Fixed:
+    - Cleaned up `build.py`.
+    - Type annotations in OpenAI related code.
+
 ## v0.1.3
 
 Added:

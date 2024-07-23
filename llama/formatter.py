@@ -1,4 +1,4 @@
-__all__ = ['get_config', 'get_tokenizer', 'get_special_tokens', 'format_messages']
+__all__ = ['get_config', 'get_tokenizer', 'get_special_tokens', 'format_messages', 'AutoConfig']
 
 from copy import deepcopy
 

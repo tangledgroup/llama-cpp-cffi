@@ -1,6 +1,7 @@
 from openai import OpenAI
 from llama import Model
 
+
 client = OpenAI(
     base_url = 'http://localhost:11434/v1',
     api_key='llama-cpp-cffi',

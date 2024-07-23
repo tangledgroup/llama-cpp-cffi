@@ -146,7 +146,7 @@ class Options:
     control_vector_layer_range = attr.ib(default=None, metadata={"description": "layer range to apply the control vector(s) to", "long_name": "--control-vector-layer-range"})
     model = attr.ib(default=None, metadata={"description": "model path", "long_name": "--model", "alias": "-m"})
     model_draft = attr.ib(default=None, metadata={"description": "draft model for speculative decoding", "long_name": "--model-draft", "alias": "-md"})
-    model_url = attr.ib(default=None, metadata={"description": "model download url", "long_name": "--model-url", "alias": "-mu"})
+    # model_url = attr.ib(default=None, metadata={"description": "model download url", "long_name": "--model-url", "alias": "-mu"})
     # hf_repo = attr.ib(default=None, metadata={"description": "Hugging Face model repository", "long_name": "--hf-repo", "alias": "-hfr"})
     # hf_file = attr.ib(default=None, metadata={"description": "Hugging Face model file", "long_name": "--hf-file", "alias": "-hff"})
 

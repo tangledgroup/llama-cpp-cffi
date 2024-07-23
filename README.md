@@ -14,6 +14,8 @@
 
 **Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU** and **CUDA 12.5** execution.
 
+NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musllinux_1_2`), but we are working on both Windows and MacOS versions.
+
 ## Install
 
 Basic library install:
@@ -22,13 +24,15 @@ Basic library install:
 pip install llama-cpp-cffi
 ```
 
-In case you want [Chat Completions API by OpenAI ©](https://platform.openai.com/docs/overview) compatible API:
+In case you want [OpenAI © Chat Completions API](https://platform.openai.com/docs/overview) compatible API:
 
 ```bash
 pip install llama-cpp-cffi[openai]
 ```
 
-**IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12.5**. If you don't have CUDA 12.5 installed follow instructions here: https://developer.nvidia.com/cuda-downloads
+**IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12.5**. If you don't have CUDA 12.5 installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
+
+GPU Compute Capability: `compute_61`, `compute_70`, `compute_75`, `compute_80`, `compute_86`, `compute_89` covering from most of GPUs from **GeForce GTX 1050** to **NVIDIA H100**. [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
 
 ## Example
 
@@ -37,8 +41,8 @@ pip install llama-cpp-cffi[openai]
 `examples/demo_0.py`
 
 ```python
-from llama import llama_generate, Model, Options
-from llama import get_config
+from llama import llama_generate, get_config, Model, Options
+
 
 model = Model(
     creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
@@ -69,7 +73,7 @@ for chunk in llama_generate(options):
 print()
 ```
 
-### OpenAI © compatible Chat Completions
+### OpenAI © compatible Chat Completions API - Server and Client
 
 Run OpenAI compatible server:
 
@@ -77,11 +81,12 @@ Run OpenAI compatible server:
 python -B llama/openai.py
 ```
 
-Run example `examples/demo_1.py` using OpenAI module:
+Run OpenAI compatible client `examples/demo_1.py`:
 
 ```python
 from openai import OpenAI
 from llama import Model
+
 
 client = OpenAI(
     base_url = 'http://localhost:11434/v1',
