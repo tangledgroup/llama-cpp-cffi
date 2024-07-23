@@ -18,7 +18,7 @@ def clone_llama_cpp():
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-fno-rtti'
+    env['CXXFLAGS'] = '-O3'
     
     # if 'PYODIDE' in env and env['PYODIDE'] == '1':
     #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
@@ -61,8 +61,8 @@ def build_cpu(*args, **kwargs):
         ''',
         libraries=['stdc++'],
         extra_objects=['../llama.cpp/llama_cli.a'],
-        extra_compile_args=['-Os'],
-        extra_link_args=['-O3', '-Os', '-flto', '-ffunction-sections', '-fdata-sections', '-Wl,--gc-sections'],
+        extra_compile_args=['-O3'],
+        extra_link_args=['-O3', '-flto'],
     )
 
     ffibuilder.compile(tmpdir='build', verbose=True)
@@ -98,19 +98,15 @@ def build_linux_cuda_12_5(*args, **kwargs):
 
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
-    env['CUDA_DOCKER_ARCH'] = 'compute_90'
-    env['CXXFLAGS'] = '-fno-rtti'
+    env['CUDA_DOCKER_ARCH'] = 'compute_61'
+    env['CXXFLAGS'] = '-O3'
     env['NVCCFLAGS'] = '\
-            -gencode arch=compute_61,code=sm_61 \
             -gencode arch=compute_70,code=sm_70 \
             -gencode arch=compute_75,code=sm_75 \
             -gencode arch=compute_80,code=sm_80 \
             -gencode arch=compute_86,code=sm_86 \
             -gencode arch=compute_89,code=sm_89 \
-            -Xcompiler -s \
-            -Xcompiler -fno-exceptions -Xcompiler -fno-rtti \
-            -Xcompiler -ffunction-sections -Xcompiler -fdata-sections \
-            -Xlinker --gc-sections'
+            -gencode arch=compute_90,code=sm_90'
 
     pprint(env)
 

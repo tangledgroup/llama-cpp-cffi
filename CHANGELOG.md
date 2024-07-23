@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.1.5
+
+Fixed:
+    - Build for linux, upx uses best compression option, 7z uses more aggressive compression.
+    - Do not use UPX for shared/dynamic library compression.
+
 ## v0.1.4
 
 Added:

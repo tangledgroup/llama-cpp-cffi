@@ -11,6 +11,9 @@ pip install poetry
 # local build
 # poetry install --all-extras
 
+# clean build
+poetry run clean
+
 # x86_64
 poetry run cibuildwheel --output-dir wheelhouse --platform linux --arch x86_64 .
 
