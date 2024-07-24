@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.5"
+version = "0.1.6"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
@@ -13,11 +13,11 @@ include = [{path = "llama/*.so"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 attrs = "^23.2.0"
-huggingface-hub = "^0.24.0"
+huggingface-hub = "^0.24.1"
 cffi = "^1.16.0"
 setuptools = "^71.0.3"
 psutil = "^6.0.0"
-transformers = "^4.42.4"
+transformers = "^4.43.1"
 jinja2 = "^3.1.4"
 sentencepiece = "^0.2.0"
 protobuf = "^5.27.2"
@@ -68,8 +68,7 @@ repair-wheel-command = """
 for file in {wheel}; do
     tempdir=$(mktemp -d)
     unzip -d "$tempdir" "$file"
-    # (cd "$tempdir" && 7z a -tzip -mx=9 -mfb=258 -mpass=15 -mmt=on "{dest_dir}/$(basename $file)" .)
-    (cd "$tempdir" && 7z a -tzip -mx=9 -mm=Deflate64 -mmt=on "{dest_dir}/$(basename $file)" .)
+    (cd "$tempdir" && 7z a -tzip -mx=9 -mfb=258 -mpass=15 -mmt=on "{dest_dir}/$(basename $file)" .)
     rm -rf "$tempdir"
 done
 """

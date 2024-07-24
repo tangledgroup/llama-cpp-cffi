@@ -51,8 +51,8 @@ async def chat_completions(request):
 
     model = Model(*model.split(':'))
     config: AutoConfig = get_config(model.creator_hf_repo)
-    ctx_size: int = config.max_position_embeddings
-    
+    ctx_size: int = config.max_position_embeddings if max_tokens is None else max_tokens
+
     options = Options(
         seed=seed,
         ctx_size=ctx_size,

@@ -1,5 +1,5 @@
 from openai import OpenAI
-from llama import Model
+from llama.model import Model
 
 
 client = OpenAI(

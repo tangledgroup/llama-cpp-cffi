@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v0.1.6
+
+Changed:
+    - Updated `huggingface-hub`.
+
+Fixed:
+    - `llama.__init__` now correctly imports submodules and handles CPU and CUDA backends.
+    - OpenAI: `ctx_size: int = config.max_position_embeddings if max_tokens is None else max_tokens`.
+
 ## v0.1.5
 
 Fixed:
