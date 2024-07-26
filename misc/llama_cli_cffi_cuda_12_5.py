@@ -1,6 +1,5 @@
 __all__ = ['llama_generate', 'Options']
 
-import os
 import json
 import ctypes
 from queue import Queue
@@ -9,14 +8,13 @@ from typing import Iterator
 from threading import Thread
 from functools import partial
 
-os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = '1'
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
 from .formatter import get_tokenizer, get_special_tokens, format_messages
 from .model import Model
 from .options import Options, convert_options_to_bytes
-from ._llama_cli_cpu import lib, ffi
+from ._llama_cli_cuda_12_5 import lib, ffi
 
 
 _LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
@@ -131,6 +129,13 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
         'should_stop': False,
         'special_tokens': get_special_tokens(tokenizer),
     }
+
+    if isinstance(options.stop, str):
+        metadata['special_tokens'].append(options.stop)
+    elif isinstance(options.stop, (list, tuple)):
+        metadata['special_tokens'].extend(options.stop)
+
+    print(f'{metadata = }')
 
     argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(options)
     argv = [ffi.new('char[]', n) for n in argv]

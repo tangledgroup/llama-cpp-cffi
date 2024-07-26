@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.1.7
+
+Added:
+    - Support for `stop` tokens/words.
+
+Changed:
+    - `llama/llama_cli.py` unified CPU and CUDA 12.5 modules into single module.
+
+Removed:
+    - Removed separate examples for CPU and CUDA 12.5 modules.
+
 ## v0.1.6
 
 Changed:

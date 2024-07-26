@@ -10,6 +10,7 @@ from llama import llama_generate, get_config, Model, Options, AutoConfig
 async def generate_response(options: Options) -> AsyncIterator[str]:
     for chunk in llama_generate(options):
         yield chunk
+        await asyncio.sleep(0.0)
 
 
 async def chat_completions(request):
@@ -26,7 +27,7 @@ async def chat_completions(request):
     response_format = data.get('response_format') # TODO: https://platform.openai.com/docs/api-reference/chat/create#chat-create-response_format
     seed = data.get('seed')
     service_tier = data.get('service_tier')
-    stop = data.get('stop') # TODO: https://platform.openai.com/docs/api-reference/chat/create#chat-create-stop
+    stop = data.get('stop')
     stream = data.get('stream', False)
     stream_options = data.get('stream_options')
     temperature = data.get('temperature', 0.0) # NOTE: https://platform.openai.com/docs/api-reference/chat/create#chat-create-temperature
@@ -60,6 +61,7 @@ async def chat_completions(request):
         prompt=messages,
         top_p=top_p,
         model=model,
+        stop=stop,
     )
 
     if stream:

@@ -17,7 +17,7 @@ messages = [
     {'role': 'system', 'content': 'You are a helpful assistant.'},
     {'role': 'user', 'content': '1 + 1 = ?'},
     {'role': 'assistant', 'content': '2'},
-    {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'}
+    {'role': 'user', 'content': 'Evaluate 1 + 2 in Python. Use syntax:\n```python\n\n```\n'},
 ]
 
 
@@ -28,6 +28,7 @@ def demo_chat_completions():
         model=str(model),
         messages=messages,
         temperature=0.0,
+        stop=['```\n'],
     )
 
     print(response.choices[0].message.content)
@@ -40,6 +41,7 @@ def demo_chat_completions_stream():
         model=str(model),
         messages=messages,
         temperature=0.0,
+        stop=['```\n'],
         stream=True,
     )
 
