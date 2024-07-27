@@ -119,7 +119,12 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
 
     options: Options = deepcopy(options)
     model: Model = options.model
-    tokenizer = get_tokenizer(model.creator_hf_repo)
+
+    if model.tokenizer_hf_repo:
+        tokenizer = get_tokenizer(model.tokenizer_hf_repo)
+    else:
+        tokenizer = get_tokenizer(model.creator_hf_repo)
+
     options.model = hf_hub_download(repo_id=model.hf_repo, filename=model.hf_file)
 
     if isinstance(options.prompt, list):

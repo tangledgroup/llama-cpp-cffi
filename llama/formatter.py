@@ -139,18 +139,6 @@ def get_tokenizer(model_id: str) -> AutoTokenizer:
     if not tokenizer.chat_template:
         tokenizer.chat_template = get_fallback_chat_template(tokenizer)
 
-    # print(f'{type(tokenizer) = }')
-    # print(f'{dir(tokenizer) = }')
-    # print(f'{tokenizer.special_tokens_map = }')
-    # print(f'{tokenizer.all_special_tokens = }')
-    # print(f'{tokenizer.all_special_tokens_extended = }')
-    # print(f'{tokenizer.additional_special_tokens = }')
-    # print(f'{tokenizer.bos_token = }')
-    # print(f'{tokenizer.eos_token = }')
-    # print(f'{tokenizer.cls_token = }')
-    # print(f'{tokenizer.mask_token = }')
-    # print(f'{tokenizer.pad_token = }')
-    # print(f'{tokenizer.sep_token = }')
     return tokenizer
 
 

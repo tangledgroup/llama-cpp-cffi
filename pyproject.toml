@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.7"
+version = "0.1.8"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
@@ -52,11 +52,11 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf install -y epel-release
     dnf install -y unzip p7zip p7zip-plugins
 else
-    apk -U add upx unzip 7zip
+    apk -U add upx unzip 7zip libexecinfo-dev
 fi
 """
-skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
-# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686"]
+# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
+skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686"]
 manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
 manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
 manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
@@ -64,14 +64,15 @@ manylinux-pypy_aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
 musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:latest"
 musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:latest"
 build-verbosity=3
-repair-wheel-command = """
-for file in {wheel}; do
-    tempdir=$(mktemp -d)
-    unzip -d "$tempdir" "$file"
-    (cd "$tempdir" && 7z a -tzip -mx=9 -mfb=258 -mpass=15 -mmt=on "{dest_dir}/$(basename $file)" .)
-    rm -rf "$tempdir"
-done
-"""
+# repair-wheel-command = """
+# for file in {wheel}; do
+#     tempdir=$(mktemp -d)
+#     unzip -d "$tempdir" "$file"
+#     (cd "$tempdir" && 7z a -tzip -mx=9 -mfb=258 -mpass=15 -mmt=on "{dest_dir}/$(basename $file)" .)
+#     rm -rf "$tempdir"
+# done
+# """
+repair-wheel-command = ""
 environment = {"LD_LIBRARY_PATH" = "/project/cuda-12.5.1/dist/lib64:/project/cuda-12.5.1/dist/targets/x86_64-linux/lib:/project/cuda-12.5.1/dist/lib64/stubs:$LD_LIBRARY_PATH", "CUDA_HOME" = "/project/cuda-12.5.1/dist"}
 
 [tool.cibuildwheel.pyodide]

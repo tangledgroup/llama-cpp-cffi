@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.8
+
+Added:
+    - `Model.tokenizer_hf_repo` as optional in case when `Model.creator_hf_repo` cannot be used to tokenize / format prompt/messages.
+
 ## v0.1.7
 
 Added:
