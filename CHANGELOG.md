@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.9
+
+Changed:
+    - Build scripts now have separate step/function `cuda_12_5_1_setup` which setups CUDA 12.5.1 env for build-time.
+
 ## v0.1.8
 
 Added:

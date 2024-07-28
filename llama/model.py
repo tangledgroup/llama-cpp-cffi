@@ -14,4 +14,7 @@ class Model:
 
 
     def __str__(self):
-        return f'{self.creator_hf_repo}:{self.hf_repo}:{self.hf_file}:{self.tokenizer_hf_repo}'
+        if self.tokenizer_hf_repo:
+            return f'{self.creator_hf_repo}:{self.hf_repo}:{self.hf_file}:{self.tokenizer_hf_repo}'
+        else:
+            return f'{self.creator_hf_repo}:{self.hf_repo}:{self.hf_file}'

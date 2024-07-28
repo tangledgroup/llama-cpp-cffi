@@ -15,6 +15,58 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_3.patch'], check=True)
 
 
+def cuda_12_5_1_setup(*args, **kwargs):
+    #
+    # cuda env
+    #
+    cuda_file = 'cuda_12.5.1_555.42.06_linux.run'
+    cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.5.1/local_installers/{cuda_file}'
+    cuda_output_dir = os.path.abspath('./cuda-12.5.1')
+    cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
+
+    # download cuda file
+    if not os.path.exists(cuda_file_path):
+        cmd = ['mkdir', '-p', f'{cuda_output_dir}']
+        
+        subprocess.run(cmd, check=True)
+        subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
+    
+    # extract cuda file
+    cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
+    subprocess.run(cmd, check=True)
+    
+    cmd = [
+        f'{cuda_output_dir}/{cuda_file}',
+        '--tar',
+        'mxf',
+        '--wildcards',
+        './builds/cuda_cccl/*',
+        './builds/cuda_cudart/*',
+        './builds/cuda_nvcc/*',
+        './builds/libcublas/*',
+        '-C',
+        cuda_output_dir,
+    ]
+    subprocess.run(cmd, cwd=cuda_output_dir, check=True)
+
+    cmd = ['mkdir', '-p', f'{cuda_output_dir}/dist']
+    subprocess.run(cmd, check=True)
+
+    cmd = f'cp -r {cuda_output_dir}/builds/cuda_cccl/* {cuda_output_dir}/dist'
+    subprocess.run(cmd, shell=True, check=True)
+
+    cmd = f'cp -r {cuda_output_dir}/builds/cuda_cudart/* {cuda_output_dir}/dist'
+    subprocess.run(cmd, shell=True, check=True)
+
+    cmd = f'cp -r {cuda_output_dir}/builds/cuda_nvcc/* {cuda_output_dir}/dist'
+    subprocess.run(cmd, shell=True, check=True)
+
+    cmd = f'cp -r {cuda_output_dir}/builds/libcublas/* {cuda_output_dir}/dist'
+    subprocess.run(cmd, shell=True, check=True)
+
+    return cuda_output_dir
+
+
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
@@ -91,10 +143,11 @@ def build_linux_cuda_12_5(*args, **kwargs):
     #
     # cuda env
     #
-    cuda_file = 'cuda_12.5.1_555.42.06_linux.run'
-    cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.5.1/local_installers/{cuda_file}'
-    cuda_output_dir = os.path.abspath('./cuda-12.5.1')
-    cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
+    # cuda_file = 'cuda_12.5.1_555.42.06_linux.run'
+    # cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.5.1/local_installers/{cuda_file}'
+    # cuda_output_dir = os.path.abspath('./cuda-12.5.1')
+    # cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
+    cuda_output_dir = cuda_12_5_1_setup()
 
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
@@ -110,45 +163,45 @@ def build_linux_cuda_12_5(*args, **kwargs):
 
     pprint(env)
 
-    # download cuda file
-    if not os.path.exists(cuda_file_path):
-        cmd = ['mkdir', '-p', f'{cuda_output_dir}']
-        
-        subprocess.run(cmd, check=True)
-        subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
+    # # download cuda file
+    # if not os.path.exists(cuda_file_path):
+    #     cmd = ['mkdir', '-p', f'{cuda_output_dir}']
+    # 
+    #     subprocess.run(cmd, check=True)
+    #     subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
     
-    # extract cuda file
-    cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
-    subprocess.run(cmd, check=True)
-    
-    cmd = [
-        f'{cuda_output_dir}/{cuda_file}',
-        '--tar',
-        'mxf',
-        '--wildcards',
-        './builds/cuda_cccl/*',
-        './builds/cuda_cudart/*',
-        './builds/cuda_nvcc/*',
-        './builds/libcublas/*',
-        '-C',
-        cuda_output_dir,
-    ]
-    subprocess.run(cmd, cwd=cuda_output_dir, check=True)
-
-    cmd = ['mkdir', '-p', f'{cuda_output_dir}/dist']
-    subprocess.run(cmd, check=True)
-
-    cmd = f'cp -r {cuda_output_dir}/builds/cuda_cccl/* {cuda_output_dir}/dist'
-    subprocess.run(cmd, shell=True, check=True)
-
-    cmd = f'cp -r {cuda_output_dir}/builds/cuda_cudart/* {cuda_output_dir}/dist'
-    subprocess.run(cmd, shell=True, check=True)
-
-    cmd = f'cp -r {cuda_output_dir}/builds/cuda_nvcc/* {cuda_output_dir}/dist'
-    subprocess.run(cmd, shell=True, check=True)
-
-    cmd = f'cp -r {cuda_output_dir}/builds/libcublas/* {cuda_output_dir}/dist'
-    subprocess.run(cmd, shell=True, check=True)
+    # # extract cuda file
+    # cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
+    # subprocess.run(cmd, check=True)
+    #
+    # cmd = [
+    #     f'{cuda_output_dir}/{cuda_file}',
+    #     '--tar',
+    #     'mxf',
+    #     '--wildcards',
+    #     './builds/cuda_cccl/*',
+    #     './builds/cuda_cudart/*',
+    #     './builds/cuda_nvcc/*',
+    #     './builds/libcublas/*',
+    #     '-C',
+    #     cuda_output_dir,
+    # ]
+    # subprocess.run(cmd, cwd=cuda_output_dir, check=True)
+    #
+    # cmd = ['mkdir', '-p', f'{cuda_output_dir}/dist']
+    # subprocess.run(cmd, check=True)
+    #
+    # cmd = f'cp -r {cuda_output_dir}/builds/cuda_cccl/* {cuda_output_dir}/dist'
+    # subprocess.run(cmd, shell=True, check=True)
+    #
+    # cmd = f'cp -r {cuda_output_dir}/builds/cuda_cudart/* {cuda_output_dir}/dist'
+    # subprocess.run(cmd, shell=True, check=True)
+    #
+    # cmd = f'cp -r {cuda_output_dir}/builds/cuda_nvcc/* {cuda_output_dir}/dist'
+    # subprocess.run(cmd, shell=True, check=True)
+    #
+    # cmd = f'cp -r {cuda_output_dir}/builds/libcublas/* {cuda_output_dir}/dist'
+    # subprocess.run(cmd, shell=True, check=True)
 
     #
     # build llama.cpp
