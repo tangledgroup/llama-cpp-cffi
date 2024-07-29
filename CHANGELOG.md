@@ -2,6 +2,10 @@
 
 ## v0.1.9
 
+Added:
+    - Support for default CPU tinyBLAS (llamafile, sgemm) builds
+    - Support for CPU OpenBLAS (GGML_OPENBLAS) builds
+
 Changed:
     - Build scripts now have separate step/function `cuda_12_5_1_setup` which setups CUDA 12.5.1 env for build-time.
 
