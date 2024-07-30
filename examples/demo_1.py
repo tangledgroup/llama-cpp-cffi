@@ -29,6 +29,15 @@ def demo_chat_completions():
         messages=messages,
         temperature=0.0,
         stop=['```\n'],
+
+        # llama-cpp-cffi
+        extra_body=dict(
+            batch_size=512,
+            n_gpu_layers=22,
+            main_gpu=0,
+            cont_batching=True,
+            flash_attn=True,
+        ),
     )
 
     print(response.choices[0].message.content)
@@ -43,6 +52,15 @@ def demo_chat_completions_stream():
         temperature=0.0,
         stop=['```\n'],
         stream=True,
+
+        # llama-cpp-cffi
+        extra_body=dict(
+            batch_size=512,
+            n_gpu_layers=22,
+            main_gpu=0,
+            cont_batching=True,
+            flash_attn=True,
+        ),
     )
 
     for chunk in response:

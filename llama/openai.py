@@ -1,10 +1,15 @@
 import json
 import asyncio
+from pprint import pprint
 from typing import AsyncIterator
 
 from aiohttp import web
 
-from llama import llama_generate, get_config, Model, Options, AutoConfig
+from .formatter import get_config, AutoConfig
+from .llama_cli import llama_generate
+from .model import Model
+from .options import Options
+from .util import is_cuda_available
 
 
 async def generate_response(options: Options) -> AsyncIterator[str]:
@@ -15,7 +20,10 @@ async def generate_response(options: Options) -> AsyncIterator[str]:
 
 async def chat_completions(request):
     data = await request.json()
-    messages = data['messages']
+    print('data:')
+    pprint(data)
+    prompt = data.get('prompt')
+    messages = data.get('messages')
     model = data['model']
     frequency_penalty = data.get('frequency_penalty')
     logit_bias = data.get('logit_bias')
@@ -37,6 +45,16 @@ async def chat_completions(request):
     parallel_tool_calls = data.get('parallel_tool_calls', True)
     user = data.get('user')
 
+    # llama-cpp-cffi
+    batch_size = data.get('batch_size')
+    flash_attn = data.get('flash_attn')
+    cont_batching = data.get('cont_batching')
+    gpu_layers = data.get('gpu_layers')
+    gpu_layers_draft = data.get('gpu_layers_draft')
+    split_mode = data.get('split_mode')
+    tensor_split = data.get('tensor_split')
+    main_gpu = data.get('main_gpu')
+
     assert frequency_penalty is None
     assert logit_bias is None
     assert logprobs == False
@@ -57,12 +75,22 @@ async def chat_completions(request):
     options = Options(
         seed=seed,
         ctx_size=ctx_size,
+        batch_size=batch_size,
         predict=max_tokens,
-        prompt=messages,
+        prompt=prompt or messages,
         top_p=top_p,
         model=model,
         stop=stop,
     )
+
+    if is_cuda_available():
+        options.flash_attn = flash_attn
+        options.cont_batching = cont_batching
+        options.gpu_layers = gpu_layers
+        options.gpu_layers_draft = gpu_layers_draft
+        options.split_mode = split_mode
+        options.tensor_split = tensor_split
+        options.main_gpu = main_gpu
 
     if stream:
         response = web.StreamResponse()

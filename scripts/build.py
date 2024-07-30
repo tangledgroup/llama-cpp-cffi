@@ -172,7 +172,10 @@ def build_cpu_openblas(*args, **kwargs):
         typedef int (*_llama_should_stop_t)(void);
         int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
         ''',
-        libraries=['stdc++'],
+        libraries=[
+            'stdc++',
+            'openblas',
+        ],
         extra_objects=['../llama.cpp/llama_cli.a'],
         extra_compile_args=['-O3'],
         extra_link_args=['-O3', '-flto'],
@@ -285,9 +288,9 @@ def build_linux_cuda_12_5(*args, **kwargs):
 
 def build(*args, **kwargs):
     env = os.environ.copy()
-    env['GGML_CPU'] = '1'
-    env['GGML_OPENBLAS'] = '0'
-    env['GGML_CUDA'] = '0'
+    # env['GGML_CPU'] = '1'
+    # env['GGML_OPENBLAS'] = '0'
+    # env['GGML_CUDA'] = '0'
 
     # clean, clone
     clean()

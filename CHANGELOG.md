@@ -1,13 +1,27 @@
 # CHANGELOG
 
+## v0.1.10
+
+Added:
+    - In `openai`, support for `prompt` and `extra_body`. Reference: https://github.com/openai/openai-python/blob/195c05a64d39c87b2dfdf1eca2d339597f1fce03/src/openai/resources/completions.py#L41
+    - Pass `llama-cli` options to `openai`.
+    - `util` module with `is_cuda_available` function.
+    - `openai` supports both `prompt` and `messages`. Reference: https://github.com/openai/openai-python/blob/195c05a64d39c87b2dfdf1eca2d339597f1fce03/src/openai/resources/completions.py#L45
+
 ## v0.1.9
 
 Added:
-    - Support for default CPU tinyBLAS (llamafile, sgemm) builds
-    - Support for CPU OpenBLAS (GGML_OPENBLAS) builds
+    - Support for default CPU tinyBLAS (llamafile, sgemm) builds.
+    - Support for CPU OpenBLAS (GGML_OPENBLAS) builds.
 
 Changed:
     - Build scripts now have separate step/function `cuda_12_5_1_setup` which setups CUDA 12.5.1 env for build-time.
+
+Fixed:
+    - Stop thread in `llama_generate` on `GeneratorExit`.
+
+Removed:
+    - `callback` parameter in `llama_generate` and dependent functions.
 
 ## v0.1.8
 

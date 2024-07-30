@@ -8,19 +8,16 @@ from typing import Iterator
 from threading import Thread
 from functools import partial
 
-from numba import cuda
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
 from .formatter import get_tokenizer, get_special_tokens, format_messages
 from .model import Model
 from .options import Options, convert_options_to_bytes
+from .util import is_cuda_available
 
-if cuda.is_available():
-    try:
-        from ._llama_cli_cuda_12_5 import lib, ffi
-    except ImportError:
-        from ._llama_cli_cpu import lib, ffi
+if is_cuda_available():
+    from ._llama_cli_cuda_12_5 import lib, ffi
 else:
     from ._llama_cli_cpu import lib, ffi
 
@@ -29,7 +26,7 @@ _LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 _LLAMA_SHOULD_STOP_T = ctypes.CFUNCTYPE(ctypes.c_int)
 
 
-def _llama_yield_token_func(chunk_bytes: bytes, queue=None, callback=None, metadata=None):
+def _llama_yield_token_func(chunk_bytes: bytes, queue: Queue, metadata: dict):
     stop_on_special_token = metadata['stop_on_special_token']
     special_tokens = metadata['special_tokens']
 
@@ -83,13 +80,13 @@ def _llama_yield_token_func(chunk_bytes: bytes, queue=None, callback=None, metad
     metadata['buffer'] = ''
 
 
-def _llama_should_stop_func(queue=None, callback=None, metadata=None) -> int:
+def _llama_should_stop_func(queue: Queue, metadata: dict) -> int:
     return 1 if metadata['should_stop'] else 0
 
 
-def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
-    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, callback=callback, metadata=metadata))
-    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, callback=callback, metadata=metadata))
+def _llama_cli_main(argc, argv, queue: Queue, metadata: dict):
+    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, metadata=metadata))
+    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, metadata=metadata))
 
     _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
     _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
@@ -98,22 +95,15 @@ def _llama_cli_main(argc, argv, queue=None, callback=None, metadata=None):
     cffi__llama_should_stop_callback = ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
 
     r = lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback, 1)
-    
-    if r != 0:
-        queue.put(None)
-        return
-    
-    if queue is not None:
-        queue.put(None)
-    elif callback is not None:
-        callback(None)
+    # assert r == 0
+    queue.put(None)
 
 
-def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
+def llama_generate(options: Options) -> Iterator[str]:
     tokenizer: AutoTokenizer
     creator_hf_repo: str
     prompt: str
-    queue: Queue | None
+    queue: Queue
 
     assert options.model and isinstance(options.model, Model)
 
@@ -130,10 +120,7 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
     if isinstance(options.prompt, list):
         options.prompt = format_messages(tokenizer, options.prompt)
 
-    if callback:
-        queue = None
-    else:
-        queue = Queue()
+    queue = Queue()
 
     metadata: dict = {
         'prev_chunk_bytes': b'',
@@ -152,13 +139,10 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
     argv = [ffi.new('char[]', n) for n in argv]
     argc = len(argv)
 
-    if callback:
-        _llama_cli_main(argc, argv, queue, callback, metadata)
-        yield ''
-    else:
-        t = Thread(target=_llama_cli_main, args=(argc, argv, queue, callback, metadata))
-        t.start()
+    t = Thread(target=_llama_cli_main, args=(argc, argv, queue, metadata))
+    t.start()
 
+    try:
         while True:
             chunk = queue.get()
             queue.task_done()
@@ -167,6 +151,9 @@ def llama_generate(options: Options, callback=None) -> Iterator[str] | None:
                 break
 
             yield chunk
+    except GeneratorExit:
+        # give signal to thread to stop
+        metadata['should_stop'] = True
 
-        queue.join()
-        t.join()
+    queue.join()
+    t.join()
