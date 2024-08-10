@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.1.11
+
+Changed:
+    - openai: allow import of `routes` and `v1_chat_completions` handler.
+    - examples/demo_0.py
+
 ## v0.1.10
 
 Added:

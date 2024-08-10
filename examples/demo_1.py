@@ -15,11 +15,10 @@ model = Model(
 
 messages = [
     {'role': 'system', 'content': 'You are a helpful assistant.'},
-    {'role': 'user', 'content': '1 + 1 = ?'},
-    {'role': 'assistant', 'content': '2'},
-    {'role': 'user', 'content': 'Evaluate 1 + 2 in Python. Use syntax:\n```python\n\n```\n'},
+    {'role': 'user', 'content': 'You will write Python code in ```python...``` block.'},
+    {'role': 'assistant', 'content': 'What is the task that you want to solve?'},
+    {'role': 'user', 'content': 'Write Python function to evaluate expression a + b arguments, and return result.'},
 ]
-
 
 def demo_chat_completions():
     print('demo_chat_completions:')
