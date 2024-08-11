@@ -27,7 +27,7 @@ def demo_0():
         predict=-2,
         model=model,
         prompt=messages,
-        stop=['<|system|>', '<|user|>', '<|assistant|>', '<|end|>'],
+        stop=['<|system|>', '<|user|>', '<|assistant|>', '<|end|>', '</s>'],
     )
 
     for chunk in llama_generate(options):
@@ -59,7 +59,7 @@ def demo_1():
         predict=-2,
         model=model,
         prompt=messages,
-        stop=['<|system|>', '<|user|>', '<|assistant|>', '<|end|>'],
+        stop=['<|system|>', '<|user|>', '<|assistant|>', '<|end|>', '</s>'],
     )
 
     for chunk in llama_generate(options):
@@ -107,6 +107,19 @@ def demo_2():
         """
         return a + b
 
+    def sub(a: float, b: float) -> float:
+        """
+        A function that subtracts two numbers
+
+        Args:
+            a: The first number to subtract
+            b: The second number to subtract
+
+        Returns:
+            Number that is subtraction of a and b
+        """
+        return a - b
+
     def mul(a: float, b: float) -> float:
         """
         A function that multiplies two numbers
@@ -118,7 +131,7 @@ def demo_2():
         Returns:
             Number that is multiplication of a and b
         """
-        return a + b
+        return a * b
 
     def div(a: float, b: float) -> float:
         """
@@ -134,38 +147,55 @@ def demo_2():
         assert b != 0
         return a / b
 
-    tools = [add, mul, div]
-    tools = [get_json_schema(n) for n in tools]
-    # tools = [json.dumps(n, indent=2) for n in tools]
-    # tools_str: str = '\n'.join(tools)
-    tools_str: str = json.dumps(tools, indent=2)
-    # pprint(tools)
+    def pow(a: float, b: float) -> float:
+        """
+        A function that calculates a raised to the power b
 
+        Args:
+            a: The first number to raise to the power of b
+            b: The second number to be used to raise a
+
+        Returns:
+            Number that is a raised to the power b
+        """
+        return a * b
+
+    tools = [add, sub, mul, div, pow]
+    tools = [get_json_schema(n) for n in tools]
+    tools_str: str = json.dumps(tools, indent=2)
+    
     system_content = (
-        'You are a function calling AI model. '
-        'You may call one or more functions to assist with the user query. '
-        'You need to keep order of function calls. '
-        'Use only functions and argument names that are provided for that function. '
+        'You are a tool calling AI model. '
+        'You may call one or more tools to assist with the user query. '
+        'You need to keep order of tool calls. '
+        'Use only tools and arguments that are provided for that tool. '
+        'Use special value `"$R"` for all unknown or missing arguments of a tool. '
         'Here are the available tools:\n'
         '```json\n'
         f'{tools_str}\n'
         '```\n'
         '\n'
-        # 'For each function call return a JSON object with function name and arguments within as follows:\n'
-        # '[\n'
-        # '  {"function": <function-name>, "arguments": {"arg1": <arg-value>, "arg2": <arg-value>, ...}},\n'
-        # '  ...'
-        # ']\n'
+        # 'Use special value `"$R"` for all values or results from previous tool calls. '
+        # 'Use special value `"$R"` for all unknown or missing arguments. '
+        # 'Do not try to evaluate or guess arguments. '
+        # 'Do not evaluate special `"$R"` values, just pass them as value to tool calls. '
         # '\n'
-        'Use special value `"$R"` for all values or results from previous function calls. '
-        'Don\'t evaluate special `"$R"` values, just pass them as value to function calls. '
-        # 'For example: {"function": "function_name", "arguments": {"x": "$R", "y": -10, "z": "$R"}}\n'
-        '\n'
-        'Do not try to evaluate, just output function calls without explanations.'
+        # 'Do not try to evaluate, just output tool calls without explanations.'
+        # 'Do not try to evaluate or guess arguments. '
+        # 'Use special value `"$R"` for all unknown or missing arguments. '
     )
 
     messages = [
         {'role': 'system', 'content': system_content},
+        {'role': 'user', 'content': 'Divide by 15 with 3. Subtract 3.'},
+        {'role': 'assistant', 'content': (
+            '```json\n'
+            '[\n'
+            '  {"function": "div", "arguments": {"a": 15, "b": 3}},\n'
+            '  {"function": "sub", "arguments": {"a": "$R", "b": 3}},\n'
+            ']\n'
+            '```'
+        )},
         {'role': 'user', 'content': 'Multiply 3 with 5. Divide by 15. Add 3.'},
         {'role': 'assistant', 'content': (
             '```json\n'
@@ -179,7 +209,7 @@ def demo_2():
         {'role': 'user', 'content': 'Add 1 and 2. Then multiply it with 5. Result divide by 3.'},
     ]
 
-    pprint(messages)
+    # pprint(messages)
 
     options = Options(
         ctx_size=config.max_position_embeddings,
@@ -187,7 +217,7 @@ def demo_2():
         model=model,
         prompt=messages,
         temp=0,
-        stop=['<|system|>', '<|user|>', '<|assistant|>', '<|end|>'],
+        stop=['<|system|>', '<|user|>', '<|assistant|>', '<|end|>', '</s>'],
     )
 
     for chunk in llama_generate(options):
