@@ -216,6 +216,6 @@ def demo_2():
     print()
 
 if __name__ == '__main__':
-    # demo_0()
-    # demo_1()
+    demo_0()
+    demo_1()
     demo_2()
