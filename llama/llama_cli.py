@@ -119,8 +119,8 @@ def llama_generate(options: Options) -> Iterator[str]:
 
     if isinstance(options.prompt, list):
         options.prompt = format_messages(tokenizer, options.prompt)
-        print('options.prompt:')
-        print(options.prompt)
+        # print('options.prompt:')
+        # print(options.prompt)
 
     if options.no_display_prompt == False:
         options.no_display_prompt = None

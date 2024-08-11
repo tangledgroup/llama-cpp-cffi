@@ -83,16 +83,22 @@ def demo_2():
     # )
 
     model = Model(
-        creator_hf_repo='squeeze-ai-lab/TinyAgent-1.1B',
-        hf_repo='squeeze-ai-lab/TinyAgent-1.1B-GGUF',
-        hf_file='TinyAgent-1.1B-Q4_K_M.gguf',
-        tokenizer_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
+        creator_hf_repo='TinyLlama/TinyLlama_v1.1_math_code',
+        hf_repo='mjschock/TinyLlama_v1.1_math_code-Q4_K_M-GGUF',
+        hf_file='tinyllama_v1.1_math_code-q4_k_m.gguf',
     )
+
+    # # https://github.com/SqueezeAILab/TinyAgent/blob/0074615dd05ae632cc2321f63b4290682897334d/src/llm_compiler/planner.py#L44
+    #
+    # model = Model(
+    #     creator_hf_repo='squeeze-ai-lab/TinyAgent-1.1B',
+    #     hf_repo='squeeze-ai-lab/TinyAgent-1.1B-GGUF',
+    #     hf_file='TinyAgent-1.1B-Q4_K_M.gguf',
+    #     tokenizer_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
+    # )
 
     print(model)
     config = get_config(model.creator_hf_repo)
-
-    # https://github.com/SqueezeAILab/TinyAgent/blob/0074615dd05ae632cc2321f63b4290682897334d/src/llm_compiler/planner.py#L44
     
     def add(a: float, b: float) -> float:
         """
@@ -169,30 +175,21 @@ def demo_2():
         'You may call one or more tools to assist with the user query. '
         'You need to keep order of tool calls. '
         'Use only tools and arguments that are provided for that tool. '
-        'Use special value `"$R"` for all unknown or missing arguments of a tool. '
-        'Here are the available tools:\n'
+        'Use `"$R"` for all unknown or missing arguments. '
+        'Here are the available tools/functions:\n'
         '```json\n'
         f'{tools_str}\n'
-        '```\n'
-        '\n'
-        # 'Use special value `"$R"` for all values or results from previous tool calls. '
-        # 'Use special value `"$R"` for all unknown or missing arguments. '
-        # 'Do not try to evaluate or guess arguments. '
-        # 'Do not evaluate special `"$R"` values, just pass them as value to tool calls. '
-        # '\n'
-        # 'Do not try to evaluate, just output tool calls without explanations.'
-        # 'Do not try to evaluate or guess arguments. '
-        # 'Use special value `"$R"` for all unknown or missing arguments. '
+        '```'
     )
 
     messages = [
         {'role': 'system', 'content': system_content},
-        {'role': 'user', 'content': 'Divide by 15 with 3. Subtract 3.'},
+        {'role': 'user', 'content': 'Divide by 18 with 3. Subtract 3.'},
         {'role': 'assistant', 'content': (
             '```json\n'
             '[\n'
-            '  {"function": "div", "arguments": {"a": 15, "b": 3}},\n'
-            '  {"function": "sub", "arguments": {"a": "$R", "b": 3}},\n'
+            '  {"function": "div", "arguments": {"a": 18, "b": 3}},\n'
+            '  {"function": "sub", "arguments": {"a": "$R", "b": 3}}\n'
             ']\n'
             '```'
         )},
@@ -202,14 +199,21 @@ def demo_2():
             '[\n'
             '  {"function": "mul", "arguments": {"a": 3, "b": 5}},\n'
             '  {"function": "div", "arguments": {"a": "$R", "b": 15}},\n'
-            '  {"function": "add", "arguments": {"a": "$R", "b": 3}},\n'
+            '  {"function": "add", "arguments": {"a": "$R", "b": 3}}\n'
+            ']\n'
+            '```'
+        )},
+        {'role': 'user', 'content': 'Multiply 4 with 5. Raise its result to power of 2.'},
+        {'role': 'assistant', 'content': (
+            '```json\n'
+            '[\n'
+            '  {"function": "mul", "arguments": {"a": 4, "b": 5}},\n'
+            '  {"function": "pow", "arguments": {"a": "$R", "b": 2}}\n'
             ']\n'
             '```'
         )},
         {'role': 'user', 'content': 'Add 1 and 2. Then multiply it with 5. Result divide by 3.'},
     ]
-
-    # pprint(messages)
 
     options = Options(
         ctx_size=config.max_position_embeddings,
