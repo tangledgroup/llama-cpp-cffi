@@ -71,12 +71,6 @@ def demo_1():
 
 def demo_2():
     # model = Model(
-    #     creator_hf_repo='HuggingFaceTB/SmolLM-1.7B-Instruct',
-    #     hf_repo='mradermacher/SmolLM-1.7B-Instruct-GGUF',
-    #     hf_file='SmolLM-1.7B-Instruct.Q4_K_M.gguf',
-    # )
-
-    # model = Model(
     #     creator_hf_repo='TinyLlama/TinyLlama_v1.1',
     #     hf_repo='QuantFactory/TinyLlama_v1.1-GGUF',
     #     hf_file='TinyLlama_v1.1.Q4_K_M.gguf',
@@ -87,15 +81,6 @@ def demo_2():
         hf_repo='mjschock/TinyLlama_v1.1_math_code-Q4_K_M-GGUF',
         hf_file='tinyllama_v1.1_math_code-q4_k_m.gguf',
     )
-
-    # # https://github.com/SqueezeAILab/TinyAgent/blob/0074615dd05ae632cc2321f63b4290682897334d/src/llm_compiler/planner.py#L44
-    #
-    # model = Model(
-    #     creator_hf_repo='squeeze-ai-lab/TinyAgent-1.1B',
-    #     hf_repo='squeeze-ai-lab/TinyAgent-1.1B-GGUF',
-    #     hf_file='TinyAgent-1.1B-Q4_K_M.gguf',
-    #     tokenizer_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
-    # )
 
     print(model)
     config = get_config(model.creator_hf_repo)
