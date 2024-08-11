@@ -1,7 +1,7 @@
 __all__ = ['Options', 'convert_options_to_bytes']
 
 
-from typing import Optional, List
+from typing import Optional
 
 import psutil
 from attrs import define, field, fields
@@ -174,11 +174,9 @@ class Options:
     stop: Optional[list[str]] = field(default=None, metadata={"long_name": "--stop", "description": "Stop"})
 
 
-
 def convert_options_to_bytes(options: Options) -> list[bytes]:
     result = []
 
-    # Iterate over all attributes of the options class
     for field in fields(Options):
         # skip non-llama-cli fields
         if field.name in ('stop',):
@@ -190,12 +188,12 @@ def convert_options_to_bytes(options: Options) -> list[bytes]:
             long_name = field.metadata['long_name']
             alias = field.metadata.get('alias')
 
-            # Handle boolean options
             if isinstance(value, bool):
+                # handle boolean options
                 if value:
                     result.append(long_name.encode())
-            # Handle other options
             else:
+                # handle other options
                 result.append(long_name.encode())
                 result.append(str(value).encode())
 
