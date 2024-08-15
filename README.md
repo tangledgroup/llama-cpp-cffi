@@ -14,7 +14,7 @@
 [![Github Downloads](https://img.shields.io/github/downloads/tangledgroup/llama-cpp-cffi/total.svg?label=Github%20Downloads)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU** and **CUDA 12.5** execution.
+**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU**, **CUDA 12.5.1** and **CUDA 12.6** execution.
 
 NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musllinux_1_2`), but we are working on both Windows and MacOS versions.
 
@@ -32,7 +32,7 @@ In case you want [OpenAI © Chat Completions API](https://platform.openai.com/do
 pip install llama-cpp-cffi[openai]
 ```
 
-**IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12.5**. If you don't have CUDA 12.5 installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
+**IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12**. If you don't have CUDA 12.X installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
 
 GPU Compute Capability: `compute_61`, `compute_70`, `compute_75`, `compute_80`, `compute_86`, `compute_89` covering from most of GPUs from **GeForce GTX 1050** to **NVIDIA H100**. [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
 
@@ -40,7 +40,9 @@ GPU Compute Capability: `compute_61`, `compute_70`, `compute_75`, `compute_80`, 
 
 ### Library Usage
 
-`examples/demo_0.py`
+References:
+- `examples/demo_tinyllama_chat.py`
+- `examples/demo_tinyllama_tool.py`
 
 ```python
 from llama import llama_generate, get_config, Model, Options
@@ -80,10 +82,16 @@ print()
 Run OpenAI compatible server:
 
 ```bash
-python -B llama/openai.py
+python -m llama.openai
+# or
+python -B -u -m gunicorn --bind '0.0.0.0:11434' --timeout 300 --workers 1 --worker-class aiohttp.GunicornWebWorker 'llama.openai:build_app()'
 ```
 
-Run OpenAI compatible client `examples/demo_1.py`:
+Run OpenAI compatible client `examples/demo_openai_0.py`:
+
+```bash
+python -B examples/demo_openai_0.py
+```
 
 ```python
 from openai import OpenAI
@@ -145,10 +153,6 @@ if __name__ == '__main__':
 ## Demos
 
 ```bash
-#
-# run demos
-#
-python -B examples/demo_0.py
-python -B examples/demo_cffi_cpu.py
-python -B examples/demo_cffi_cuda_12_5.py
+python -B examples/demo_tinyllama_chat.py
+python -B examples/demo_tinyllama_tool.py
 ```

@@ -1,10 +1,28 @@
 # CHANGELOG
 
+## v0.1.12
+
+Added:
+    - Build `vulkan_1_x` for general GPU.
+    - Build `cuda 12.4.1` as default.
+
+Changed:
+    - Renamed examples for TinyLlama (chat, tool calling) and OpenAI.
+    - Updated demo models definitions.
+    - Updated examples (chat, tool calling).
+    - `get_special_tokens` not supports parameter `force_standard_special_tokens: bool=False` which bypasses tokenizer's special tokens with standard/common ones.
+    - Build `cuda 12.5.1` as additional build target but packaged on PyPI.
+    - Build `cuda 12.6` as additional build target but packaged on PyPI.
+    - Build `openblas` as additional build target but packaged on PyPI.
+
+Fixed:
+    - Handle `Options.no_display_prompt` on Python side.
+
 ## v0.1.11
 
 Changed:
-    - openai: allow import of `routes` and `v1_chat_completions` handler.
-    - examples/demo_0.py
+    - OpenAI: allow import of `routes` and `v1_chat_completions` handler.
+    - `examples/demo_0.py`, tool calling example.
 
 ## v0.1.10
 

@@ -14,10 +14,18 @@ from huggingface_hub import hf_hub_download
 from .formatter import get_tokenizer, get_special_tokens, format_messages
 from .model import Model
 from .options import Options, convert_options_to_bytes
-from .util import is_cuda_available
+from .util import is_cuda_available, is_vulkan_available
 
 if is_cuda_available():
-    from ._llama_cli_cuda_12_5 import lib, ffi
+    try:
+        from ._llama_cli_cuda_12_6 import lib, ffi
+    except ImportError:
+        try:
+            from ._llama_cli_cuda_12_5_1 import lib, ffi
+        except ImportError:
+            from ._llama_cli_cuda_12_4_1 import lib, ffi
+elif is_vulkan_available():
+    from ._llama_cli_vulkan_1_x import lib, ffi
 else:
     from ._llama_cli_cpu import lib, ffi
 
@@ -119,8 +127,10 @@ def llama_generate(options: Options) -> Iterator[str]:
 
     if isinstance(options.prompt, list):
         options.prompt = format_messages(tokenizer, options.prompt)
+
+    if options.no_display_prompt == False:
         # print('options.prompt:')
-        # print(options.prompt)
+        print(options.prompt, end='')
 
     if options.no_display_prompt == False:
         options.no_display_prompt = None
@@ -129,19 +139,22 @@ def llama_generate(options: Options) -> Iterator[str]:
         options.log_disable = None
 
     queue = Queue()
+    special_tokens: list[str] = get_special_tokens(tokenizer, force_standard_special_tokens=True)
 
     metadata: dict = {
         'prev_chunk_bytes': b'',
         'buffer': '',
         'stop_on_special_token': True,
         'should_stop': False,
-        'special_tokens': get_special_tokens(tokenizer),
+        'special_tokens': special_tokens,
     }
 
     if isinstance(options.stop, str):
         metadata['special_tokens'].append(options.stop)
     elif isinstance(options.stop, (list, tuple)):
-        metadata['special_tokens'].extend(options.stop)
+        metadata['special_tokens'].extend(list(options.stop))
+    elif options.stop is not None:
+        raise ValueError(options.stop)
 
     argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(options)
     argv = [ffi.new('char[]', n) for n in argv]

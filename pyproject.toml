@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.11"
+version = "0.1.12"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
@@ -12,30 +12,33 @@ include = [{path = "llama/*.so"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-attrs = "^23.2.0"
-huggingface-hub = "^0.24.1"
-cffi = "^1.16.0"
-setuptools = "^71.0.3"
+attrs = "^24.2.0"
+huggingface-hub = "^0.24.5"
+cffi = "^1.17.0"
+setuptools = "^72.2.0"
 psutil = "^6.0.0"
-transformers = "^4.43.1"
+transformers = "^4.44.0"
 jinja2 = "^3.1.4"
 sentencepiece = "^0.2.0"
-protobuf = "^5.27.2"
+protobuf = "^5.27.3"
 numba = "^0.60.0"
-openai = {version = "^1.35.15", optional = true}
-aiohttp = {extras = ["speedups"], version = "^3.9.5", optional = true}
+openai = {version = "^1.40.6", optional = true}
+aiohttp = {extras = ["speedups"], version = "^3.10.3", optional = true}
 uvloop = {version = "^0.19.0", optional = true}
+vulkan = "^1.3.275.1"
 
 [tool.poetry.extras]
 openai = ["openai", "aiohttp"]
 uvloop = ["uvloop"]
 
 [tool.poetry.group.dev.dependencies]
-cibuildwheel = "^2.19.2"
+cibuildwheel = "^2.20.0"
+mkdocs-material = "^9.5.31"
 
 [tool.poetry.scripts]
 build = "scripts.build:build"
 clean = "scripts.clean:clean"
+cuda_12_6_setup = "scripts.build:cuda_12_6_setup"
 cuda_12_5_1_setup = "scripts.build:cuda_12_5_1_setup"
 
 [tool.poetry.build]
@@ -51,16 +54,26 @@ pip install poetry
 if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf update -y
     dnf install -y epel-release
-    dnf install -y unzip p7zip p7zip-plugins openblas openblas-devel
+    dnf update -y
+    dnf install -y unzip p7zip p7zip-plugins upx
+
+    # Check architecture
+    ARCH=$(uname -m)
+    
+    if [[ "$ARCH" == "x86_64" ]]; then
+        # vulkan packages only on x86_64
+        dnf install -y vulkan-tools vulkan-headers vulkan-loader vulkan-loader-devel vulkan-validation-layers spirv-tools
+        dnf install -y https://pkgs.sysadmins.ws/el8/extras/x86_64/glslc-2023.1-3.el8.x86_64.rpm https://pkgs.sysadmins.ws/el8/extras/x86_64/glslang-12.0.0-1.el8.x86_64.rpm
+    fi
 else
-    apk -U add upx unzip 7zip openblas-dev
-    apk add --repository=https://dl-cdn.alpinelinux.org/alpine/v3.16/main/ libexecinfo-dev
+    apk -U add unzip 7zip upx vulkan-dev shaderc spirv-tools
 fi
 """
-skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
+# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686", "*manylinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
+skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
 manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
 manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
 manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
@@ -68,16 +81,22 @@ manylinux-pypy_aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
 musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:latest"
 musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:latest"
 build-verbosity=3
-# repair-wheel-command = """
-# for file in {wheel}; do
-#     tempdir=$(mktemp -d)
-#     unzip -d "$tempdir" "$file"
-#     (cd "$tempdir" && 7z a -tzip -mx=9 -mfb=258 -mpass=15 -mmt=on "{dest_dir}/$(basename $file)" .)
-#     rm -rf "$tempdir"
-# done
-# """
-repair-wheel-command = ""
-environment = {"LD_LIBRARY_PATH" = "/project/cuda-12.5.1/dist/lib64:/project/cuda-12.5.1/dist/targets/x86_64-linux/lib:/project/cuda-12.5.1/dist/lib64/stubs:$LD_LIBRARY_PATH", "CUDA_HOME" = "/project/cuda-12.5.1/dist"}
+# repair-wheel-command = ""
+repair-wheel-command = """
+for file in {wheel}; do
+    tempdir=$(mktemp -d)
+    unzip -d "$tempdir" "$file"
+    
+    # Compress shared libraries in the tempdir using UPX
+    find "$tempdir" -type f \\( -name "*.so" -o -name "*.dylib" -o -name "*.dll" \\) -exec upx -9 {} \\;
+
+    # Repackage with 7z
+    (cd "$tempdir" && 7z a -tzip -mx=9 -mfb=258 -mpass=15 -mmt=on "{dest_dir}/$(basename $file)" .)
+    
+    # Clean up
+    rm -rf "$tempdir"
+done
+"""
 
 [tool.cibuildwheel.pyodide]
 

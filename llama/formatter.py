@@ -65,66 +65,105 @@ def get_config(model_id: str) -> AutoConfig:
     return config
 
 
-def get_special_tokens(tokenizer: AutoTokenizer) -> list[str]:
-    special_tokens: list[str] = tokenizer.all_special_tokens + tokenizer.additional_special_tokens
-
-    if '<s>' in special_tokens and not '</s>' in special_tokens:
-        special_tokens.append('</s>')
-
-    if '<s>' in special_tokens and not '[AVAILABLE_TOOLS]' in special_tokens:
-        special_tokens.append('[AVAILABLE_TOOLS]')
-
-    if '<s>' in special_tokens and not '[/AVAILABLE_TOOLS]' in special_tokens:
-        special_tokens.append('[/AVAILABLE_TOOLS]')
-
-    if '<s>' in special_tokens and not '[INST]' in special_tokens:
-        special_tokens.append('[INST]')
-
-    if '<s>' in special_tokens and not '[/INST]' in special_tokens:
-        special_tokens.append('[/INST]')
-
-    if '<s>' in special_tokens and not '<<INST>>' in special_tokens:
-        special_tokens.append('<<INST>>')
-
-    if '<s>' in special_tokens and not '<</INST>>' in special_tokens:
-        special_tokens.append('<</INST>>')
-
-    if '<s>' in special_tokens and not '<<SYS>>' in special_tokens:
-        special_tokens.append('<<SYS>>')
-
-    if '<s>' in special_tokens and not '<</SYS>>' in special_tokens:
-        special_tokens.append('<</SYS>>')
-
-    if '<s>' in special_tokens and not '[SYS]' in special_tokens:
-        special_tokens.append('[SYS]')
-
-    if '<s>' in special_tokens and not '[/SYS]' in special_tokens:
-        special_tokens.append('[/SYS]')
-
-    if '<s>' in special_tokens and not '[UNUSED_TOKEN_145]' in special_tokens:
-        special_tokens.append('[UNUSED_TOKEN_145]')
-
-    if '<|startoftext|>' in special_tokens and not '<|endoftext|>' in special_tokens:
-        special_tokens.append('<|endoftext|>')
+def get_special_tokens(tokenizer: AutoTokenizer, force_standard_special_tokens: bool=False) -> list[str]:
+    special_tokens: list[str] = []
     
-    if '<|endoftext|>' in special_tokens and not '<|end|>' in special_tokens:
-        special_tokens.append('<|end|>')
+    if force_standard_special_tokens:
+        special_tokens += [
+            # mixed
+            '<s>',
+            '</s>',
+            '[INST]',
+            '[/INST]',
+            '[SYS]',
+            '[/SYS]',
+            '[AVAILABLE_TOOLS]',
+            '[/AVAILABLE_TOOLS]',
+            '<<INST>>',
+            '<</INST>>',
+            '<<SYS>>',
+            '<</SYS>>',
+            '[UNUSED_TOKEN_145]',
+            '<|startoftext|>',
+            '<|endoftext|>',
+            '<|system|>',
+            '<|user|>',
+            '<|assistant|>',
+            '<|tool|>',
+            '<|end|>',
 
-    if '<|endoftext|>' in special_tokens and not '<|system|>' in special_tokens:
-        special_tokens.append('<|system|>')
+            # chatml
+            '<|im_start|>',
+            '<|im_end|>',
 
-    if '<|endoftext|>' in special_tokens and not '<|user|>' in special_tokens:
-        special_tokens.append('<|user|>')
+            # llama 3
+            '<|begin_of_text|>',
+            '<|end_of_text|>',
+            '<|start_header_id|>',
+            '<|end_header_id|>',
+            '<|eot_id|>',
+        ]
+    else:
+        special_tokens += tokenizer.all_special_tokens + tokenizer.additional_special_tokens
 
-    if '<|endoftext|>' in special_tokens and not '<|assistant|>' in special_tokens:
-        special_tokens.append('<|assistant|>')
-    
-    if '<|im_end|>' in special_tokens and not '<|im_start|>' in special_tokens:
-        special_tokens.append('<|im_start|>')
+        if '<s>' in special_tokens and not '</s>' in special_tokens:
+            special_tokens.append('</s>')
 
-    special_tokens = set(special_tokens)
-    special_tokens = list(special_tokens)
-    special_tokens.sort()
+        if '<s>' in special_tokens and not '[AVAILABLE_TOOLS]' in special_tokens:
+            special_tokens.append('[AVAILABLE_TOOLS]')
+
+        if '<s>' in special_tokens and not '[/AVAILABLE_TOOLS]' in special_tokens:
+            special_tokens.append('[/AVAILABLE_TOOLS]')
+
+        if '<s>' in special_tokens and not '[INST]' in special_tokens:
+            special_tokens.append('[INST]')
+
+        if '<s>' in special_tokens and not '[/INST]' in special_tokens:
+            special_tokens.append('[/INST]')
+
+        if '<s>' in special_tokens and not '<<INST>>' in special_tokens:
+            special_tokens.append('<<INST>>')
+
+        if '<s>' in special_tokens and not '<</INST>>' in special_tokens:
+            special_tokens.append('<</INST>>')
+
+        if '<s>' in special_tokens and not '<<SYS>>' in special_tokens:
+            special_tokens.append('<<SYS>>')
+
+        if '<s>' in special_tokens and not '<</SYS>>' in special_tokens:
+            special_tokens.append('<</SYS>>')
+
+        if '<s>' in special_tokens and not '[SYS]' in special_tokens:
+            special_tokens.append('[SYS]')
+
+        if '<s>' in special_tokens and not '[/SYS]' in special_tokens:
+            special_tokens.append('[/SYS]')
+
+        if '<s>' in special_tokens and not '[UNUSED_TOKEN_145]' in special_tokens:
+            special_tokens.append('[UNUSED_TOKEN_145]')
+
+        if '<|startoftext|>' in special_tokens and not '<|endoftext|>' in special_tokens:
+            special_tokens.append('<|endoftext|>')
+        
+        if '<|endoftext|>' in special_tokens and not '<|end|>' in special_tokens:
+            special_tokens.append('<|end|>')
+
+        if '<|endoftext|>' in special_tokens and not '<|system|>' in special_tokens:
+            special_tokens.append('<|system|>')
+
+        if '<|endoftext|>' in special_tokens and not '<|user|>' in special_tokens:
+            special_tokens.append('<|user|>')
+
+        if '<|endoftext|>' in special_tokens and not '<|assistant|>' in special_tokens:
+            special_tokens.append('<|assistant|>')
+        
+        if '<|im_end|>' in special_tokens and not '<|im_start|>' in special_tokens:
+            special_tokens.append('<|im_start|>')
+
+        special_tokens = set(special_tokens)
+        special_tokens = list(special_tokens)
+        special_tokens.sort()
+
     # print(f'{special_tokens = }')
     return special_tokens
 
