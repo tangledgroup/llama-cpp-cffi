@@ -69,11 +69,11 @@ else
     apk -U add unzip 7zip upx vulkan-dev shaderc spirv-tools
 fi
 """
-# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
+skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686", "*manylinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
-skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
+# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
 manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
 manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
 manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
