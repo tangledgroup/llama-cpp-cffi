@@ -2,12 +2,12 @@ __all__ = ['is_cuda_available', 'is_vulkan_available']
 
 try:
     from numba import cuda
-except ImportError:
+except Exception:
     pass
 
 try:
     import vulkan as vk
-except ImportError:
+except Exception:
     pass
 
 

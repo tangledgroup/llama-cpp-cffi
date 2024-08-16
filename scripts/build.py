@@ -658,7 +658,7 @@ def build(*args, **kwargs):
     #     build_cpu_openblas(*args, **kwargs)
 
     # vulkan 1.x
-    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None)::
+    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
         clean_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 

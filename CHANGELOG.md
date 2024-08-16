@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.13
+
+Fixed:
+    - CUDA and Vulkan detection.
+
 ## v0.1.12
 
 Added:

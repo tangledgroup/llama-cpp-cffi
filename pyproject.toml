@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.12"
+version = "0.1.13"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
@@ -49,6 +49,7 @@ script = "scripts/build.py"
 [tool.cibuildwheel.linux]
 build-frontend = "build"
 before-build = """
+ARCH=$(uname -m)
 pip install poetry
 
 if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
@@ -57,20 +58,23 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf update -y
     dnf install -y unzip p7zip p7zip-plugins upx
 
-    # Check architecture
-    ARCH=$(uname -m)
-    
+    # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then
         # vulkan packages only on x86_64
         dnf install -y vulkan-tools vulkan-headers vulkan-loader vulkan-loader-devel vulkan-validation-layers spirv-tools
         dnf install -y https://pkgs.sysadmins.ws/el8/extras/x86_64/glslc-2023.1-3.el8.x86_64.rpm https://pkgs.sysadmins.ws/el8/extras/x86_64/glslang-12.0.0-1.el8.x86_64.rpm
     fi
 else
-    apk -U add unzip 7zip upx vulkan-dev shaderc spirv-tools
+    apk -U add unzip 7zip upx
+
+    # vulkan
+    if [[ "$ARCH" == "x86_64" ]]; then
+        apk -U add mesa-vulkan-ati mesa-vulkan-intel mesa-vulkan-layers mesa-vulkan-swrast vulkan-headers vulkan-loader vulkan-loader-dev vulkan-tools vulkan-validation-layers vulkan-validation-layers-dev vulkan-validation-layers-static shaderc glslang glslang-dev glslang-libs glslang-static
+    fi
 fi
 """
-skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
-# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686", "*manylinux*"]
+# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
+skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686", "*manylinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
