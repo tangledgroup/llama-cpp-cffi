@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.14
+
+Fixed:
+    - Vulkan detection.
+
 ## v0.1.13
 
 Fixed:

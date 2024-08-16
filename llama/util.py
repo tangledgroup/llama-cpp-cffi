@@ -49,9 +49,7 @@ def is_vulkan_available():
         
         # Clean up the Vulkan instance
         vk.vkDestroyInstance(instance, None)
-    except vk.VkErrorInitializationFailed:
-        pass
-    except Exception as e:
+    except Exception:
         pass
 
     return vulkan_available
