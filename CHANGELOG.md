@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.1.15
+
+Added:
+    - `SmolLM-1.7B-Instruct-v0.2` examples.
+    - Updated `llama.cpp`.
+
 ## v0.1.14
 
 Fixed:

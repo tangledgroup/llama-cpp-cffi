@@ -6,7 +6,6 @@ from demo_messages import tools_messages as messages
 
 def demo(model: Model):
     print(model)
-
     config = get_config(model.creator_hf_repo)
     
     options = Options(

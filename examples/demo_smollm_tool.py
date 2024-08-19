@@ -13,7 +13,7 @@ def demo(model: Model):
         predict=-2,
         model=model,
         prompt=messages,
-        temp=0,
+        temp=0.0,
         no_display_prompt=True,
         gpu_layers=99,
     )
@@ -27,10 +27,9 @@ def demo(model: Model):
 
 if __name__ == '__main__':
     models_ids: list[str] = [
-        'TinyLlama/TinyLlama_v1.1_math_code',
-        'cognitivecomputations/TinyDolphin-2.8-1.1b',
+        'HuggingFaceTB/SmolLM-1.7B-Instruct-v0.2',
     ]
-
+    
     for model_id in models_ids:
         model: Model = models[model_id]
         demo(model)
