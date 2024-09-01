@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.15"
+version = "0.1.16"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
