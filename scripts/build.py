@@ -662,11 +662,11 @@ def build(*args, **kwargs):
         clean_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 
-    # # cuda 12.6
-    # if env.get('GGML_CUDA', '1') != '0':
-    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #         clean_llama_cpp()
-    #         build_linux_cuda_12_6(*args, **kwargs)
+    # cuda 12.6
+    if env.get('GGML_CUDA', '1') != '0':
+        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+            clean_llama_cpp()
+            build_linux_cuda_12_6(*args, **kwargs)
 
     # # cuda 12.5.1
     # if env.get('GGML_CUDA', '1') != '0':
@@ -674,11 +674,11 @@ def build(*args, **kwargs):
     #         clean_llama_cpp()
     #         build_linux_cuda_12_5_1(*args, **kwargs)
 
-    # cuda 12.4.1
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_4_1(*args, **kwargs)
+    # # cuda 12.4.1
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_4_1(*args, **kwargs)
 
 if __name__ == '__main__':
     build()

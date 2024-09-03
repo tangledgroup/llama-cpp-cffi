@@ -1,14 +1,29 @@
 # CHANGELOG
 
-## v0.1.16
+## v0.1.17
 
 Added:
+    - `LLAMA_CPP_BACKEND` which can be `cuda`, `vulkan` or `cpu`.
+
+Changed:
+    - Updated `llama.cpp`.
+    - Updated requirements.
+    - CUDA backend imports only 12.6 library.
+
+Fixed:
+    - `Options.top_p` check using `isinstance`.
+
+## v0.1.16
+
+Changed:
     - Updated `llama.cpp`.
 
 ## v0.1.15
 
 Added:
     - `SmolLM-1.7B-Instruct-v0.2` examples.
+
+Changed:
     - Updated `llama.cpp`.
 
 ## v0.1.14

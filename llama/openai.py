@@ -73,7 +73,7 @@ async def v1_chat_completions(request):
     assert seed is None or isinstance(seed, int)
     assert service_tier is None
     assert stream_options is None
-    assert top_p is None or ininstance(top_p, (int, float))
+    assert top_p is None or isinstance(top_p, (int, float))
 
     model = Model(*model.split(':'))
     # config: AutoConfig = get_config(model.creator_hf_repo)

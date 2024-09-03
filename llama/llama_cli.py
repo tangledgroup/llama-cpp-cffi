@@ -1,5 +1,6 @@
 __all__ = ['llama_generate']
 
+import os
 import json
 import ctypes
 from queue import Queue
@@ -16,18 +17,26 @@ from .model import Model
 from .options import Options, convert_options_to_bytes
 from .util import is_cuda_available, is_vulkan_available
 
-if is_cuda_available():
-    try:
+
+LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
+
+
+if LLAMA_CPP_BACKEND:
+    if LLAMA_CPP_BACKEND in ('cuda', 'CUDA'):
         from ._llama_cli_cuda_12_6 import lib, ffi
-    except ImportError:
-        try:
-            from ._llama_cli_cuda_12_5_1 import lib, ffi
-        except ImportError:
-            from ._llama_cli_cuda_12_4_1 import lib, ffi
-elif is_vulkan_available():
-    from ._llama_cli_vulkan_1_x import lib, ffi
+    elif LLAMA_CPP_BACKEND in ('vulkan', 'VULKAN'):
+        from ._llama_cli_vulkan_1_x import lib, ffi
+    elif LLAMA_CPP_BACKEND in ('cpu', 'CPU'):
+        from ._llama_cli_cpu import lib, ffi
+    else:
+        raise ValueError(f'{LLAMA_CPP_BACKEND = }')
 else:
-    from ._llama_cli_cpu import lib, ffi
+    if is_cuda_available():
+        from ._llama_cli_cuda_12_6 import lib, ffi
+    elif is_vulkan_available():
+        from ._llama_cli_vulkan_1_x import lib, ffi
+    else:
+        from ._llama_cli_cpu import lib, ffi
 
 
 _LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
