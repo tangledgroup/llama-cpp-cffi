@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.18
+
+Changed:
+    - Updated `llama.cpp` with **RWKV** support.
+
 ## v0.1.17
 
 Added:

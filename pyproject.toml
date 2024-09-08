@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.17"
+version = "0.1.18"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
@@ -14,15 +14,15 @@ include = [{path = "llama/*.so"}]
 python = "^3.10"
 attrs = "^24.2.0"
 huggingface-hub = "^0.24.6"
-cffi = "^1.17.0"
-setuptools = "^74.1.1"
+cffi = "^1.17.1"
+setuptools = "^74.1.2"
 psutil = "^6.0.0"
 transformers = "^4.44.2"
 jinja2 = "^3.1.4"
 sentencepiece = "^0.2.0"
 protobuf = "^5.28.0"
 numba = "^0.60.0"
-openai = {version = "^1.43.0", optional = true}
+openai = {version = "^1.44.0", optional = true}
 aiohttp = {extras = ["speedups"], version = "^3.10.5", optional = true}
 uvloop = {version = "^0.20.0", optional = true}
 vulkan = "^1.3.275.1"
