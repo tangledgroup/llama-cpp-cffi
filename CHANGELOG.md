@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.20
+
+Changed:
+    - Updated `llama.cpp`.
+
 ## v0.1.19
 
 Changed:
