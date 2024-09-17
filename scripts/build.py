@@ -16,8 +16,8 @@ from clean import clean_llama, clean_llama_cpp, clean
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_3.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_3.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_4.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_4.patch'], check=True)
 
 
 def cuda_12_6_setup(*args, **kwargs):
