@@ -1,0 +1,65 @@
+--- ../main.cpp	2024-09-17 10:09:45.399347437 +0200
++++ examples/main/main.cpp	2024-09-17 10:21:14.158217574 +0200
+@@ -130,7 +130,21 @@
+     return formatted;
+ }
+ 
+-int main(int argc, char ** argv) {
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#ifdef LLAMA_LIB
++typedef void (*_llama_yield_token_t)(const char * token);
++typedef int (*_llama_should_stop_t)(void);
++
++int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
++
++int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot)
++#else
++int main(int argc, char ** argv)
++#endif
++{
+     gpt_params params;
+     g_params = &params;
+     if (!gpt_params_parse(argc, argv, params, LLAMA_EXAMPLE_MAIN, print_usage)) {
+@@ -712,7 +726,30 @@
+                 const std::string token_str = llama_token_to_piece(ctx, id, params.special);
+ 
+                 // Console/Stream Output
++#ifdef LLAMA_LIB
++                if (_llama_yield_token != NULL) {
++                    char* c_token_str = (char*)malloc(token_str.length() + 1);
++                    std::memset(c_token_str, 0, token_str.length() + 1);
++                    std::strcpy(c_token_str, token_str.c_str());
++                    _llama_yield_token(c_token_str);
++                    free((void*)c_token_str);
++                }
++
++                if (_llama_should_stop != NULL) {
++                    if (_llama_should_stop() == 1) {
++                        n_remain = 0;
++                        break;
++                    }
++                }
++
++                if (stop_on_bos_eos_eot == 1) {
++                    if (id == llama_token_bos(model) || id == llama_token_eos(model) || id == llama_token_eot(model)) {
++                        break;
++                    }
++                }
++#else
+                 LOG("%s", token_str.c_str());
++#endif
+ 
+                 // Record Displayed Tokens To Log
+                 // Note: Generated tokens are created one by one hence this check
+@@ -935,3 +972,7 @@
+ 
+     return 0;
+ }
++
++#ifdef __cplusplus
++}
++#endif
+\ No newline at end of file

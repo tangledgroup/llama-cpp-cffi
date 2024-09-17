@@ -1,0 +1,57 @@
+--- ../Makefile	2024-09-17 09:47:52.056518449 +0200
++++ Makefile	2024-09-17 10:12:50.353516172 +0200
+@@ -431,6 +431,31 @@
+ 	MK_CXXFLAGS += -pg
+ endif
+ 
++#
++# llama-cpp-cffi
++# Set shared library extension and linker flags based on the platform
++#
++ifeq ($(UNAME_S), Linux)
++    LIB_EXT := so
++    LIB_LDFLAGS := -shared
++    LIB_CXXFLAGS := -fPIC -DLLAMA_LIB
++endif
++
++ifeq ($(UNAME_S), Darwin)
++    LIB_EXT := dylib
++    LIB_LDFLAGS := -dynamiclib
++    LIB_CXXFLAGS := -fPIC -DLLAMA_LIB
++endif
++
++# For Windows (assuming MinGW)
++ifeq ($(OS), Windows_NT)
++    LIB_EXT := dll
++    LIB_LDFLAGS := -shared
++    LIB_CXXFLAGS := -DLLAMA_LIB
++endif
++
++LIB_NAME := llama_cli.$(LIB_EXT)
++
+ # Architecture specific
+ # TODO: probably these flags need to be tweaked on some architectures
+ #       feel free to update the Makefile for your architecture and send a pull request or issue
+@@ -1263,6 +1288,22 @@
+ 	@echo '====  Run ./llama-cli -h for help.  ===='
+ 	@echo
+ 
++#
++# llama-cpp-cffi shared library
++#
++llama-cli-shared: examples/main/main.cpp \
++	$(OBJ_ALL)
++	$(CXX) $(CXXFLAGS) $(LIB_CXXFLAGS) -c $< -o $(call GET_OBJ_FILE, $<)
++	$(CXX) $(CXXFLAGS) $(LIB_CXXFLAGS) $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<) -o $(LIB_NAME) $(LIB_LDFLAGS) $(LDFLAGS)
++
++#
++# llama-cpp-cffi static library
++#
++llama-cli-static: examples/main/main.cpp \
++	$(OBJ_ALL)
++	$(CXX) $(CXXFLAGS) $(LIB_CXXFLAGS) -c $< -o $(call GET_OBJ_FILE, $<)
++	ar rcs llama_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
++
+ llama-infill: examples/infill/infill.cpp \
+ 	$(OBJ_ALL)
+ 	$(CXX) $(CXXFLAGS) -c $< -o $(call GET_OBJ_FILE, $<)
