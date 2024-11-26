@@ -26,7 +26,7 @@ def demo(model: Model):
 
 if __name__ == '__main__':
     models_ids: list[str] = [
-        'HuggingFaceTB/SmolLM-1.7B-Instruct-v0.2',
+        'HuggingFaceTB/SmolLM2-1.7B-Instruct',
     ]
 
     for model_id in models_ids:

@@ -6,7 +6,7 @@ from pprint import pprint
 
 from cffi import FFI
 
-from clean import clean_llama, clean_llama_cpp, clean
+from clean import clean_llama_cpp, clean
 
 
 # if 'PYODIDE' in env and env['PYODIDE'] == '1':
@@ -22,13 +22,13 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/examples/llava/minicpmv-cli.cpp', 'minicpmv-cli_5.patch'], check=True)
 
 
-def cuda_12_6_setup(*args, **kwargs):
+def cuda_12_6_3_setup(*args, **kwargs):
     #
     # cuda env
     #
-    cuda_file = 'cuda_12.6.0_560.28.03_linux.run'
-    cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.6.0/local_installers/{cuda_file}'
-    cuda_output_dir = os.path.abspath('./cuda-12.6')
+    cuda_file = 'cuda_12.6.3_560.35.05_linux.run'
+    cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/{cuda_file}'
+    cuda_output_dir = os.path.abspath('./cuda-12.6.3')
     cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
 
     # download cuda file
@@ -181,49 +181,50 @@ def cuda_12_4_1_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3'
+    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
     print('build_cpu:')
     pprint(env)
 
-    #
-    # build llama.cpp
-    #
-    subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
-        '-j',
-        'llama-cli-static',
-        'GGML_NO_OPENMP=1',
-    ], check=True, env=env)
+    for name in ['llama', 'llava', 'minicpmv']:
+        #
+        # build llama.cpp
+        #
+        subprocess.run([
+            'make',
+            '-C',
+            'llama.cpp',
+            '-j',
+            f'{name}-cli-static',
+            'GGML_NO_OPENMP=1',
+        ], check=True, env=env)
 
-    #
-    # cffi
-    #
-    ffibuilder = FFI()
+        #
+        # cffi
+        #
+        ffibuilder = FFI()
 
-    ffibuilder.cdef('''
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-    ''')
+        ffibuilder.cdef(f'''
+            typedef void (*_llama_yield_token_t)(const char * token);
+            typedef int (*_llama_should_stop_t)(void);
+            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+        ''')
 
-    ffibuilder.set_source(
-        '_llama_cli_cpu',
-        '''
-        #include <stdio.h>
+        ffibuilder.set_source(
+            f'_{name}_cli_cpu',
+            f'''
+            #include <stdio.h>
 
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-        ''',
-        libraries=['stdc++'],
-        extra_objects=['../llama.cpp/llama_cli.a'],
-        extra_compile_args=['-O3'],
-        extra_link_args=['-O3', '-flto'],
-    )
+            typedef void (*_llama_yield_token_t)(const char * token);
+            typedef int (*_llama_should_stop_t)(void);
+            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+            ''',
+            libraries=['stdc++'],
+            extra_objects=[f'../llama.cpp/lib{name}_cli.a'],
+            extra_compile_args=['-O3'],
+            extra_link_args=['-O3', '-flto'],
+        )
 
-    ffibuilder.compile(tmpdir='build', verbose=True)
+        ffibuilder.compile(tmpdir='build', verbose=True)
 
     #
     # copy compiled modules
@@ -241,117 +242,54 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3'
+    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
     print('build_vulkan_1_x:')
     pprint(env)
 
-    #
-    # build llama.cpp
-    #
-    subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
-        '-j',
-        'llama-cli-static',
-        'GGML_NO_OPENMP=1',
-        'GGML_VULKAN=1',
-    ], check=True, env=env)
+    for name in ['llama', 'llava', 'minicpmv']:
+        #
+        # build llama.cpp
+        #
+        subprocess.run([
+            'make',
+            '-C',
+            'llama.cpp',
+            '-j',
+            f'{name}-cli-static',
+            'GGML_NO_OPENMP=1',
+            'GGML_VULKAN=1',
+        ], check=True, env=env)
 
-    #
-    # cffi
-    #
-    ffibuilder = FFI()
+        #
+        # cffi
+        #
+        ffibuilder = FFI()
 
-    ffibuilder.cdef('''
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
-    ''')
+        ffibuilder.cdef(f'''
+            typedef void (*_llama_yield_token_t)(const char * token);
+            typedef int (*_llama_should_stop_t)(void);
+            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+        ''')
 
-    ffibuilder.set_source(
-        '_llama_cli_vulkan_1_x',
-        '''
-        #include <stdio.h>
+        ffibuilder.set_source(
+            f'_{name}_cli_vulkan_1_x',
+            f'''
+            #include <stdio.h>
 
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
-        ''',
-        libraries=[
-            'stdc++',
-            'vulkan',
-        ],
-        extra_objects=['../llama.cpp/llama_cli.a'],
-        extra_compile_args=['-O3'],
-        extra_link_args=['-O3', '-flto'],
-    )
+            typedef void (*_llama_yield_token_t)(const char * token);
+            typedef int (*_llama_should_stop_t)(void);
+            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+            ''',
+            libraries=[
+                'stdc++',
+                'vulkan',
+            ],
+            extra_objects=[f'../llama.cpp/lib{name}_cli.a'],
+            extra_compile_args=['-O3'],
+            extra_link_args=['-O3', '-flto'],
+        )
 
-    ffibuilder.compile(tmpdir='build', verbose=True)
-
-    #
-    # copy compiled modules
-    #
-    for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
-        shutil.move(file, 'llama/')
-
-    for file in glob.glob('build/*.dll') + glob.glob('llama.cpp/*.dll'):
-        shutil.move(file, 'llama/')
-
-    for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
-        shutil.move(file, 'llama/')
-
-
-def build_cpu_openblas(*args, **kwargs):
-    # build static and shared library
-    env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3'
-    print('build_cpu_openblas:')
-    pprint(env)
-
-    #
-    # build llama.cpp
-    #
-    subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
-        '-j',
-        'llama-cli-static',
-        'GGML_NO_OPENMP=1',
-        'GGML_OPENBLAS=1',
-    ], check=True, env=env)
-
-    #
-    # cffi
-    #
-    ffibuilder = FFI()
-
-    ffibuilder.cdef('''
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
-    ''')
-
-    ffibuilder.set_source(
-        '_llama_cli_cpu_openblas',
-        '''
-        #include <stdio.h>
-
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
-        ''',
-        libraries=[
-            'stdc++',
-            'openblas',
-        ],
-        extra_objects=['../llama.cpp/llama_cli.a'],
-        extra_compile_args=['-O3'],
-        extra_link_args=['-O3', '-flto'],
-    )
-
-    ffibuilder.compile(tmpdir='build', verbose=True)
+        ffibuilder.compile(tmpdir='build', verbose=True)
 
     #
     # copy compiled modules
@@ -366,21 +304,24 @@ def build_cpu_openblas(*args, **kwargs):
         shutil.move(file, 'llama/')
 
 
-def build_linux_cuda_12_6(*args, **kwargs):
+def build_linux_cuda_12_6_3(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
 
     #
     # cuda env
     #
-    cuda_output_dir = cuda_12_6_setup()
+    cuda_output_dir = cuda_12_6_3_setup()
 
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
+    env['CC'] = 'gcc-13'
+    env['CXX'] = 'g++-13'
+    env['NVCC_PREPEND_FLAGS'] = '-ccbin /usr/bin/g++-13'
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
-    env['CXXFLAGS'] = '-O3'
-    env['LD_LIBRARY_PATH'] = '/project/cuda-12.6/dist/lib64:/project/cuda-12.6/dist/targets/x86_64-linux/lib:/project/cuda-12.6/dist/lib64/stubs:$LD_LIBRARY_PATH'
-    env['CUDA_HOME'] = '/project/cuda-12.6/dist'
+    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
+    env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
+    env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
     env['NVCCFLAGS'] = '\
             -gencode arch=compute_70,code=sm_70 \
             -gencode arch=compute_75,code=sm_75 \
@@ -389,61 +330,62 @@ def build_linux_cuda_12_6(*args, **kwargs):
             -gencode arch=compute_89,code=sm_89 \
             -gencode arch=compute_90,code=sm_90'
 
-    print('build_linux_cuda_12_6:')
+    print('build_linux_cuda_12_6_3:')
     pprint(env)
 
-    #
-    # build llama.cpp
-    #
-    subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
-        '-j',
-        'llama-cli-static',
-        'GGML_NO_OPENMP=1',
-        'GGML_CUDA=1',
-    ], check=True, env=env)
+    for name in ['llama', 'llava', 'minicpmv']:
+        #
+        # build llama.cpp
+        #
+        subprocess.run([
+            'make',
+            '-C',
+            'llama.cpp',
+            '-j',
+            f'{name}-cli-static',
+            'GGML_NO_OPENMP=1',
+            'GGML_CUDA=1',
+        ], check=True, env=env)
 
-    #
-    # cffi
-    #
-    ffibuilder = FFI()
+        #
+        # cffi
+        #
+        ffibuilder = FFI()
 
-    ffibuilder.cdef('''
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
-    ''')
+        ffibuilder.cdef(f'''
+            typedef void (*_llama_yield_token_t)(const char * token);
+            typedef int (*_llama_should_stop_t)(void);
+            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+        ''')
 
-    ffibuilder.set_source(
-        '_llama_cli_cuda_12_6',
-        '''
-        #include <stdio.h>
+        ffibuilder.set_source(
+            f'_{name}_cli_cuda_12_6_3',
+            f'''
+            #include <stdio.h>
 
-        typedef void (*_llama_yield_token_t)(const char * token);
-        typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
-        ''',
-        libraries=[
-            'stdc++',
-            'cuda',
-            'cublas',
-            'culibos',
-            'cudart',
-            'cublasLt',
-        ],
-        library_dirs=[
-            f'{cuda_output_dir}/dist/lib64',
-            f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
-            f'{cuda_output_dir}/dist/lib64/stubs',
-        ],
-        extra_objects=['../llama.cpp/llama_cli.a'],
-        extra_compile_args=['-O3'],
-        extra_link_args=['-O3', '-flto'],
-    )
+            typedef void (*_llama_yield_token_t)(const char * token);
+            typedef int (*_llama_should_stop_t)(void);
+            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+            ''',
+            libraries=[
+                'stdc++',
+                'cuda',
+                'cublas',
+                'culibos',
+                'cudart',
+                'cublasLt',
+            ],
+            library_dirs=[
+                f'{cuda_output_dir}/dist/lib64',
+                f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
+                f'{cuda_output_dir}/dist/lib64/stubs',
+            ],
+            extra_objects=[f'../llama.cpp/lib{name}_cli.a'],
+            extra_compile_args=['-O3'],
+            extra_link_args=['-O3', '-flto'],
+        )
 
-    ffibuilder.compile(tmpdir='build', verbose=True)
+        ffibuilder.compile(tmpdir='build', verbose=True)
 
     #
     # copy compiled modules
@@ -470,7 +412,7 @@ def build_linux_cuda_12_5_1(*args, **kwargs):
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
-    env['CXXFLAGS'] = '-O3'
+    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.5.1/dist/lib64:/project/cuda-12.5.1/dist/targets/x86_64-linux/lib:/project/cuda-12.5.1/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.5.1/dist'
     env['NVCCFLAGS'] = '\
@@ -505,7 +447,7 @@ def build_linux_cuda_12_5_1(*args, **kwargs):
     ffibuilder.cdef('''
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
+        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
     ''')
 
     ffibuilder.set_source(
@@ -515,7 +457,7 @@ def build_linux_cuda_12_5_1(*args, **kwargs):
 
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
+        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
         ''',
         libraries=[
             'stdc++',
@@ -530,7 +472,7 @@ def build_linux_cuda_12_5_1(*args, **kwargs):
             f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
             f'{cuda_output_dir}/dist/lib64/stubs',
         ],
-        extra_objects=['../llama.cpp/llama_cli.a'],
+        extra_objects=['../llama.cpp/libllama_cli.a'],
         extra_compile_args=['-O3'],
         extra_link_args=['-O3', '-flto'],
     )
@@ -562,7 +504,7 @@ def build_linux_cuda_12_4_1(*args, **kwargs):
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
-    env['CXXFLAGS'] = '-O3'
+    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.4.1/dist/lib64:/project/cuda-12.4.1/dist/targets/x86_64-linux/lib:/project/cuda-12.4.1/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.4.1/dist'
     env['NVCCFLAGS'] = '\
@@ -597,7 +539,7 @@ def build_linux_cuda_12_4_1(*args, **kwargs):
     ffibuilder.cdef('''
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
+        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
     ''')
 
     ffibuilder.set_source(
@@ -607,7 +549,7 @@ def build_linux_cuda_12_4_1(*args, **kwargs):
 
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
+        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
         ''',
         libraries=[
             'stdc++',
@@ -622,7 +564,7 @@ def build_linux_cuda_12_4_1(*args, **kwargs):
             f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
             f'{cuda_output_dir}/dist/lib64/stubs',
         ],
-        extra_objects=['../llama.cpp/llama_cli.a'],
+        extra_objects=['../llama.cpp/libllama_cli.a'],
         extra_compile_args=['-O3'],
         extra_link_args=['-O3', '-flto'],
     )
@@ -654,21 +596,16 @@ def build(*args, **kwargs):
         clean_llama_cpp()
         build_cpu(*args, **kwargs)
 
-    # # openblas
-    # if env.get('GGML_OPENBLAS', '1') != '0':
-    #     clean_llama_cpp()
-    #     build_cpu_openblas(*args, **kwargs)
-
     # vulkan 1.x
     if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
         clean_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 
-    # cuda 12.6
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_6(*args, **kwargs)
+    # # cuda 12.6.3
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
     # # cuda 12.5.1
     # if env.get('GGML_CUDA', '1') != '0':
@@ -681,6 +618,7 @@ def build(*args, **kwargs):
     #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
     #         clean_llama_cpp()
     #         build_linux_cuda_12_4_1(*args, **kwargs)
+
 
 if __name__ == '__main__':
     build()

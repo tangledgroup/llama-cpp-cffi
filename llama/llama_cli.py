@@ -1,7 +1,6 @@
 __all__ = ['llama_generate']
 
 import os
-import json
 import ctypes
 from queue import Queue
 from copy import deepcopy
@@ -21,22 +20,27 @@ from .util import is_cuda_available, is_vulkan_available
 LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
 
 
-if LLAMA_CPP_BACKEND:
-    if LLAMA_CPP_BACKEND in ('cuda', 'CUDA'):
-        from ._llama_cli_cuda_12_6 import lib, ffi
-    elif LLAMA_CPP_BACKEND in ('vulkan', 'VULKAN'):
-        from ._llama_cli_vulkan_1_x import lib, ffi
-    elif LLAMA_CPP_BACKEND in ('cpu', 'CPU'):
-        from ._llama_cli_cpu import lib, ffi
+try:
+    if LLAMA_CPP_BACKEND:
+        if LLAMA_CPP_BACKEND in ('cuda', 'CUDA'):
+            from ._llama_cli_cuda_12_6_3 import lib, ffi
+        elif LLAMA_CPP_BACKEND in ('vulkan', 'VULKAN'):
+            from ._llama_cli_vulkan_1_x import lib, ffi
+        elif LLAMA_CPP_BACKEND in ('cpu', 'CPU'):
+            from ._llama_cli_cpu import lib, ffi
+        else:
+            raise ValueError(f'{LLAMA_CPP_BACKEND = }')
     else:
-        raise ValueError(f'{LLAMA_CPP_BACKEND = }')
-else:
-    if is_cuda_available():
-        from ._llama_cli_cuda_12_6 import lib, ffi
-    elif is_vulkan_available():
-        from ._llama_cli_vulkan_1_x import lib, ffi
-    else:
-        from ._llama_cli_cpu import lib, ffi
+        if is_cuda_available():
+            from ._llama_cli_cuda_12_6_3 import lib, ffi
+        elif is_vulkan_available():
+            from ._llama_cli_vulkan_1_x import lib, ffi
+        else:
+            from ._llama_cli_cpu import lib, ffi
+except ImportError:
+    from ._llama_cli_cpu import lib, ffi
+except ModuleNotFoundError:
+    from ._llama_cli_cpu import lib, ffi
 
 
 _LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
@@ -55,7 +59,7 @@ def _llama_yield_token_func(chunk_bytes: bytes, queue: Queue, metadata: dict):
         return
 
     metadata['prev_chunk_bytes'] = b''
-    
+
     if not stop_on_special_token:
         queue.put(chunk)
         return
@@ -64,10 +68,10 @@ def _llama_yield_token_func(chunk_bytes: bytes, queue: Queue, metadata: dict):
     buffer = metadata['buffer']
     buffer += chunk
     metadata['buffer'] = buffer
-    
+
     subtoken_found = False
     token_found = False
-    
+
     for token in special_tokens:
         for i in range(len(token)):
             subtoken = token[:i + 1]
@@ -85,13 +89,13 @@ def _llama_yield_token_func(chunk_bytes: bytes, queue: Queue, metadata: dict):
                     metadata['buffer'] = buffer
                     metadata['should_stop'] = True
                     token_found = True
-    
+
     if subtoken_found:
         return
 
     if token_found:
         return
-    
+
     buffer = metadata['buffer']
     queue.put(buffer)
     metadata['buffer'] = ''
@@ -111,7 +115,7 @@ def _llama_cli_main(argc, argv, queue: Queue, metadata: dict):
     cffi__llama_yield_token_callback = ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
     cffi__llama_should_stop_callback = ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
 
-    r = lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback, 1)
+    r = lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
     # assert r == 0
     queue.put(None)
 

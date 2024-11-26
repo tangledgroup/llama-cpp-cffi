@@ -28,6 +28,11 @@ models = {
         hf_repo='bartowski/SmolLM-1.7B-Instruct-v0.2-GGUF',
         hf_file='SmolLM-1.7B-Instruct-v0.2-Q4_K_M.gguf',
     ),
+    'HuggingFaceTB/SmolLM2-1.7B-Instruct': Model(
+        creator_hf_repo='HuggingFaceTB/SmolLM2-1.7B-Instruct',
+        hf_repo='bartowski/SmolLM2-1.7B-Instruct-GGUF',
+        hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
+    ),
     'microsoft/phi-2': Model(
         creator_hf_repo='microsoft/phi-2',
         hf_repo='andrijdavid/phi-2-GGUF',

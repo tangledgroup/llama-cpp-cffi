@@ -7,7 +7,7 @@ from demo_messages import tools_messages as messages
 def demo(model: Model):
     print(model)
     config = get_config(model.creator_hf_repo)
-    
+
     options = Options(
         ctx_size=config.max_position_embeddings,
         predict=-2,
@@ -27,9 +27,9 @@ def demo(model: Model):
 
 if __name__ == '__main__':
     models_ids: list[str] = [
-        'HuggingFaceTB/SmolLM-1.7B-Instruct-v0.2',
+        'HuggingFaceTB/SmolLM2-1.7B-Instruct',
     ]
-    
+
     for model_id in models_ids:
         model: Model = models[model_id]
         demo(model)

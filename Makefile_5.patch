@@ -3,37 +3,37 @@
 @@ -970,7 +970,11 @@
  	$(DIR_COMMON)/build-info.o \
  	$(DIR_COMMON)/json-schema-to-grammar.o
- 
+
 -OBJ_ALL = $(OBJ_GGML) $(OBJ_LLAMA) $(OBJ_COMMON)
 +OBJ_LLAVA = \
 +	examples/llava/llava.o \
 +	examples/llava/clip.o
 +
 +OBJ_ALL = $(OBJ_GGML) $(OBJ_LLAMA) $(OBJ_COMMON) $(OBJ_LLAVA)
- 
+
  LIB_GGML   = $(LIB_PRE)ggml$(DSO_EXT)
  LIB_GGML_S = $(LIB_PRE)ggml.a
 @@ -1153,6 +1157,24 @@
  # Helper function that replaces .c, .cpp, and .cu file endings with .o:
  GET_OBJ_FILE = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(patsubst %.cu,%.o,$(1))))
- 
+
 +#
 +# llama-cpp-cffi static library
 +#
 +llama-cli-static: examples/main/main.cpp \
 +	$(OBJ_ALL)
 +	$(CXX) $(CXXFLAGS) $(LIB_CXXFLAGS) -c $< -o $(call GET_OBJ_FILE, $<)
-+	ar rcs llama_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
++	ar rcs libllama_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
 +
 +llava-cli-static: examples/llava/llava-cli.cpp \
 +	$(OBJ_ALL)
 +	$(CXX) $(CXXFLAGS) $(LIB_CXXFLAGS) -c $< -o $(call GET_OBJ_FILE, $<)
-+	ar rcs llava_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
++	ar rcs libllava_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
 +
 +minicpmv-cli-static: examples/llava/minicpmv-cli.cpp \
 +	$(OBJ_ALL)
 +	$(CXX) $(CXXFLAGS) $(LIB_CXXFLAGS) -c $< -o $(call GET_OBJ_FILE, $<)
-+	ar rcs llava_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
++	ar rcs libminicpmv_cli.a $(filter-out %.h $<,$^) $(call GET_OBJ_FILE, $<)
 +
  llama-cli: examples/main/main.cpp \
  	$(OBJ_ALL)
