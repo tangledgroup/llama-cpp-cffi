@@ -1,0 +1,92 @@
+--- llama.cpp-master/examples/llava/minicpmv-cli.cpp	2024-11-25 14:16:56.886772502 +0100
++++ llama.cpp/examples/llava/minicpmv-cli.cpp	2024-11-26 11:32:42.915258718 +0100
+@@ -14,6 +14,21 @@
+ #include <vector>
+ #include <iostream> // TODO: remove me
+ 
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#ifdef LLAMA_LIB
++typedef void (*_llama_yield_token_t)(const char * token);
++typedef int (*_llama_should_stop_t)(void);
++int _minicpmv_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
++#endif
++
++#ifdef __cplusplus
++}
++#endif
++
++
+ struct llava_context {
+     struct clip_ctx * ctx_clip = NULL;
+     struct llama_context * ctx_llama = NULL;
+@@ -247,7 +262,15 @@
+     return tmp;
+ }
+ 
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#ifdef LLAMA_LIB
++int _minicpmv_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop) {
++#else
+ int main(int argc, char ** argv) {
++#endif
+     ggml_time_init();
+ 
+     common_params params;
+@@ -285,7 +308,21 @@
+                 }
+                 if (strstr(tmp, "###")) break; // Yi-VL behavior
+                 have_tmp = true;
++
++#ifdef LLAMA_LIB
++                if (_llama_yield_token != NULL) {
++                    _llama_yield_token(tmp);
++                }
++
++                if (_llama_should_stop != NULL) {
++                    if (_llama_should_stop() == 1) {
++                        break;
++                    }
++                }
++#else
+                 printf("%s", tmp);
++#endif
++
+                 if (strstr(response.c_str(), "<user>")) break; // minicpm-v
+ 
+                 fflush(stdout);
+@@ -305,7 +342,21 @@
+                     response += tmp;
+                     if (strcmp(tmp, "</s>") == 0) break;
+                     if (strstr(tmp, "###")) break; // Yi-VL behavior
++
++#ifdef LLAMA_LIB
++                    if (_llama_yield_token != NULL) {
++                        _llama_yield_token(tmp);
++                    }
++
++                    if (_llama_should_stop != NULL) {
++                        if (_llama_should_stop() == 1) {
++                            break;
++                        }
++                    }
++#else
+                     printf("%s", tmp);// mistral llava-1.6
++#endif
++
+                     if (strstr(response.c_str(), "<user>")) break; // minicpm-v
+                     fflush(stdout);
+                 }
+@@ -321,3 +372,7 @@
+ 
+     return 0;
+ }
++
++#ifdef __cplusplus
++}
++#endif

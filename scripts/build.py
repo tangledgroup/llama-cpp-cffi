@@ -16,8 +16,10 @@ from clean import clean_llama, clean_llama_cpp, clean
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_4.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_4.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/llava-cli.cpp', 'llava-cli_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/minicpmv-cli.cpp', 'minicpmv-cli_5.patch'], check=True)
 
 
 def cuda_12_6_setup(*args, **kwargs):
@@ -32,14 +34,14 @@ def cuda_12_6_setup(*args, **kwargs):
     # download cuda file
     if not os.path.exists(cuda_file_path):
         cmd = ['mkdir', '-p', f'{cuda_output_dir}']
-        
+
         subprocess.run(cmd, check=True)
         subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
-    
+
     # extract cuda file
     cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
     subprocess.run(cmd, check=True)
-    
+
     cmd = [
         f'{cuda_output_dir}/{cuda_file}',
         '--tar',
@@ -84,14 +86,14 @@ def cuda_12_5_1_setup(*args, **kwargs):
     # download cuda file
     if not os.path.exists(cuda_file_path):
         cmd = ['mkdir', '-p', f'{cuda_output_dir}']
-        
+
         subprocess.run(cmd, check=True)
         subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
-    
+
     # extract cuda file
     cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
     subprocess.run(cmd, check=True)
-    
+
     cmd = [
         f'{cuda_output_dir}/{cuda_file}',
         '--tar',
@@ -136,14 +138,14 @@ def cuda_12_4_1_setup(*args, **kwargs):
     # download cuda file
     if not os.path.exists(cuda_file_path):
         cmd = ['mkdir', '-p', f'{cuda_output_dir}']
-        
+
         subprocess.run(cmd, check=True)
         subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
-    
+
     # extract cuda file
     cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
     subprocess.run(cmd, check=True)
-    
+
     cmd = [
         f'{cuda_output_dir}/{cuda_file}',
         '--tar',
@@ -203,17 +205,17 @@ def build_cpu(*args, **kwargs):
     ffibuilder.cdef('''
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
+        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
     ''')
 
     ffibuilder.set_source(
         '_llama_cli_cpu',
         '''
         #include <stdio.h>
-        
+
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
-        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
+        int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
         ''',
         libraries=['stdc++'],
         extra_objects=['../llama.cpp/llama_cli.a'],
@@ -271,7 +273,7 @@ def build_vulkan_1_x(*args, **kwargs):
         '_llama_cli_vulkan_1_x',
         '''
         #include <stdio.h>
-        
+
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
         int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
@@ -335,7 +337,7 @@ def build_cpu_openblas(*args, **kwargs):
         '_llama_cli_cpu_openblas',
         '''
         #include <stdio.h>
-        
+
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
         int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
@@ -367,7 +369,7 @@ def build_cpu_openblas(*args, **kwargs):
 def build_linux_cuda_12_6(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    
+
     #
     # cuda env
     #
@@ -418,7 +420,7 @@ def build_linux_cuda_12_6(*args, **kwargs):
         '_llama_cli_cuda_12_6',
         '''
         #include <stdio.h>
-        
+
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
         int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
@@ -459,7 +461,7 @@ def build_linux_cuda_12_6(*args, **kwargs):
 def build_linux_cuda_12_5_1(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    
+
     #
     # cuda env
     #
@@ -510,7 +512,7 @@ def build_linux_cuda_12_5_1(*args, **kwargs):
         '_llama_cli_cuda_12_5_1',
         '''
         #include <stdio.h>
-        
+
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
         int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
@@ -551,7 +553,7 @@ def build_linux_cuda_12_5_1(*args, **kwargs):
 def build_linux_cuda_12_4_1(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    
+
     #
     # cuda env
     #
@@ -602,7 +604,7 @@ def build_linux_cuda_12_4_1(*args, **kwargs):
         '_llama_cli_cuda_12_4_1',
         '''
         #include <stdio.h>
-        
+
         typedef void (*_llama_yield_token_t)(const char * token);
         typedef int (*_llama_should_stop_t)(void);
         int _llama_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop, int stop_on_bos_eos_eot);
