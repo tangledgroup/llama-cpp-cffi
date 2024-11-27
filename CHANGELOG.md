@@ -1,6 +1,15 @@
 # CHANGELOG
 
+## v0.1.23
+
+Added:
+  - Support and examples for `llava` and `minicpmv` models.
+
 ## v0.1.22
+
+Added:
+  - `llava` high-level API calls
+  - `minicpmv` high-level API support
 
 Changed:
     - Updated `llama.cpp`.

@@ -1,9 +1,25 @@
-__all__ = ['get_config', 'get_tokenizer', 'get_special_tokens', 'format_messages', 'AutoConfig']
+__all__ = [
+    'CHATML_CHAT_TEMPLATE',
+    'ZEPHYR_CHAT_TEMPLATE',
+    'SYSTEM_USER_ASSISTANT_TEMPLATE',
+    'create_alternate_messages',
+    'get_fallback_chat_template',
+    'get_config',
+    'get_tokenizer',
+    'get_special_tokens',
+    'format_messages',
+    'AutoConfig',
+]
 
+import json
 from copy import deepcopy
+from collections import namedtuple
 
-import jinja2
+# import jinja2
+from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoTokenizer
+
+from .options import Options
 
 
 FALLBACK_MODEL_ID = 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
@@ -27,6 +43,22 @@ ZEPHYR_CHAT_TEMPLATE = (
     "{% endif %}"
 )
 
+SYSTEM_USER_ASSISTANT_TEMPLATE = (
+    "{% for message in messages %}"
+        "{% if message['role'] == 'system' %}"
+            "{{ 'System: ' + message['content'] }}\n\n"
+        "{% elif message['role'] == 'user' %}"
+            "{{ 'User: ' + message['content'] }}\n\n"
+        "{% elif message['role'] == 'assistant' %}"
+            "{{ 'Assistant: '  + message['content'] }}\n\n"
+        "{% endif %}"
+
+        "{% if loop.last and add_generation_prompt %}"
+            "{{ 'Assistant:' }}"
+        "{% endif %}"
+    "{% endfor %}"
+)
+
 
 def create_alternate_messages(messages: list[dict], convert_system_to_user: bool=False) -> list[dict]:
     assert messages
@@ -42,7 +74,7 @@ def create_alternate_messages(messages: list[dict], convert_system_to_user: bool
 
     for i, m in enumerate(list(messages[1:])):
         if m['role'] == prev_m['role']:
-            new_messages[-1]['content'] += '\n' + m['content']
+            new_messages[-1]['content'] += ' ' + m['content']
         else:
             new_messages.append(m)
 
@@ -61,13 +93,23 @@ def get_fallback_chat_template(tokenizer: AutoTokenizer) -> str:
 
 
 def get_config(model_id: str) -> AutoConfig:
-    config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+    try:
+        config = AutoConfig.from_pretrained(model_id, trust_remote_code=True)
+    except Exception:
+        config_path = hf_hub_download(repo_id=model_id, filename='config.json')
+
+        with open(config_path) as f:
+            config_data: dict = json.load(f)
+
+        _ModelConfig = namedtuple('_ModelConfig', [k for k in config_data.keys() if not k.startswith('_')])
+        config = _ModelConfig(**{k: v for k, v in config_data.items() if not k.startswith('_')})
+
     return config
 
 
 def get_special_tokens(tokenizer: AutoTokenizer, force_standard_special_tokens: bool=False) -> list[str]:
     special_tokens: list[str] = []
-    
+
     if force_standard_special_tokens:
         special_tokens += [
             # mixed
@@ -106,58 +148,58 @@ def get_special_tokens(tokenizer: AutoTokenizer, force_standard_special_tokens: 
     else:
         special_tokens += tokenizer.all_special_tokens + tokenizer.additional_special_tokens
 
-        if '<s>' in special_tokens and not '</s>' in special_tokens:
+        if '<s>' in special_tokens and '</s>' not in special_tokens:
             special_tokens.append('</s>')
 
-        if '<s>' in special_tokens and not '[AVAILABLE_TOOLS]' in special_tokens:
+        if '<s>' in special_tokens and '[AVAILABLE_TOOLS]' not in special_tokens:
             special_tokens.append('[AVAILABLE_TOOLS]')
 
-        if '<s>' in special_tokens and not '[/AVAILABLE_TOOLS]' in special_tokens:
+        if '<s>' in special_tokens and '[/AVAILABLE_TOOLS]' not in special_tokens:
             special_tokens.append('[/AVAILABLE_TOOLS]')
 
-        if '<s>' in special_tokens and not '[INST]' in special_tokens:
+        if '<s>' in special_tokens and '[INST]' not in special_tokens:
             special_tokens.append('[INST]')
 
-        if '<s>' in special_tokens and not '[/INST]' in special_tokens:
+        if '<s>' in special_tokens and '[/INST]' not in special_tokens:
             special_tokens.append('[/INST]')
 
-        if '<s>' in special_tokens and not '<<INST>>' in special_tokens:
+        if '<s>' in special_tokens and '<<INST>>' not in special_tokens:
             special_tokens.append('<<INST>>')
 
-        if '<s>' in special_tokens and not '<</INST>>' in special_tokens:
+        if '<s>' in special_tokens and '<</INST>>' not in special_tokens:
             special_tokens.append('<</INST>>')
 
-        if '<s>' in special_tokens and not '<<SYS>>' in special_tokens:
+        if '<s>' in special_tokens and '<<SYS>>' not in special_tokens:
             special_tokens.append('<<SYS>>')
 
-        if '<s>' in special_tokens and not '<</SYS>>' in special_tokens:
+        if '<s>' in special_tokens and '<</SYS>>' not in special_tokens:
             special_tokens.append('<</SYS>>')
 
-        if '<s>' in special_tokens and not '[SYS]' in special_tokens:
+        if '<s>' in special_tokens and '[SYS]' not in special_tokens:
             special_tokens.append('[SYS]')
 
-        if '<s>' in special_tokens and not '[/SYS]' in special_tokens:
+        if '<s>' in special_tokens and '[/SYS]' not in special_tokens:
             special_tokens.append('[/SYS]')
 
-        if '<s>' in special_tokens and not '[UNUSED_TOKEN_145]' in special_tokens:
+        if '<s>' in special_tokens and '[UNUSED_TOKEN_145]' not in special_tokens:
             special_tokens.append('[UNUSED_TOKEN_145]')
 
-        if '<|startoftext|>' in special_tokens and not '<|endoftext|>' in special_tokens:
+        if '<|startoftext|>' in special_tokens and '<|endoftext|>' not in special_tokens:
             special_tokens.append('<|endoftext|>')
-        
-        if '<|endoftext|>' in special_tokens and not '<|end|>' in special_tokens:
+
+        if '<|endoftext|>' in special_tokens and '<|end|>' not in special_tokens:
             special_tokens.append('<|end|>')
 
-        if '<|endoftext|>' in special_tokens and not '<|system|>' in special_tokens:
+        if '<|endoftext|>' in special_tokens and '<|system|>' not in special_tokens:
             special_tokens.append('<|system|>')
 
-        if '<|endoftext|>' in special_tokens and not '<|user|>' in special_tokens:
+        if '<|endoftext|>' in special_tokens and '<|user|>' not in special_tokens:
             special_tokens.append('<|user|>')
 
-        if '<|endoftext|>' in special_tokens and not '<|assistant|>' in special_tokens:
+        if '<|endoftext|>' in special_tokens and '<|assistant|>' not in special_tokens:
             special_tokens.append('<|assistant|>')
-        
-        if '<|im_end|>' in special_tokens and not '<|im_start|>' in special_tokens:
+
+        if '<|im_end|>' in special_tokens and '<|im_start|>' not in special_tokens:
             special_tokens.append('<|im_start|>')
 
         special_tokens = set(special_tokens)
@@ -181,12 +223,16 @@ def get_tokenizer(model_id: str) -> AutoTokenizer:
     return tokenizer
 
 
-def format_messages(tokenizer: AutoTokenizer, messages: list[dict]) -> str:
-    try:
+def format_messages(tokenizer: AutoTokenizer, messages: list[dict], options: Options) -> str:
+    if options.chat_template:
+        tokenizer.chat_template = options.chat_template
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    except Exception:
-        messages = create_alternate_messages(messages, convert_system_to_user=True)
-        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    else:
+        try:
+            text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        except Exception:
+            messages = create_alternate_messages(messages, convert_system_to_user=True)
+            text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
     # print(f'{text = }')
     return text

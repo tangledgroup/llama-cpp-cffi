@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.1.22"
+version = "0.1.23"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
@@ -91,13 +91,13 @@ repair-wheel-command = """
 for file in {wheel}; do
     tempdir=$(mktemp -d)
     unzip -d "$tempdir" "$file"
-    
+
     # Compress shared libraries in the tempdir using UPX
     find "$tempdir" -type f \\( -name "*.so" -o -name "*.dylib" -o -name "*.dll" \\) -exec upx -9 {} \\;
 
     # Repackage with 7z
     (cd "$tempdir" && 7z a -tzip -mx=9 -mfb=258 -mpass=15 -mmt=on "{dest_dir}/$(basename $file)" .)
-    
+
     # Clean up
     rm -rf "$tempdir"
 done

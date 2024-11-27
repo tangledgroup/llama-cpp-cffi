@@ -1,4 +1,4 @@
-from llama import llama_generate, get_config, Model, Options
+from llama import llama_generate, Model, Options
 
 from demo_models import models
 from demo_messages import tools_messages as messages
@@ -6,11 +6,11 @@ from demo_messages import tools_messages as messages
 
 def demo(model: Model):
     print(model)
-    config = get_config(model.creator_hf_repo)
 
     options = Options(
-        ctx_size=config.max_position_embeddings,
-        predict=-2,
+        ctx_size=0,
+        predict=-1,
+        no_context_shift=True,
         model=model,
         prompt=messages,
         temp=0.0,
@@ -28,8 +28,8 @@ def demo(model: Model):
 
 if __name__ == '__main__':
     models_ids: list[str] = [
-        'HuggingFaceTB/SmolLM2-360M-Instruct',
-        'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+        'RWKV/v6-Finch-1B6-HF',
+        'RWKV/v6-Finch-3B-HF',
     ]
 
     for model_id in models_ids:

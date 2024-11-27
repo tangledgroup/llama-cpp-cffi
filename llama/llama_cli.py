@@ -4,7 +4,7 @@ import os
 import ctypes
 from queue import Queue
 from copy import deepcopy
-from typing import Iterator
+from typing import Iterator, Callable
 from threading import Thread
 from functools import partial
 
@@ -24,24 +24,39 @@ try:
     if LLAMA_CPP_BACKEND:
         if LLAMA_CPP_BACKEND in ('cuda', 'CUDA'):
             from ._llama_cli_cuda_12_6_3 import lib, ffi
+            from ._llava_cli_cuda_12_6_3 import lib as llava_lib, llava_ffi
+            from ._minicpmv_cli_cuda_12_6_3 import lib as minicpmv_lib, ffi as minicpmv_ffi
         elif LLAMA_CPP_BACKEND in ('vulkan', 'VULKAN'):
             from ._llama_cli_vulkan_1_x import lib, ffi
+            from ._llava_cli_vulkan_1_x import lib as llava_lib, ffi as llava_ffi
+            from ._minicpmv_cli_vulkan_1_x import lib as minicpmv_lib, ffi as minicpmv_ffi
         elif LLAMA_CPP_BACKEND in ('cpu', 'CPU'):
             from ._llama_cli_cpu import lib, ffi
+            from ._llava_cli_cpu import lib as llava_lib, ffi as llava_ffi
+            from ._minicpmv_cli_cpu import lib as minicpmv_lib, ffi as minicpmv_ffi
         else:
             raise ValueError(f'{LLAMA_CPP_BACKEND = }')
     else:
         if is_cuda_available():
             from ._llama_cli_cuda_12_6_3 import lib, ffi
+            from ._llava_cli_cuda_12_6_3 import lib as llava_lib, ffi as llava_ffi
+            from ._minicpmv_cli_cuda_12_6_3 import lib as minicpmv_lib, ffi as minicpmv_ffi
         elif is_vulkan_available():
             from ._llama_cli_vulkan_1_x import lib, ffi
+            from ._llava_cli_vulkan_1_x import lib as llava_lib, ffi as llava_ffi
+            from ._minicpmv_cli_vulkan_1_x import lib as minicpmv_lib, ffi as minicpmv_ffi
         else:
             from ._llama_cli_cpu import lib, ffi
+            from ._llava_cli_cpu import lib as llava_lib, ffi as llava_ffi
+            from ._minicpmv_cli_cpu import lib as minicpmv_lib, ffi as minicpmv_ffi
 except ImportError:
     from ._llama_cli_cpu import lib, ffi
-except ModuleNotFoundError:
-    from ._llama_cli_cpu import lib, ffi
+    from ._llava_cli_cpu import lib as llava_lib, ffi as llava_ffi
+    from ._minicpmv_cli_cpu import lib as minicpmv_lib, ffi as minicpmv_ffi
 
+
+llama_lib = lib
+llama_ffi = ffi
 
 _LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
 _LLAMA_SHOULD_STOP_T = ctypes.CFUNCTYPE(ctypes.c_int)
@@ -76,19 +91,20 @@ def _llama_yield_token_func(chunk_bytes: bytes, queue: Queue, metadata: dict):
         for i in range(len(token)):
             subtoken = token[:i + 1]
 
-            # if subtoken in buffer:
             if buffer[-len(subtoken):] == subtoken:
-                # print(f'{subtoken = }, {buffer = }')
                 subtoken_found = True
 
                 if token in buffer:
-                    # print(f'{token = }')
                     index = buffer.index(token)
                     chunk = buffer[:index]
                     buffer = buffer[index + len(token):]
                     metadata['buffer'] = buffer
                     metadata['should_stop'] = True
                     token_found = True
+                    break
+
+        if subtoken_found or token_found:
+            break
 
     if subtoken_found:
         return
@@ -115,7 +131,37 @@ def _llama_cli_main(argc, argv, queue: Queue, metadata: dict):
     cffi__llama_yield_token_callback = ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
     cffi__llama_should_stop_callback = ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
 
-    r = lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
+    r = llama_lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
+    # assert r == 0
+    queue.put(None)
+
+
+def _llava_cli_main(argc, argv, queue: Queue, metadata: dict):
+    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, metadata=metadata))
+    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, metadata=metadata))
+
+    _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
+    _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
+
+    cffi__llama_yield_token_callback = ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
+    cffi__llama_should_stop_callback = ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
+
+    r = llava_lib._llava_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
+    # assert r == 0
+    queue.put(None)
+
+
+def _minicpmv_cli_main(argc, argv, queue: Queue, metadata: dict):
+    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, metadata=metadata))
+    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, metadata=metadata))
+
+    _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
+    _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
+
+    cffi__llama_yield_token_callback = ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
+    cffi__llama_should_stop_callback = ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
+
+    r = minicpmv_lib._minicpmv_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
     # assert r == 0
     queue.put(None)
 
@@ -129,6 +175,11 @@ def llama_generate(options: Options) -> Iterator[str]:
     assert options.model and isinstance(options.model, Model)
 
     options: Options = deepcopy(options)
+
+    engine = options.engine
+    engine_func: str = f'_{engine}_cli_main'
+    engine_func: Callable = globals()[engine_func]
+
     model: Model = options.model
 
     if model.tokenizer_hf_repo:
@@ -136,10 +187,13 @@ def llama_generate(options: Options) -> Iterator[str]:
     else:
         tokenizer = get_tokenizer(model.creator_hf_repo)
 
+    if model.mmproj_hf_file:
+        options.mmproj = hf_hub_download(repo_id=model.hf_repo, filename=model.mmproj_hf_file)
+
     options.model = hf_hub_download(repo_id=model.hf_repo, filename=model.hf_file)
 
     if isinstance(options.prompt, list):
-        options.prompt = format_messages(tokenizer, options.prompt)
+        options.prompt = format_messages(tokenizer, options.prompt, options)
 
     if options.no_display_prompt == False:
         # print('options.prompt:')
@@ -173,7 +227,7 @@ def llama_generate(options: Options) -> Iterator[str]:
     argv = [ffi.new('char[]', n) for n in argv]
     argc = len(argv)
 
-    t = Thread(target=_llama_cli_main, args=(argc, argv, queue, metadata))
+    t = Thread(target=engine_func, args=(argc, argv, queue, metadata))
     t.start()
 
     try:

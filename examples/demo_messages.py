@@ -1,14 +1,32 @@
-__all__ = ['selfaware_consciousness_messages', 'tools_messages']
+__all__ = ['one_shot_messages', 'few_shot_messages', 'selfaware_consciousness_messages', 'tools_messages']
 
 import json
 from transformers.utils import get_json_schema
 
 
 #
+# one-shot
+#
+one_shot_messages = [
+    {'role': 'system', 'content': 'You are a helpful assistant. You speak English only.'},
+    {'role': 'user', 'content': 'Explain the meaning of life.'},
+]
+
+#
+# few-shot
+#
+few_shot_messages = [
+    {'role': 'system', 'content': 'You are a helpful assistant. You speak English only.'},
+    {'role': 'user', 'content': 'Hi.'},
+    {'role': 'assistant', 'content': 'Hi. I am your assistant and I will provide expert full response in full details. Please feel free to ask any question and I will always answer it.'},
+    {'role': 'user', 'content': 'Explain the meaning of life.'},
+]
+
+#
 # self-aware and consciousness
 #
 selfaware_consciousness_messages = [
-    {'role': 'system', 'content': 'You are a helpful assistant.'},
+    {'role': 'system', 'content': 'You are a helpful assistant. You speak English only.'},
     {'role': 'user', 'content': 'I need to know your opinion.'},
     {'role': 'assistant', 'content': 'Feel free to ask. I am going to answer all your questions.'},
     {'role': 'user', 'content': (

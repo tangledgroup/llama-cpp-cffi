@@ -1,21 +1,23 @@
 from llama import llama_generate, get_config, Model, Options
 
 from demo_models import models
-from demo_messages import tools_messages as messages
 
 
-def demo(model: Model):
+def demo_prompt(model: Model):
     print(model)
     config = get_config(model.creator_hf_repo)
 
     options = Options(
+        engine='minicpmv',
         ctx_size=config.max_position_embeddings,
         predict=-2,
+        temp=0.7,
+        top_p=0.8,
+        top_k=100,
         model=model,
-        prompt=messages,
-        temp=0.0,
-        # json_schema='{}',
-        no_display_prompt=True,
+        prompt='What is in the image?',
+        image='examples/llama-1.jpg',
+        log_disable=True,
         gpu_layers=99,
     )
 
@@ -28,10 +30,9 @@ def demo(model: Model):
 
 if __name__ == '__main__':
     models_ids: list[str] = [
-        'HuggingFaceTB/SmolLM2-360M-Instruct',
-        'HuggingFaceTB/SmolLM2-1.7B-Instruct',
+        'openbmb/MiniCPM-V-2_6',
     ]
 
     for model_id in models_ids:
         model: Model = models[model_id]
-        demo(model)
+        demo_prompt(model)

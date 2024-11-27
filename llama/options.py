@@ -17,6 +17,7 @@ class Options:
     verbose_prompt: Optional[bool] = field(default=None, metadata={"long_name": "--verbose-prompt", "description": "Print a verbose prompt before generation (default: false)"})
     no_display_prompt: Optional[bool] = field(default=True, metadata={"long_name": "--no-display-prompt", "description": "Don't print prompt at generation (default: false)"})
     color: Optional[bool] = field(default=None, metadata={"long_name": "--color", "description": "Colorize output to distinguish prompt and user input from generations (default: false)"})
+    no_context_shift: Optional[bool] = field(default=None, metadata={"long_name": "--no-context-shift", "description": "disables context shift on infinite text generation (default: disabled)"})
     seed: Optional[int] = field(default=None, metadata={"long_name": "--seed", "description": "RNG seed (default: -1, use random seed for < 0)"})
     threads: Optional[int] = field(default=psutil.cpu_count(logical=False), metadata={"long_name": "--threads", "description": "Number of threads to use during generation (default: 16)"})
     threads_batch: Optional[int] = field(default=None, metadata={"long_name": "--threads-batch", "description": "Number of threads to use during batch and prompt processing (default: same as --threads)"})
@@ -171,22 +172,29 @@ class Options:
     log_append: Optional[bool] = field(default=None, metadata={"long_name": "--log-append", "description": "Don't truncate the old log file"})
 
     # Non-llama-cli fields
+    engine: str = field(default='llama', metadata={"long_name": "--engine", "description": "Engine"}) # 'llama', 'llava', 'minicpmv'
     stop: Optional[list[str]] = field(default=None, metadata={"long_name": "--stop", "description": "Stop"})
+    chat_template: Optional[str] = field(default=None, metadata={"long_name": "--chat-template", "description": "Chat Template"})
 
 
 def convert_options_to_bytes(options: Options) -> list[bytes]:
-    result = []
+    result: list[bytes] = []
 
-    for field in fields(Options):
+    for n in fields(Options):
         # skip non-llama-cli fields
-        if field.name in ('stop',):
+        if n.name in ('engine', 'stop', 'chat_template'):
             continue
 
-        value = getattr(options, field.name)
-        
+        # skip unsupported options for given engine
+        if options.engine in ('llava', 'minicpmv'):
+            if n.name in ('no_display_prompt', 'simple_io'):
+                continue
+
+        value = getattr(options, n.name)
+
         if value is not None:
-            long_name = field.metadata['long_name']
-            alias = field.metadata.get('alias')
+            long_name = n.metadata['long_name']
+            # alias = field.metadata.get('alias')
 
             if isinstance(value, bool):
                 # handle boolean options

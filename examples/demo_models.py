@@ -3,6 +3,9 @@ __all__ = ['models']
 from llama.model import Model
 
 models = {
+    #
+    # llm
+    #
     'TinyLlama/TinyLlama_v1.1': Model(
         creator_hf_repo='TinyLlama/TinyLlama_v1.1',
         hf_repo='QuantFactory/TinyLlama_v1.1-GGUF',
@@ -22,16 +25,6 @@ models = {
         creator_hf_repo='cognitivecomputations/TinyDolphin-2.8-1.1b',
         hf_repo='tsunemoto/TinyDolphin-2.8-1.1b-GGUF',
         hf_file='tinydolphin-2.8-1.1b.Q4_K_M.gguf',
-    ),
-    'HuggingFaceTB/SmolLM-1.7B-Instruct-v0.2': Model(
-        creator_hf_repo='HuggingFaceTB/SmolLM-1.7B-Instruct-v0.2',
-        hf_repo='bartowski/SmolLM-1.7B-Instruct-v0.2-GGUF',
-        hf_file='SmolLM-1.7B-Instruct-v0.2-Q4_K_M.gguf',
-    ),
-    'HuggingFaceTB/SmolLM2-1.7B-Instruct': Model(
-        creator_hf_repo='HuggingFaceTB/SmolLM2-1.7B-Instruct',
-        hf_repo='bartowski/SmolLM2-1.7B-Instruct-GGUF',
-        hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
     ),
     'microsoft/phi-2': Model(
         creator_hf_repo='microsoft/phi-2',
@@ -62,5 +55,52 @@ models = {
         creator_hf_repo='mistralai/Mistral-7B-Instruct-v0.3',
         hf_repo='bartowski/Mistral-7B-Instruct-v0.3-GGUF',
         hf_file='Mistral-7B-Instruct-v0.3-Q4_K_M.gguf',
+    ),
+    # 'HuggingFaceTB/SmolLM-1.7B-Instruct-v0.2': Model(
+    #     creator_hf_repo='HuggingFaceTB/SmolLM-1.7B-Instruct-v0.2',
+    #     hf_repo='bartowski/SmolLM-1.7B-Instruct-v0.2-GGUF',
+    #     hf_file='SmolLM-1.7B-Instruct-v0.2-Q4_K_M.gguf',
+    # ),
+    'HuggingFaceTB/SmolLM2-1.7B-Instruct': Model(
+        creator_hf_repo='HuggingFaceTB/SmolLM2-1.7B-Instruct',
+        hf_repo='bartowski/SmolLM2-1.7B-Instruct-GGUF',
+        hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
+    ),
+    'HuggingFaceTB/SmolLM2-360M-Instruct': Model(
+        creator_hf_repo='HuggingFaceTB/SmolLM2-360M-Instruct',
+        hf_repo='bartowski/SmolLM2-360M-Instruct-GGUF',
+        hf_file='SmolLM2-360M-Instruct-Q8_0.gguf',
+    ),
+    'RWKV/v6-Finch-1B6-HF': Model(
+        creator_hf_repo='RWKV/v6-Finch-1B6-HF',
+        hf_repo='latestissue/rwkv-6-finch-1b6-gguf',
+        hf_file='rwkv-6-finch-1b6-Q4_K.gguf',
+    ),
+    'RWKV/v6-Finch-3B-HF': Model(
+        creator_hf_repo='RWKV/v6-Finch-3B-HF',
+        hf_repo='bartowski/v6-Finch-3B-HF-GGUF',
+        hf_file='v6-Finch-3B-HF-Q4_K_M.gguf',
+    ),
+
+    #
+    # vlm
+    #
+    'vikhyatk/moondream2': Model(
+        creator_hf_repo='vikhyatk/moondream2',
+        hf_repo='vikhyatk/moondream2',
+        hf_file='moondream2-text-model-f16.gguf',
+        mmproj_hf_file='moondream2-mmproj-f16.gguf',
+    ),
+    'liuhaotian/llava-v1.6-mistral-7b': Model(
+        creator_hf_repo='liuhaotian/llava-v1.6-mistral-7b',
+        hf_repo='cjpais/llava-1.6-mistral-7b-gguf',
+        hf_file='llava-v1.6-mistral-7b.Q4_K_M.gguf',
+        mmproj_hf_file='mmproj-model-f16.gguf',
+    ),
+    'openbmb/MiniCPM-V-2_6': Model(
+        creator_hf_repo='openbmb/MiniCPM-V-2_6',
+        hf_repo='bartowski/MiniCPM-V-2_6-GGUF',
+        hf_file='MiniCPM-V-2_6-Q4_K_M.gguf',
+        mmproj_hf_file='mmproj-MiniCPM-V-2_6-f16.gguf',
     ),
 }

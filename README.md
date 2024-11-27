@@ -18,6 +18,10 @@
 
 NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musllinux_1_2`), but we are working on both Windows and MacOS versions.
 
+## News
+
+**Nov 27 2024** Support for Multimodal models such as **llava** and **minicpmv**.
+
 ## Install
 
 Basic library install:
@@ -153,6 +157,8 @@ if __name__ == '__main__':
 ## Demos
 
 ```bash
-python -B examples/demo_tinyllama_chat.py
-python -B examples/demo_tinyllama_tool.py
+python -B examples/demo_smollm_chat.py
+python -B examples/demo_smollm_tool.py
+python -B examples/demo_rwkv_chat.py
+python -B examples/demo_rwkv_tool.py
 ```
