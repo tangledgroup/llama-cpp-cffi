@@ -20,7 +20,7 @@ NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musll
 
 ## News
 
-**Nov 27 2024** Support for Multimodal models such as **llava** and **minicpmv**.
+**Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.
 
 ## Install
 

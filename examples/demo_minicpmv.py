@@ -17,7 +17,7 @@ def demo_prompt(model: Model):
         model=model,
         prompt='What is in the image?',
         image='examples/llama-1.jpg',
-        log_disable=True,
+        log_disable=False,
         gpu_layers=99,
     )
 

@@ -22,7 +22,7 @@ def demo_prompt(model: Model):
         model=model,
         prompt='What is in the image?',
         image='examples/llama-1.jpg',
-        log_disable=True,
+        log_disable=False,
         gpu_layers=99,
     )
 
@@ -35,7 +35,7 @@ def demo_prompt(model: Model):
 
 if __name__ == '__main__':
     models_ids: list[str] = [
-        'liuhaotian/llava-v1.6-mistral-7b',
+        # 'liuhaotian/llava-v1.6-mistral-7b',
         'vikhyatk/moondream2',
     ]
 
