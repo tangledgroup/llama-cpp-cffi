@@ -1,4 +1,4 @@
-from llama import llama_generate, get_config, Model, Options
+from llama import completions, get_config, Model, Options
 
 from demo_models import models
 from demo_messages import tools_messages as messages
@@ -19,7 +19,7 @@ def demo(model: Model):
         gpu_layers=99,
     )
 
-    for chunk in llama_generate(options):
+    for chunk in completions(options):
         print(chunk, flush=True, end='')
 
     # newline

@@ -1,4 +1,4 @@
-from llama import llama_generate, get_config, Model, Options
+from llama import completions, get_config, Model, Options
 
 from demo_models import models
 from demo_messages import tools_messages as messages
@@ -7,7 +7,7 @@ from demo_messages import tools_messages as messages
 def demo(model: Model):
     print(model)
     config = get_config(model.creator_hf_repo)
-    
+
     options = Options(
         ctx_size=config.max_position_embeddings,
         predict=-2,
@@ -18,7 +18,7 @@ def demo(model: Model):
         gpu_layers=99,
     )
 
-    for chunk in llama_generate(options):
+    for chunk in completions(options):
         print(chunk, flush=True, end='')
 
     # newline
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     models_ids: list[str] = [
         'arcee-ai/arcee-lite',
     ]
-    
+
     for model_id in models_ids:
         model: Model = models[model_id]
         demo(model)

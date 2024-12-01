@@ -297,6 +297,7 @@ def build_cpu(*args, **kwargs):
         'void ggml_graph_export(const struct ggml_cgraph * cgraph, const char * fname);': '',
         'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
         'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
+        'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
     }
 
     for i, line in enumerate(_source.splitlines()):

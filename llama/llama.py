@@ -1,5 +1,6 @@
 __all__ = [
-    'llama_generate'
+    'completions',
+    'llama_generate', # FIXME: remove in 1.2.0
 ]
 
 import os
@@ -168,7 +169,7 @@ def _minicpmv_cli_main(argc, argv, queue: Queue, metadata: dict):
     queue.put(None)
 
 
-def llama_generate(options: Options) -> Iterator[str]:
+def completions(options: Options) -> Iterator[str]:
     tokenizer: AutoTokenizer
     creator_hf_repo: str
     prompt: str
@@ -247,3 +248,6 @@ def llama_generate(options: Options) -> Iterator[str]:
 
     queue.join()
     t.join()
+
+
+llama_generate = completions

@@ -49,7 +49,7 @@ References:
 - `examples/demo_tinyllama_tool.py`
 
 ```python
-from llama import llama_generate, get_config, Model, Options
+from llama import completions, get_config, Model, Options
 
 
 model = Model(
@@ -74,7 +74,7 @@ options = Options(
     prompt=messages,
 )
 
-for chunk in llama_generate(options):
+for chunk in completions(options):
     print(chunk, flush=True, end='')
 
 # newline

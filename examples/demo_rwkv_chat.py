@@ -1,4 +1,4 @@
-from llama import llama_generate, Model, Options
+from llama import completions, Model, Options
 from llama import SYSTEM_USER_ASSISTANT_TEMPLATE, create_alternate_messages
 
 from demo_models import models
@@ -26,7 +26,7 @@ Assistant:''',
         gpu_layers=99,
     )
 
-    for chunk in llama_generate(options):
+    for chunk in completions(options):
         print(chunk, flush=True, end='')
 
     # newline
@@ -49,7 +49,7 @@ def demo_messages(model: Model):
         gpu_layers=99,
     )
 
-    for chunk in llama_generate(options):
+    for chunk in completions(options):
         print(chunk, flush=True, end='')
 
     # newline
