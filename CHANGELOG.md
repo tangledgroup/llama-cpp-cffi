@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.1.24
+
+Added:
+  - Low-level C API calls from llama.h
+
 ## v0.1.23
 
 Added:

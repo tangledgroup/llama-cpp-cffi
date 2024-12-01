@@ -4,4 +4,4 @@
 from .formatter import * # noqa
 from .model import * # noqa
 from .options import * # noqa
-from .llama_cli import * # noqa
+from .llama import * # noqa

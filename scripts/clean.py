@@ -18,6 +18,7 @@ def clean_llama_cpp():
 
 def clean():
     clean_llama()
+    clean_llama_cpp()
     subprocess.run(['rm', '-fr', 'build'], check=True)
     subprocess.run(['rm', '-fr', 'dist'], check=True)
     subprocess.run(['rm', '-fr', 'llama.cpp'], check=True)
