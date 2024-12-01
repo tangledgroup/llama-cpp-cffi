@@ -8,7 +8,7 @@ from tempfile import NamedTemporaryFile
 
 from cffi import FFI
 
-from clean import clean_llama_cpp
+from clean import clean_llama_cpp, clean
 
 
 # if 'PYODIDE' in env and env['PYODIDE'] == '1':
@@ -186,18 +186,15 @@ def get_func_declarations(source_code: str) -> list[str]:
     return declarations
 
 
-def remove_llama_cpp():
-    subprocess.run(['rm', '-rf', 'llama.cpp'], check=True)
-
-
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_5.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_5.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/llava-cli.cpp', 'llava-cli_5.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/minicpmv-cli.cpp', 'minicpmv-cli_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.h', 'llava_h_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_5.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):
@@ -264,8 +261,8 @@ def build_cpu(*args, **kwargs):
         'gcc',
         '-I./llama.cpp/ggml/include',
         '-E',
-        './llama.cpp/examples/llava/llava.h',
         './llama.cpp/examples/llava/clip.h',
+        './llama.cpp/examples/llava/llava.h',
         './llama.cpp/include/llama.h',
     ], text=True, env=env)
 
@@ -428,26 +425,9 @@ def build_cpu(*args, **kwargs):
         # _source = ''
         ffibuilder.cdef(
             f'''
-            typedef void (*_llama_yield_token_t)(const char * token);
-            typedef int (*_llama_should_stop_t)(void);
-            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''' +
-            '''
-            struct clip_image_u8 {
-                int nx;
-                int ny;
-                /* std::vector<uint8_t> buf; */
-                uint8_t *buf;  // Pointer to an array of bytes
-                size_t buf_size;  // Size of the buffer in bytes
-            };
-
-            struct clip_image_f32 {
-                int nx;
-                int ny;
-                /* std::vector<float> buf; */
-                float *buf;  // Pointer to an array of float
-                size_t buf_size;  // Size of the buffer in float
-            };
+                typedef void (*_llama_yield_token_t)(const char * token);
+                typedef int (*_llama_should_stop_t)(void);
+                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
             ''' +
             _source,
             override=True,
@@ -455,32 +435,15 @@ def build_cpu(*args, **kwargs):
 
         ffibuilder.set_source(
             f'_{name}_cli_cpu',
-            '''
-            #include <stdio.h>
-            #include "llama.h"
-            #include "llava/llava.h"
-            #include "llava/clip.h"
-
-            struct clip_image_u8 {
-                int nx;
-                int ny;
-                /* std::vector<uint8_t> buf; */
-                uint8_t *buf;  // Pointer to an array of bytes
-                size_t buf_size;  // Size of the buffer in bytes
-            };
-
-            struct clip_image_f32 {
-                int nx;
-                int ny;
-                /* std::vector<float> buf; */
-                float *buf;  // Pointer to an array of float
-                size_t buf_size;  // Size of the buffer in float
-            };
-            ''' +
             f'''
-            typedef void (*_llama_yield_token_t)(const char * token);
-            typedef int (*_llama_should_stop_t)(void);
-            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+                #include <stdio.h>
+                #include "llama.h"
+                #include "llava/clip.h"
+                #include "llava/llava.h"
+
+                typedef void (*_llama_yield_token_t)(const char * token);
+                typedef int (*_llama_should_stop_t)(void);
+                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
             ''',
             libraries=['stdc++', 'm', 'pthread'],
             extra_objects=[],
@@ -684,7 +647,7 @@ def build(*args, **kwargs):
     env = os.environ.copy()
 
     # remove, clone
-    remove_llama_cpp()
+    clean()
     clone_llama_cpp()
 
     # cpu

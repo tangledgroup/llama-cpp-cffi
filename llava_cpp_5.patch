@@ -1,12 +1,18 @@
 --- llama.cpp-master/examples/llava/llava.cpp	2024-12-01 15:05:26.915691953 +0100
-+++ llama.cpp/examples/llava/llava.cpp	2024-12-01 15:08:30.859787620 +0100
-@@ -382,7 +382,8 @@
-     return true;
- }
++++ llama.cpp/examples/llava/llava.cpp	2024-12-01 15:44:31.404591921 +0100
+@@ -23,6 +23,7 @@
+ #   define LOG_DBG(...) do { fprintf(stdout, __VA_ARGS__); } while (0)
+ #endif // defined(LLAVA_LOG_OFF)
  
--bool llava_image_embed_make_with_clip_img(clip_ctx * ctx_clip, int n_threads, const clip_image_u8 * img, float ** image_embd_out, int * n_img_pos_out) {
-+bool llava_image_embed_make_with_clip_img(clip_ctx * ctx_clip, int n_threads, const void * _img, float ** image_embd_out, int * n_img_pos_out) {
-+    const clip_image_u8 * img = (const clip_image_u8 *)_img;
-     int num_max_patches = 6;
-     if (clip_is_minicpmv(ctx_clip)) {
-         num_max_patches = 10;
++/*
+ // RGB uint8 image
+ struct clip_image_u8 {
+     int nx;
+@@ -39,6 +40,7 @@
+ 
+     std::vector<float> buf;
+ };
++*/
+ 
+ struct clip_image_grid_shape {
+     int first;
