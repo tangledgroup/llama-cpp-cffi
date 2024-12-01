@@ -4,12 +4,11 @@ import glob
 import shutil
 import subprocess
 from pprint import pprint
-from random import randint
 from tempfile import NamedTemporaryFile
 
 from cffi import FFI
 
-from clean import clean_llama_cpp, clean
+from clean import clean_llama_cpp
 
 
 # if 'PYODIDE' in env and env['PYODIDE'] == '1':
@@ -25,7 +24,7 @@ def remove_duplicate_decls_and_defs(source: str) -> str:
         p = subprocess.run([
             'clang-tidy',
             f.name,
-            '-checks="-\*,clang-diagnostic-redefinition,clang-diagnostic-redeclared"',
+            '-checks="clang-diagnostic-redefinition,clang-diagnostic-redeclared"',
             '--',
             '-std=c11',
             '-ferror-limit=0',
@@ -187,12 +186,18 @@ def get_func_declarations(source_code: str) -> list[str]:
     return declarations
 
 
+def remove_llama_cpp():
+    subprocess.run(['rm', '-rf', 'llama.cpp'], check=True)
+
+
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_5.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_5.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/llava-cli.cpp', 'llava-cli_5.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/minicpmv-cli.cpp', 'minicpmv-cli_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.h', 'llava_h_5.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_5.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):
@@ -678,8 +683,8 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
 def build(*args, **kwargs):
     env = os.environ.copy()
 
-    # clean, clone
-    clean()
+    # remove, clone
+    remove_llama_cpp()
     clone_llama_cpp()
 
     # cpu

@@ -3,7 +3,7 @@ import subprocess
 
 
 def clean_llama():
-    files = glob.glob('llama/*.so') + glob.glob('llama/*.a') + glob.glob('llama/*.dylib') + glob.glob('llama/*.dll')
+    files = glob.glob('llama/*.a') + glob.glob('llama/*.so') + glob.glob('llama/*.dylib') + glob.glob('llama/*.dll')
     subprocess.run(['rm', '-fv'] + files, check=True)
 
 
