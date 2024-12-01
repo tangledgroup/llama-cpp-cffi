@@ -11,9 +11,95 @@ from cffi import FFI
 from clean import clean_llama_cpp, clean
 
 
+REPLACE_CODE_ITEMS = {
+    'extern': ' ',
+    'static': ' ',
+    '_Noreturn __attribute__((format(printf, 3, 4)))': '',
+    'static const size_t GGML_TENSOR_SIZE = sizeof(struct ggml_tensor);': '',
+    'int32_t op_params[64 / sizeof(int32_t)];': 'int32_t op_params[16];',
+    'void ggml_graph_export(const struct ggml_cgraph * cgraph, const char * fname);': '',
+    'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
+    'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
+    'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
+}
+
+
 # if 'PYODIDE' in env and env['PYODIDE'] == '1':
 #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
 #     env['UNAME_M'] = 'wasm'
+
+
+def preprocess_library_code(cc: str, cflags: str, include_dirs: list[str], files: list[str]) -> str:
+    source: str = subprocess.check_output([
+        cc,
+        *[f'-I{n}' for n in include_dirs],
+        '-E',
+        *files
+    ], text=True)
+
+    return source
+
+
+def filter_library_code(source: str) -> str:
+    temp_source: list[str] | str = []
+    is_relevant_code = False
+
+    for i, line in enumerate(source.splitlines()):
+        if line.startswith('#'):
+            line_items: list[str] = line.split(' ')
+            filename: str = line_items[2]
+
+            if filename.startswith('/') or filename.startswith('"/'):
+                is_relevant_code = False
+            else:
+                is_relevant_code = True
+
+            continue
+
+        if is_relevant_code:
+            temp_source.append(line)
+
+    source = '\n'.join(temp_source)
+    return source
+
+
+def replace_code(source: str, items: dict[str, str]) -> str:
+    temp_source: list[str] | str = []
+
+    for i, line in enumerate(source.splitlines()):
+        for k, v in items.items():
+            if k in line:
+                line = line.replace(k, v)
+
+        temp_source.append(line)
+
+    source = '\n'.join(temp_source)
+    return source
+
+
+def remove_attribute_code(source: str) -> str:
+    temp_source: list[str] | str = []
+    scope = 0
+
+    for i, line in enumerate(source.splitlines()):
+        if '__attribute__' in line:
+            scope = 0
+
+            for j in range(line.index('__attribute__') + len('__attribute__'), len(line)):
+                if line[j] == '(':
+                    scope += 1
+                    continue
+                elif line[j] == ')':
+                    scope -= 1
+
+                if scope == 0:
+                    line = line[:line.index('__attribute__')] + line[j + 1:]
+                    break
+
+        temp_source.append(line)
+
+    source = '\n'.join(temp_source)
+    return source
 
 
 def remove_duplicate_decls_and_defs(source: str) -> str:
@@ -186,6 +272,59 @@ def get_func_declarations(source_code: str) -> list[str]:
     return declarations
 
 
+def replace_inline_code(source: str) -> (str, str):
+    temp_source: list[str] | str = []
+    inline_source: list[str] | str = []
+    is_inline_code = False
+    is_inline_block = False
+    scope = 0
+
+    for i, line in enumerate(source.splitlines()):
+        line = line.strip()
+
+        if line.startswith('static inline'):
+            is_inline_code = True
+            is_inline_block = '{' in line
+            scope = line.count('{')
+            scope -= line.count('}')
+
+            line = line[len('static inline '):]
+            line = add_prefix_to_function(line, '_inline_')
+            inline_source.append(line)
+            continue
+
+        if is_inline_code:
+            inline_source.append(line)
+
+            if not is_inline_block:
+                is_inline_block = '{' in line
+
+            scope += line.count('{')
+            scope -= line.count('}')
+
+            if is_inline_block and scope == 0:
+                is_inline_code = False
+                is_inline_block = False
+                continue
+        else:
+            temp_source.append(line)
+
+    source = '\n'.join(temp_source)
+    inline_source = '\n'.join(inline_source)
+
+    # function declarations for inlined definitions
+    func_declarations: list[str] | str = get_func_declarations(inline_source)
+    func_declarations = '\n'.join(func_declarations)
+
+    source += '\n\n' + func_declarations
+    return source
+
+
+def cleanup_code(source: str) -> str:
+    source = '\n'.join([line.rstrip() for line in source.splitlines() if line])
+    return source
+
+
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_5.patch'], check=True)
@@ -252,156 +391,42 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB -DGGML_SHARED'
+    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
     print('build_cpu:')
     pprint(env)
 
     # pre-process header code
-    _source: str = subprocess.check_output([
-        'gcc',
-        '-I./llama.cpp/ggml/include',
-        '-E',
-        './llama.cpp/examples/llava/clip.h',
-        './llama.cpp/examples/llava/llava.h',
-        './llama.cpp/include/llama.h',
-    ], text=True, env=env)
+    _source = preprocess_library_code(
+        cc=env.get('CC', 'gcc'),
+        cflags='-DLLAMA_LIB',
+        include_dirs=[
+            './llama.cpp/ggml/include',
+            # './llama.cpp/common',
+        ],
+        files=[
+            './llama.cpp/examples/llava/clip.h',
+            './llama.cpp/examples/llava/llava.h',
+            './llama.cpp/include/llama.h',
+        ],
+    )
 
     # filter relevant header code
-    _temp_source: list[str] | str = []
-    is_relevant_code = False
+    _source = filter_library_code(_source)
 
-    for i, line in enumerate(_source.splitlines()):
-        if line.startswith('#'):
-            line_items: list[str] = line.split(' ')
-            filename: str = line_items[2]
-
-            if filename.startswith('"/'):
-                is_relevant_code = False
-            else:
-                is_relevant_code = True
-
-            continue
-
-        if is_relevant_code:
-            _temp_source.append(line)
-
-    _source = '\n'.join(_temp_source)
-
-    # finally patch of source
-    _temp_source: list[str] | str = []
-
-    _find_replace: dict[str, str] = {
-        '_Noreturn __attribute__((format(printf, 3, 4)))': '',
-        'static const size_t GGML_TENSOR_SIZE = sizeof(struct ggml_tensor);': '',
-        'int32_t op_params[64 / sizeof(int32_t)];': 'int32_t op_params[16];',
-        'void ggml_graph_export(const struct ggml_cgraph * cgraph, const char * fname);': '',
-        'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
-        'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
-        'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
-    }
-
-    for i, line in enumerate(_source.splitlines()):
-        for k, v in _find_replace.items():
-            if k in line:
-                line = v
-                break
-
-        _temp_source.append(line)
-
-    _source = '\n'.join(_temp_source)
-
-    # strip empty lines
-    _source = '\n'.join([
-        line
-        for line in [n.rstrip() for n in _source.splitlines()]
-        if line
-    ])
-
-    # filter our extern code
-    _temp_source: list[str] | str = []
-    scope = 0
-
-    for i, line in enumerate(_source.splitlines()):
-        if line.strip().startswith('extern'):
-            line = line.strip()
-            line = line[len('extern'):]
-
-        _temp_source.append(line)
-
-    _source = '\n'.join(_temp_source)
+    # patch of source
+    _source = replace_code(_source, REPLACE_CODE_ITEMS)
 
     # filter our attribute code
-    _temp_source: list[str] | str = []
-    scope = 0
-
-    for i, line in enumerate(_source.splitlines()):
-        if '__attribute__' in line:
-            scope = 0
-
-            for j in range(line.index('__attribute__') + len('__attribute__'), len(line)):
-                if line[j] == '(':
-                    scope += 1
-                    continue
-                elif line[j] == ')':
-                    scope -= 1
-
-                if scope == 0:
-                    line = line[:line.index('__attribute__')] + line[j + 1:]
-                    break
-
-        _temp_source.append(line)
-
-    _source = '\n'.join(_temp_source)
+    _source = remove_attribute_code(_source)
 
     # remove duplicate decls/defs
-    # print(_source)
     _source = remove_duplicate_decls_and_defs(_source)
-    print('=' * 280)
-    print(_source)
-    print('=' * 280)
 
     # filter our static inline code
-    _temp_source: list[str] | str = []
-    _inline_static_source: list[str] | str = []
-    is_static_inline_code = False
-    is_static_inline_block = False
-    scope = 0
+    _source = replace_inline_code(_source)
 
-    for i, line in enumerate(_source.splitlines()):
-        if line.startswith('static inline'):
-            is_static_inline_code = True
-            is_static_inline_block = '{' in line
-            scope = line.count('{')
-            scope -= line.count('}')
-
-            line = line[len('static inline '):]
-            line = add_prefix_to_function(line, '_inline_')
-            _inline_static_source.append(line)
-            continue
-
-        if is_static_inline_code:
-            _inline_static_source.append(line)
-
-            if not is_static_inline_block:
-                is_static_inline_block = '{' in line
-
-            scope += line.count('{')
-            scope -= line.count('}')
-
-            if is_static_inline_block and scope == 0:
-                is_static_inline_code = False
-                is_static_inline_block = False
-                continue
-        else:
-            _temp_source.append(line)
-
-    _source = '\n'.join(_temp_source)
-    _inline_static_source = '\n'.join(_inline_static_source)
-
-    # function declarations for inlined definitions
-    func_declarations: list[str] | str = get_func_declarations(_inline_static_source)
-    func_declarations = '\n'.join(func_declarations)
-    _source += '\n\n' + func_declarations
+    # strip empty lines
+    _source = cleanup_code(_source)
     print(_source)
 
     # build
@@ -489,6 +514,40 @@ def build_vulkan_1_x(*args, **kwargs):
     print('build_vulkan_1_x:')
     pprint(env)
 
+    # pre-process header code
+    _source = preprocess_library_code(
+        cc=env.get('CC', 'gcc'),
+        cflags='-DLLAMA_LIB',
+        include_dirs=[
+            './llama.cpp/ggml/include',
+            # './llama.cpp/common',
+        ],
+        files=[
+            './llama.cpp/examples/llava/clip.h',
+            './llama.cpp/examples/llava/llava.h',
+            './llama.cpp/include/llama.h',
+        ],
+    )
+
+    # filter relevant header code
+    _source = filter_library_code(_source)
+
+    # patch of source
+    _source = replace_code(_source, REPLACE_CODE_ITEMS)
+
+    # filter our attribute code
+    _source = remove_attribute_code(_source)
+
+    # remove duplicate decls/defs
+    _source = remove_duplicate_decls_and_defs(_source)
+
+    # filter our static inline code
+    _source = replace_inline_code(_source)
+
+    # strip empty lines
+    _source = cleanup_code(_source)
+    print(_source)
+
     for name in ['llama', 'llava', 'minicpmv']:
         #
         # build llama.cpp
@@ -517,19 +576,39 @@ def build_vulkan_1_x(*args, **kwargs):
         ffibuilder.set_source(
             f'_{name}_cli_vulkan_1_x',
             f'''
-            #include <stdio.h>
+                #include <stdio.h>
+                #include "llama.h"
+                #include "llava/clip.h"
+                #include "llava/llava.h"
 
-            typedef void (*_llama_yield_token_t)(const char * token);
-            typedef int (*_llama_should_stop_t)(void);
-            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+                typedef void (*_llama_yield_token_t)(const char * token);
+                typedef int (*_llama_should_stop_t)(void);
+                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
             ''',
             libraries=[
                 'stdc++',
+                'm',
+                'pthread',
                 'vulkan',
             ],
-            extra_objects=[f'../llama.cpp/lib{name}_cli.a'],
-            extra_compile_args=['-O3'],
-            extra_link_args=['-O3', '-flto'],
+            extra_objects=[],
+            extra_compile_args=[
+                '-O3',
+                '-g',
+                '-fPIC',
+                '-DLLAMA_SHARED',
+                '-DLLAMA_LIB',
+                '-I../llama.cpp/ggml/include',
+                '-I../llama.cpp/include',
+                '-I../llama.cpp/examples',
+            ],
+            extra_link_args=[
+                '-O3',
+                '-g',
+                '-flto',
+                '-L../llama.cpp',
+                f'-l{name}_cli',
+            ],
         )
 
         ffibuilder.compile(tmpdir='build', verbose=True)
@@ -577,6 +656,40 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     print('build_linux_cuda_12_6_3:')
     pprint(env)
 
+    # pre-process header code
+    _source = preprocess_library_code(
+        cc=env.get('CC', 'gcc'),
+        cflags='-DLLAMA_LIB',
+        include_dirs=[
+            './llama.cpp/ggml/include',
+            # './llama.cpp/common',
+        ],
+        files=[
+            './llama.cpp/examples/llava/clip.h',
+            './llama.cpp/examples/llava/llava.h',
+            './llama.cpp/include/llama.h',
+        ],
+    )
+
+    # filter relevant header code
+    _source = filter_library_code(_source)
+
+    # patch of source
+    _source = replace_code(_source, REPLACE_CODE_ITEMS)
+
+    # filter our attribute code
+    _source = remove_attribute_code(_source)
+
+    # remove duplicate decls/defs
+    _source = remove_duplicate_decls_and_defs(_source)
+
+    # filter our static inline code
+    _source = replace_inline_code(_source)
+
+    # strip empty lines
+    _source = cleanup_code(_source)
+    print(_source)
+
     for name in ['llama', 'llava', 'minicpmv']:
         #
         # build llama.cpp
@@ -605,28 +718,48 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         ffibuilder.set_source(
             f'_{name}_cli_cuda_12_6_3',
             f'''
-            #include <stdio.h>
+                #include <stdio.h>
+                #include "llama.h"
+                #include "llava/clip.h"
+                #include "llava/llava.h"
 
-            typedef void (*_llama_yield_token_t)(const char * token);
-            typedef int (*_llama_should_stop_t)(void);
-            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+                typedef void (*_llama_yield_token_t)(const char * token);
+                typedef int (*_llama_should_stop_t)(void);
+                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
             ''',
             libraries=[
                 'stdc++',
+                'm',
+                'pthread',
                 'cuda',
                 'cublas',
                 'culibos',
                 'cudart',
-                'cublasLt',
+                'cublasLt'
             ],
             library_dirs=[
                 f'{cuda_output_dir}/dist/lib64',
                 f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
                 f'{cuda_output_dir}/dist/lib64/stubs',
             ],
-            extra_objects=[f'../llama.cpp/lib{name}_cli.a'],
-            extra_compile_args=['-O3'],
-            extra_link_args=['-O3', '-flto'],
+            extra_objects=[],
+            extra_compile_args=[
+                '-O3',
+                '-g',
+                '-fPIC',
+                '-DLLAMA_SHARED',
+                '-DLLAMA_LIB',
+                '-I../llama.cpp/ggml/include',
+                '-I../llama.cpp/include',
+                '-I../llama.cpp/examples',
+            ],
+            extra_link_args=[
+                '-O3',
+                '-g',
+                '-flto',
+                '-L../llama.cpp',
+                f'-l{name}_cli',
+            ],
         )
 
         ffibuilder.compile(tmpdir='build', verbose=True)
@@ -656,16 +789,16 @@ def build(*args, **kwargs):
         clean_llama_cpp()
         build_cpu(*args, **kwargs)
 
-    # # vulkan 1.x
-    # if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #     clean_llama_cpp()
-    #     build_vulkan_1_x(*args, **kwargs)
+    # vulkan 1.x
+    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+        clean_llama_cpp()
+        build_vulkan_1_x(*args, **kwargs)
 
-    # # cuda 12.6.3
-    # if env.get('GGML_CUDA', '1') != '0':
-    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #         clean_llama_cpp()
-    #         build_linux_cuda_12_6_3(*args, **kwargs)
+    # cuda 12.6.3
+    if env.get('GGML_CUDA', '1') != '0':
+        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+            clean_llama_cpp()
+            build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':
