@@ -6,12 +6,14 @@ from typing import Optional
 import psutil
 from attrs import define, field, fields
 
+from .model import Model
+
 
 @define
 class Options:
     # General options
-    help: Optional[bool] = field(default=None, metadata={"long_name": "--help", "description": "Print usage and exit"})
-    version: Optional[bool] = field(default=None, metadata={"long_name": "--version", "description": "Show version and build info"})
+    # help: Optional[bool] = field(default=None, metadata={"long_name": "--help", "description": "Print usage and exit"})
+    # version: Optional[bool] = field(default=None, metadata={"long_name": "--version", "description": "Show version and build info"})
     verbose: Optional[bool] = field(default=None, metadata={"long_name": "--verbose", "description": "Print verbose information"})
     verbosity: Optional[int] = field(default=None, metadata={"long_name": "--verbosity", "description": "Set specific verbosity level (default: 0)"})
     verbose_prompt: Optional[bool] = field(default=None, metadata={"long_name": "--verbose-prompt", "description": "Print a verbose prompt before generation (default: false)"})
@@ -27,10 +29,10 @@ class Options:
     p_split: Optional[float] = field(default=None, metadata={"long_name": "--p-split", "description": "Speculative decoding split probability (default: 0.1)"})
     lookup_cache_static: Optional[str] = field(default=None, metadata={"long_name": "--lookup-cache-static", "description": "Path to static lookup cache to use for lookup decoding (not updated by generation)"})
     lookup_cache_dynamic: Optional[str] = field(default=None, metadata={"long_name": "--lookup-cache-dynamic", "description": "Path to dynamic lookup cache to use for lookup decoding (updated by generation)"})
-    ctx_size: Optional[int] = field(default=None, metadata={"long_name": "--ctx-size", "description": "Size of the prompt context (default: 0, 0 = loaded from model)"})
-    predict: Optional[int] = field(default=None, metadata={"long_name": "--predict", "description": "Number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)"})
-    batch_size: Optional[int] = field(default=None, metadata={"long_name": "--batch-size", "description": "Logical maximum batch size (default: 2048)"})
-    ubatch_size: Optional[int] = field(default=None, metadata={"long_name": "--ubatch-size", "description": "Physical maximum batch size (default: 512)"})
+    ctx_size: Optional[int] = field(default=0, metadata={"long_name": "--ctx-size", "description": "Size of the prompt context (default: 0, 0 = loaded from model)"})
+    predict: Optional[int] = field(default=-1, metadata={"long_name": "--predict", "description": "Number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)"})
+    batch_size: Optional[int] = field(default=2048, metadata={"long_name": "--batch-size", "description": "Logical maximum batch size (default: 2048)"})
+    ubatch_size: Optional[int] = field(default=512, metadata={"long_name": "--ubatch-size", "description": "Physical maximum batch size (default: 512)"})
     keep: Optional[int] = field(default=None, metadata={"long_name": "--keep", "description": "Number of tokens to keep from the initial prompt (default: 0, -1 = all)"})
     chunks: Optional[int] = field(default=None, metadata={"long_name": "--chunks", "description": "Max number of chunks to process (default: -1, -1 = all)"})
     flash_attn: Optional[bool] = field(default=None, metadata={"long_name": "--flash-attn", "description": "Enable Flash Attention (default: disabled)"})
@@ -61,10 +63,10 @@ class Options:
     sampling_seq: Optional[str] = field(default=None, metadata={"long_name": "--sampling-seq", "description": "Simplified sequence for samplers that will be used (default: kfypmt)"})
     ignore_eos: Optional[bool] = field(default=None, metadata={"long_name": "--ignore-eos", "description": "Ignore end of stream token and continue generating"})
     penalize_nl: Optional[bool] = field(default=None, metadata={"long_name": "--penalize-nl", "description": "Penalize newline tokens (default: false)"})
-    temp: Optional[float] = field(default=None, metadata={"long_name": "--temp", "description": "Temperature (default: 0.8)"})
-    top_k: Optional[int] = field(default=None, metadata={"long_name": "--top-k", "description": "Top-k sampling (default: 40, 0 = disabled)"})
-    top_p: Optional[float] = field(default=None, metadata={"long_name": "--top-p", "description": "Top-p sampling (default: 0.9, 1.0 = disabled)"})
-    min_p: Optional[float] = field(default=None, metadata={"long_name": "--min-p", "description": "Min-p sampling (default: 0.1, 0.0 = disabled)"})
+    temp: Optional[float] = field(default=0.8, metadata={"long_name": "--temp", "description": "Temperature (default: 0.8)"})
+    top_k: Optional[int] = field(default=40, metadata={"long_name": "--top-k", "description": "Top-k sampling (default: 40, 0 = disabled)"})
+    top_p: Optional[float] = field(default=0.9, metadata={"long_name": "--top-p", "description": "Top-p sampling (default: 0.9, 1.0 = disabled)"})
+    min_p: Optional[float] = field(default=0.1, metadata={"long_name": "--min-p", "description": "Min-p sampling (default: 0.1, 0.0 = disabled)"})
     tfs: Optional[float] = field(default=None, metadata={"long_name": "--tfs", "description": "Tail free sampling, parameter z (default: 1.0, 1.0 = disabled)"})
     typical: Optional[float] = field(default=None, metadata={"long_name": "--typical", "description": "Locally typical sampling, parameter p (default: 1.0, 1.0 = disabled)"})
     repeat_last_n: Optional[int] = field(default=None, metadata={"long_name": "--repeat-last-n", "description": "Last n tokens to consider for penalize (default: 64, 0 = disabled, -1 = ctx_size)"})
@@ -158,8 +160,10 @@ class Options:
     control_vector: Optional[str] = field(default=None, metadata={"long_name": "--control-vector", "description": "Add a control vector"})
     control_vector_scaled: Optional[str] = field(default=None, metadata={"long_name": "--control-vector-scaled", "description": "Add a control vector with user-defined scaling"})
     control_vector_layer_range: Optional[str] = field(default=None, metadata={"long_name": "--control-vector-layer-range", "description": "Layer range to apply the control vector(s) to"})
-    model: Optional[str] = field(default=None, metadata={"long_name": "--model", "description": "Model path (default: models/$filename with filename from --hf-file or --model-url)"})
-    model_draft: Optional[str] = field(default=None, metadata={"long_name": "--model-draft", "description": "Draft model for speculative decoding (default: unused)"})
+    # model: Optional[str] = field(default=None, metadata={"long_name": "--model", "description": "Model path (default: models/$filename with filename from --hf-file or --model-url)"})
+    # model_draft: Optional[str] = field(default=None, metadata={"long_name": "--model-draft", "description": "Draft model for speculative decoding (default: unused)"})
+    model: Model = field(default=None, metadata={"long_name": "--model", "description": "Model"})
+    model_draft: Model = field(default=None, metadata={"long_name": "--model-draft", "description": "Draft model for speculative decoding (default: unused)"})
 
     # Logging options
     simple_io: Optional[bool] = field(default=True, metadata={"long_name": "--simple-io", "description": "Use basic IO for better compatibility in subprocesses"})

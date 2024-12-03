@@ -1,3 +1,4 @@
+import os
 import glob
 import subprocess
 
@@ -8,11 +9,15 @@ def clean_llama():
 
 
 def clean_llama_cpp():
+    if not os.path.exists('./llama.cpp'):
+        return
+
     subprocess.run([
         'make',
         '-C',
         'llama.cpp',
-        'clean'
+        'clean',
+        'LLAMA_MAKEFILE=1',
     ], check=True)
 
 

@@ -2,6 +2,7 @@ import os
 import re
 import glob
 import shutil
+import platform
 import subprocess
 from pprint import pprint
 from tempfile import NamedTemporaryFile
@@ -29,9 +30,10 @@ REPLACE_CODE_ITEMS = {
 #     env['UNAME_M'] = 'wasm'
 
 
-def preprocess_library_code(cc: str, cflags: str, include_dirs: list[str], files: list[str]) -> str:
+def preprocess_library_code(cc: str, cflags: list[str], include_dirs: list[str], files: list[str]) -> str:
     source: str = subprocess.check_output([
         cc,
+        *cflags,
         *[f'-I{n}' for n in include_dirs],
         '-E',
         *files
@@ -398,7 +400,10 @@ def build_cpu(*args, **kwargs):
     # pre-process header code
     _source = preprocess_library_code(
         cc=env.get('CC', 'gcc'),
-        cflags='-DLLAMA_LIB',
+        cflags=[
+            '-DLLAMA_LIB',
+            *(['-DGGML_USE_CPU_AARCH64'] if platform.machine() == 'aarch64' else []),
+        ],
         include_dirs=[
             './llama.cpp/ggml/include',
             # './llama.cpp/common',
@@ -440,7 +445,9 @@ def build_cpu(*args, **kwargs):
             'llama.cpp',
             '-j',
             f'{name}-cli-static',
+            'LLAMA_MAKEFILE=1',
             'GGML_NO_OPENMP=1',
+            *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
         ], check=True, env=env)
 
         #
@@ -448,14 +455,12 @@ def build_cpu(*args, **kwargs):
         #
         ffibuilder = FFI()
 
-        # _source = ''
         ffibuilder.cdef(
             f'''
                 typedef void (*_llama_yield_token_t)(const char * token);
                 typedef int (*_llama_should_stop_t)(void);
                 int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''' +
-            _source,
+            ''' + _source,
             override=True,
         )
 
@@ -471,7 +476,11 @@ def build_cpu(*args, **kwargs):
                 typedef int (*_llama_should_stop_t)(void);
                 int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
             ''',
-            libraries=['stdc++', 'm', 'pthread'],
+            libraries=[
+                'stdc++',
+                'm',
+                'pthread',
+            ],
             extra_objects=[],
             extra_compile_args=[
                 '-O3',
@@ -517,7 +526,10 @@ def build_vulkan_1_x(*args, **kwargs):
     # pre-process header code
     _source = preprocess_library_code(
         cc=env.get('CC', 'gcc'),
-        cflags='-DLLAMA_LIB',
+        cflags=[
+            '-DLLAMA_LIB',
+            *(['-DGGML_USE_CPU_AARCH64'] if platform.machine() == 'aarch64' else []),
+        ],
         include_dirs=[
             './llama.cpp/ggml/include',
             # './llama.cpp/common',
@@ -558,8 +570,10 @@ def build_vulkan_1_x(*args, **kwargs):
             'llama.cpp',
             '-j',
             f'{name}-cli-static',
+            'LLAMA_MAKEFILE=1',
             'GGML_NO_OPENMP=1',
             'GGML_VULKAN=1',
+            *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
         ], check=True, env=env)
 
         #
@@ -567,11 +581,14 @@ def build_vulkan_1_x(*args, **kwargs):
         #
         ffibuilder = FFI()
 
-        ffibuilder.cdef(f'''
-            typedef void (*_llama_yield_token_t)(const char * token);
-            typedef int (*_llama_should_stop_t)(void);
-            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-        ''')
+        ffibuilder.cdef(
+            f'''
+                typedef void (*_llama_yield_token_t)(const char * token);
+                typedef int (*_llama_should_stop_t)(void);
+                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+            ''' + _source,
+            override=True,
+        )
 
         ffibuilder.set_source(
             f'_{name}_cli_vulkan_1_x',
@@ -659,7 +676,10 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     # pre-process header code
     _source = preprocess_library_code(
         cc=env.get('CC', 'gcc'),
-        cflags='-DLLAMA_LIB',
+        cflags=[
+            '-DLLAMA_LIB',
+            *(['-DGGML_USE_CPU_AARCH64'] if platform.machine() == 'aarch64' else []),
+        ],
         include_dirs=[
             './llama.cpp/ggml/include',
             # './llama.cpp/common',
@@ -700,8 +720,10 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             'llama.cpp',
             '-j',
             f'{name}-cli-static',
+            'LLAMA_MAKEFILE=1',
             'GGML_NO_OPENMP=1',
             'GGML_CUDA=1',
+            *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
         ], check=True, env=env)
 
         #
@@ -709,11 +731,14 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         #
         ffibuilder = FFI()
 
-        ffibuilder.cdef(f'''
-            typedef void (*_llama_yield_token_t)(const char * token);
-            typedef int (*_llama_should_stop_t)(void);
-            int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-        ''')
+        ffibuilder.cdef(
+            f'''
+                typedef void (*_llama_yield_token_t)(const char * token);
+                typedef int (*_llama_should_stop_t)(void);
+                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
+            ''' + _source,
+            override=True,
+        )
 
         ffibuilder.set_source(
             f'_{name}_cli_cuda_12_6_3',
