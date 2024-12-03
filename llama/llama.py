@@ -3,13 +3,19 @@ __all__ = [
     'llama_generate', # FIXME: remove in 1.2.0
     # low-level API
     'LLAMA_DEFAULT_SEED',
+    'backend_init',
+    'backend_free',
+    'numa_init',
     'model_init',
     'model_free',
     'context_init',
     'context_free',
     'sampler_init',
     'sampler_free',
+    'clip_init_context',
+    'clip_free_context',
     'generate',
+    'minicpmv_generate',
 ]
 
 import os
@@ -264,6 +270,7 @@ llama_generate = completions
 lib, ffi = llama_lib, llama_ffi
 
 _void_p = NewType('void*', ffi.typeof('void*'))
+ggml_numa_strategy  = NewType('ggml_numa_strategy', ffi.typeof('enum ggml_numa_strategy'))
 llama_model_params  = NewType('llama_model_params', ffi.typeof('struct llama_model_params'))
 llama_model  = NewType('llama_model', ffi.typeof('struct llama_model'))
 llama_model_p  = NewType('llama_model*', ffi.typeof('struct llama_model*'))
@@ -274,8 +281,22 @@ llama_sampler  = NewType('llama_sampler', ffi.typeof('struct llama_sampler'))
 llama_sampler_p  = NewType('llama_sampler*', ffi.typeof('struct llama_sampler*'))
 llama_sampler_chain_params  = NewType('llama_sampler_chain_params', ffi.typeof('struct llama_sampler_chain_params'))
 llama_batch  = NewType('llama_batch', ffi.typeof('struct llama_batch'))
+clip_ctx  = NewType('clip_ctx', ffi.typeof('struct clip_ctx'))
+clip_ctx_p  = NewType('clip_ctx*', ffi.typeof('struct clip_ctx*'))
 
 LLAMA_DEFAULT_SEED = 0xFFFFFFFF
+
+
+def backend_init():
+    lib.llama_backend_init()
+
+
+def backend_free():
+    lib.llama_backend_free()
+
+
+def numa_init(numa: ggml_numa_strategy):
+    lib.llama_numa_init(numa)
 
 
 def model_init(options: Options) -> llama_model_p:
@@ -320,6 +341,16 @@ def sampler_free(sampler: llama_sampler_p):
     lib.llama_sampler_free(sampler)
 
 
+def clip_init_context(options: Options) -> clip_ctx_p:
+    clip_path: str = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.mmproj_hf_file)
+    ctx_clip: clip_ctx_p = lib.clip_model_load(clip_path.encode(), 1)
+    return ctx_clip
+
+
+def clip_free_context(ctx_clip: clip_ctx_p):
+    lib.clip_free(ctx_clip)
+
+
 def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
     n_ctx: int = lib.llama_n_ctx(context)
     n_ctx_used: int = lib.llama_get_kv_cache_used_cells(context)
@@ -331,6 +362,7 @@ def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
 
 
 def generate(model: llama_model_p, context: llama_context_p, sampler: llama_sampler_p, options: Options) -> Iterator[str]:
+    assert isinstance(options.prompt, str)
     tokenizer: AutoTokenizer
 
     if options.model.tokenizer_hf_repo:
@@ -338,14 +370,15 @@ def generate(model: llama_model_p, context: llama_context_p, sampler: llama_samp
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
 
-    assert isinstance(options.prompt, str)
+    # first batch
     prompt_tokens: list[int] = tokenizer.encode(options.prompt)
     n_prompt_tokens: int = len(prompt_tokens)
     _prompt_tokens = ffi.new('llama_token[]', prompt_tokens)
-
     batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
+
     total_n_prompt_tokens: int = n_prompt_tokens
     new_token_id: int
+    _new_prompt_tokens = None
 
     while True:
         if options.predict == -1:
@@ -364,9 +397,68 @@ def generate(model: llama_model_p, context: llama_context_p, sampler: llama_samp
         if lib.llama_token_is_eog(model, new_token_id):
             break
 
-        piece = tokenizer.decode([new_token_id])
+        piece: str = tokenizer.decode([new_token_id])
         yield piece
+
+        # next batch
+        if _new_prompt_tokens is not None:
+            ffi.release(_new_prompt_tokens)
 
         _new_prompt_tokens = ffi.new('llama_token[]', [new_token_id])
         batch = lib.llama_batch_get_one(_new_prompt_tokens, 1)
         total_n_prompt_tokens += 1
+
+    if _new_prompt_tokens is not None:
+        ffi.release(_new_prompt_tokens)
+
+
+def minicpmv_generate(model: llama_model_p, context: llama_context_p, sampler: llama_sampler_p, _clip_ctx: clip_ctx_p, options: Options) -> Iterator[str]:
+    assert isinstance(options.prompt, str)
+    assert isinstance(options.image, str)
+    tokenizer: AutoTokenizer
+
+    if options.model.tokenizer_hf_repo:
+        tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
+    else:
+        tokenizer = get_tokenizer(options.model.creator_hf_repo)
+
+    # first batch
+    prompt_tokens: list[int] = tokenizer.encode(options.prompt)
+    n_prompt_tokens: int = len(prompt_tokens)
+    _prompt_tokens = ffi.new('llama_token[]', prompt_tokens)
+    batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
+
+    total_n_prompt_tokens: int = n_prompt_tokens
+    new_token_id: int
+    _new_prompt_tokens = None
+
+    while True:
+        if options.predict == -1:
+            pass
+        elif options.predict == -2:
+            if check_context_size(context, batch):
+                break
+        elif total_n_prompt_tokens >= options.predict:
+            break
+
+        if lib.llama_decode(context, batch):
+            break
+
+        new_token_id = lib.llama_sampler_sample(sampler, context, -1)
+
+        if lib.llama_token_is_eog(model, new_token_id):
+            break
+
+        piece: str = tokenizer.decode([new_token_id])
+        yield piece
+
+        # next batch
+        if _new_prompt_tokens is not None:
+            ffi.release(_new_prompt_tokens)
+
+        _new_prompt_tokens = ffi.new('llama_token[]', [new_token_id])
+        batch = lib.llama_batch_get_one(_new_prompt_tokens, 1)
+        total_n_prompt_tokens += 1
+
+    if _new_prompt_tokens is not None:
+        ffi.release(_new_prompt_tokens)
