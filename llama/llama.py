@@ -269,7 +269,10 @@ llama_generate = completions
 #
 lib, ffi = llama_lib, llama_ffi
 
-_void_p = NewType('void*', ffi.typeof('void*'))
+void_p = NewType('void*', ffi.typeof('void*'))
+char_p = NewType('char*', ffi.typeof('char*'))
+int_p = NewType('int*', ffi.typeof('int*'))
+float_p = NewType('float*', ffi.typeof('float*'))
 ggml_numa_strategy  = NewType('ggml_numa_strategy', ffi.typeof('enum ggml_numa_strategy'))
 llama_model_params  = NewType('llama_model_params', ffi.typeof('struct llama_model_params'))
 llama_model  = NewType('llama_model', ffi.typeof('struct llama_model'))
@@ -283,6 +286,8 @@ llama_sampler_chain_params  = NewType('llama_sampler_chain_params', ffi.typeof('
 llama_batch  = NewType('llama_batch', ffi.typeof('struct llama_batch'))
 clip_ctx  = NewType('clip_ctx', ffi.typeof('struct clip_ctx'))
 clip_ctx_p  = NewType('clip_ctx*', ffi.typeof('struct clip_ctx*'))
+llava_image_embed  = NewType('llava_image_embed', ffi.typeof('struct llava_image_embed'))
+llava_image_embed_p  = NewType('llava_image_embed*', ffi.typeof('struct llava_image_embed*'))
 
 LLAMA_DEFAULT_SEED = 0xFFFFFFFF
 
@@ -363,6 +368,8 @@ def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
 
 def generate(model: llama_model_p, context: llama_context_p, sampler: llama_sampler_p, options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str)
+
+    # tokenizer
     tokenizer: AutoTokenizer
 
     if options.model.tokenizer_hf_repo:
@@ -412,15 +419,97 @@ def generate(model: llama_model_p, context: llama_context_p, sampler: llama_samp
         ffi.release(_new_prompt_tokens)
 
 
+def eval_tokens(context: llama_context_p, tokens: list[int], n_batch: int, n_past: int) -> (bool, int):
+    N = len(tokens)
+    i = 0
+
+    while i < N:
+        n_eval: int = N - i
+
+        if n_eval > n_batch:
+            n_eval = n_batch
+
+        _tokens = ffi.new('llama_token[]', [tokens[i]])
+        batch: llama_batch = lib.llama_batch_get_one(_tokens, n_eval)
+
+        if lib.llama_decode(context, batch):
+            ffi.release(_tokens)
+            return False, n_past
+
+        ffi.release(_tokens)
+        n_past += n_eval
+        i += n_batch
+
+    return True, n_past
+
+
+# def eval_id(context: llama_context_p, id: int, n_past: int) -> (bool, int):
+#     tokens: list[int] = [id]
+#     r, n_past = eval_tokens(context, tokens, 1, n_past)
+#     return r, n_past
+
+
+def eval_string(context: llama_context_p, s: str, n_batch: int, n_past: int, add_bos: bool, tokenizer: AutoTokenizer) -> (bool, int):
+    tokens: list[int] = tokenizer.encode(s)
+    r, n_past = eval_tokens(context, tokens, n_batch, n_past)
+    return r, n_past
+
+
+def process_eval_image_embed(context: llama_context_p, _clip_ctx: clip_ctx_p, embeds: llava_image_embed_p, n_batch: int, n_past: int, idx: int) -> int:
+    image_embed: float_p = lib.malloc(lib.clip_embd_nbytes(_clip_ctx))
+    # image_embed: char_p = ffi.new('char[]', lib.clip_embd_nbytes(_clip_ctx))
+
+    lib.memcpy(
+    # ffi.memmove(
+        image_embed,
+        embeds.embed + idx * lib.clip_n_patches(_clip_ctx) * lib.clip_n_mmproj_embd(_clip_ctx),
+        lib.clip_embd_nbytes(_clip_ctx),
+    )
+
+    slice_embed: llava_image_embed_p = lib.malloc(ffi.sizeof('struct llava_image_embed'))
+    # slice_embed: char_p = ffi.new('char[]', ffi.sizeof('struct llava_image_embed'))
+    slice_embed: llava_image_embed_p = ffi.cast('struct llava_image_embed*', slice_embed)
+    slice_embed.embed = image_embed
+    slice_embed.n_image_pos = lib.clip_n_patches(_clip_ctx)
+    n_past_p: int_p = ffi.new('int[]', [n_past])
+    lib.llava_eval_image_embed(context, slice_embed, n_batch, n_past_p)
+    ffi.release(n_past_p)
+    lib.llava_image_embed_free(slice_embed)
+    n_past: int = n_past_p[0]
+    return n_past
+
+
 def minicpmv_generate(model: llama_model_p, context: llama_context_p, sampler: llama_sampler_p, _clip_ctx: clip_ctx_p, options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str)
     assert isinstance(options.image, str)
+
+    # tokenizer
     tokenizer: AutoTokenizer
 
     if options.model.tokenizer_hf_repo:
         tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
+
+    # llava - process image
+    system_prompt = ''
+    n_past: int = 0
+    embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(_clip_ctx, options.threads, options.image.encode())
+    idx: int = 0
+    num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(_clip_ctx)
+    has_minicpmv_projector = lib.clip_is_minicpmv(_clip_ctx)
+
+    if has_minicpmv_projector == 2:
+        system_prompt = '<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n'
+    elif has_minicpmv_projector == 3:
+        system_prompt = '<|im_start|>user\n'
+
+    r, n_past = eval_string(context, system_prompt + '<image>', options.batch_size, n_past, False, tokenizer)
+    n_past = process_eval_image_embed(context, _clip_ctx, embeds, options.batch_size, n_past, idx)
+    idx += 1
+    r, n_past = eval_string(context, '</image>', options.batch_size, n_past, False, tokenizer)
+
+    lib.llava_image_embed_free(embeds)
 
     # first batch
     prompt_tokens: list[int] = tokenizer.encode(options.prompt)

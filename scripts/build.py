@@ -457,6 +457,10 @@ def build_cpu(*args, **kwargs):
 
         ffibuilder.cdef(
             f'''
+                void *malloc(size_t size);
+                void free(void *ptr);
+                void *memcpy(void *to, const void *from, size_t num_bytes);
+
                 typedef void (*_llama_yield_token_t)(const char * token);
                 typedef int (*_llama_should_stop_t)(void);
                 int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
@@ -583,6 +587,10 @@ def build_vulkan_1_x(*args, **kwargs):
 
         ffibuilder.cdef(
             f'''
+                void *malloc(size_t size);
+                void free(void *ptr);
+                void *memcpy(void *to, const void *from, size_t num_bytes);
+
                 typedef void (*_llama_yield_token_t)(const char * token);
                 typedef int (*_llama_should_stop_t)(void);
                 int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
@@ -733,6 +741,10 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
 
         ffibuilder.cdef(
             f'''
+                void *malloc(size_t size);
+                void free(void *ptr);
+                void *memcpy(void *to, const void *from, size_t num_bytes);
+
                 typedef void (*_llama_yield_token_t)(const char * token);
                 typedef int (*_llama_should_stop_t)(void);
                 int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
