@@ -17,7 +17,8 @@ from llama import (
 from demo_models import models
 
 
-model_id: str = 'openbmb/MiniCPM-V-2_6'
+# model_id: str = 'openbmb/MiniCPM-V-2_6'
+model_id: str = 'liuhaotian/llava-v1.6-mistral-7b'
 model: Model = models[model_id]
 config = get_config(model.creator_hf_repo)
 
@@ -30,6 +31,7 @@ options = Options(
     top_k=100,
     prompt='What is in the image?',
     image='examples/llama-1.jpg',
+    # image='examples/llama-1.png',
     gpu_layers=99,
 )
 
