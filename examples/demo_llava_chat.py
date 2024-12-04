@@ -35,7 +35,7 @@ def demo_prompt(model: Model):
 
 if __name__ == '__main__':
     models_ids: list[str] = [
-        # 'liuhaotian/llava-v1.6-mistral-7b',
+        'liuhaotian/llava-v1.6-mistral-7b',
         'vikhyatk/moondream2',
     ]
 

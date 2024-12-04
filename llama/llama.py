@@ -448,29 +448,29 @@ def batch_get_one_and_decode(context: llama_context_p, prompt: str, n_batch: int
     return batch
 
 
-def process_eval_image_embed(context: llama_context_p, _clip_ctx: clip_ctx_p, embeds: llava_image_embed_p, n_batch: int, n_past: int_p, idx: int):
-    image_embed: void_p = lib.malloc(lib.clip_embd_nbytes(_clip_ctx))
+def process_eval_image_embed(context: llama_context_p, clip_context: clip_ctx_p, embeds: llava_image_embed_p, n_batch: int, n_past: int_p, idx: int):
+    image_embed: void_p = lib.malloc(lib.clip_embd_nbytes(clip_context))
     image_embed: float_p = ffi.cast('float*', image_embed)
 
     lib.memcpy(
         image_embed,
-        embeds.embed + idx * lib.clip_n_patches(_clip_ctx) * lib.clip_n_mmproj_embd(_clip_ctx),
-        lib.clip_embd_nbytes(_clip_ctx),
+        embeds.embed + idx * lib.clip_n_patches(clip_context) * lib.clip_n_mmproj_embd(clip_context),
+        lib.clip_embd_nbytes(clip_context),
     )
 
     slice_embed: void_p = lib.malloc(ffi.sizeof('struct llava_image_embed'))
     slice_embed: llava_image_embed_p = ffi.cast('struct llava_image_embed*', slice_embed)
     slice_embed.embed = image_embed
-    slice_embed.n_image_pos = lib.clip_n_patches(_clip_ctx)
+    slice_embed.n_image_pos = lib.clip_n_patches(clip_context)
     lib.llava_eval_image_embed(context, slice_embed, n_batch, n_past)
     lib.llava_image_embed_free(slice_embed)
 
 
 def clip_completions(model: llama_model_p,
-                      context: llama_context_p,
-                      sampler: llama_sampler_p,
-                      _clip_ctx: clip_ctx_p,
-                      options: Options) -> Iterator[str]:
+                     context: llama_context_p,
+                     sampler: llama_sampler_p,
+                     clip_context: clip_ctx_p,
+                     options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str)
     assert isinstance(options.image, str)
 
@@ -484,26 +484,32 @@ def clip_completions(model: llama_model_p,
 
     # llava - process image
     n_past: int_p = ffi.new('int*', 0)
-    embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(_clip_ctx, options.threads, options.image.encode())
+    embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
     idx: int = 0
-    num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(_clip_ctx)
-    has_minicpmv_projector = lib.clip_is_minicpmv(_clip_ctx)
+    num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(clip_context)
+    has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
     print(f'{has_minicpmv_projector=}')
 
-    if has_minicpmv_projector == 2:
-        system_prompt = '<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n'
-    elif has_minicpmv_projector == 3:
-        system_prompt = '<|im_start|>user\n'
-    else:
-        system_prompt = ''
+    # if has_minicpmv_projector == 2:
+    #     system_prompt = '<|begin_of_text|><|start_header_id|>user<|end_header_id|>'
+    # elif has_minicpmv_projector == 3:
+    #     system_prompt = '<|im_start|>user\n'
+    # else:
+    #     system_prompt = ''
 
-    batch = batch_get_one_and_decode(context, system_prompt + '<image>', options.batch_size, n_past, tokenizer)
-    process_eval_image_embed(context, _clip_ctx, embeds, options.batch_size, n_past, idx)
+    messages = [{'role': 'user', 'content': '<image>'}]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+    prompt = prompt[:prompt.index('<image>') + len('<image>')]
+    print('prompt [0]:', prompt)
+
+    # batch = batch_get_one_and_decode(context, system_prompt + '<image>', options.batch_size, n_past, tokenizer)
+    batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
+    process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
     idx += 1
     batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
 
     if num_image_embeds > 1:
-        num_image_embeds_col = lib.clip_uhd_num_image_embeds_col(_clip_ctx)
+        num_image_embeds_col = lib.clip_uhd_num_image_embeds_col(clip_context)
         batch = batch_get_one_and_decode(context, '<slice>', options.batch_size, n_past, tokenizer)
         i = 0
 
@@ -512,7 +518,7 @@ def clip_completions(model: llama_model_p,
 
             while j < num_image_embeds_col:
                 batch = batch_get_one_and_decode(context, '<image>', options.batch_size, n_past, tokenizer)
-                process_eval_image_embed(context, _clip_ctx, embeds, options.batch_size, n_past, idx)
+                process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
                 idx += 1
                 batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
                 j += 1
@@ -525,12 +531,16 @@ def clip_completions(model: llama_model_p,
     lib.llava_image_embed_free(embeds)
 
     # first batch
-    if has_minicpmv_projector == 2:
-        prompt = f'\n{options.prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n'
-    elif has_minicpmv_projector == 3:
-        prompt = f'\n{options.prompt}<|im_end|>\n<|im_start|>assistant\n'
-    else:
-        prompt = '' # TODO
+    # if has_minicpmv_projector == 2:
+    #     prompt = f'\n{options.prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n'
+    # elif has_minicpmv_projector == 3:
+    #     prompt = f'\n{options.prompt}<|im_end|>\n<|im_start|>assistant\n'
+    # else:
+    #     prompt = f'\n{options.prompt}\n'
+    messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    prompt = prompt[prompt.index(f'\n{options.prompt}'):]
+    print('prompt [1]:', prompt)
 
     prompt_tokens: list[int] = tokenizer.encode(prompt)
     n_prompt_tokens: int = len(prompt_tokens)
@@ -558,7 +568,7 @@ def clip_completions(model: llama_model_p,
         if lib.llama_token_is_eog(model, new_token_id):
             break
 
-        piece: str = tokenizer.decode([new_token_id])
+        piece: str = tokenizer.decode(new_token_id)
         yield piece
 
         # next batch

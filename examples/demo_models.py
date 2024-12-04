@@ -97,6 +97,7 @@ models = {
         hf_repo='cjpais/llava-1.6-mistral-7b-gguf',
         hf_file='llava-v1.6-mistral-7b.Q4_K_M.gguf',
         mmproj_hf_file='mmproj-model-f16.gguf',
+        tokenizer_hf_repo='mistralai/Mistral-7B-Instruct-v0.2',
     ),
     'openbmb/MiniCPM-Llama3-V-2_5': Model(
         creator_hf_repo='openbmb/MiniCPM-Llama3-V-2_5',
