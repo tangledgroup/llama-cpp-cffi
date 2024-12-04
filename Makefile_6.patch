@@ -1,0 +1,11 @@
+--- llama.cpp-master/Makefile	2024-12-04 20:47:44.525404966 +0100
++++ llama.cpp/Makefile	2024-12-04 20:49:45.404793391 +0100
+@@ -1385,6 +1385,8 @@
+ 	examples/llava/llava.h \
+ 	examples/llava/clip.cpp \
+ 	examples/llava/clip.h \
++	examples/llava/mllama.cpp \
++	examples/llava/mllama.h \
+ 	common/stb_image.h \
+ 	common/base64.hpp \
+ 	$(OBJ_ALL)

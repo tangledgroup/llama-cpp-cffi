@@ -33,15 +33,15 @@ backend_init()
 _model = model_init(options)
 print(f'{_model=}')
 
-_ctx = context_init(_model, options)
-print(f'{_ctx=}')
+_context = context_init(_model, options)
+print(f'{_context=}')
 
 _sampler = sampler_init(options)
 print(f'{_sampler=}')
 
 input('Press any key to generate')
 
-for token in text_completions(_model, _ctx, _sampler, options):
+for token in text_completions(_model, _context, _sampler, options):
     print(token, end='', flush=True)
 
 print()
@@ -49,6 +49,6 @@ print()
 input('Press any key to exit')
 
 sampler_free(_sampler)
-context_free(_ctx)
+context_free(_context)
 model_free(_model)
 backend_free()

@@ -1,0 +1,44 @@
+--- llama.cpp-master/examples/llava/clip.h	2024-12-01 15:05:26.915691953 +0100
++++ llama.cpp/examples/llava/clip.h	2024-12-01 15:40:46.606247369 +0100
+@@ -19,6 +19,41 @@
+ #endif
+ 
+ #ifdef __cplusplus
++    // C++ version of the struct
++    #include <vector>
++
++    struct clip_image_u8 {
++        int nx;
++        int ny;
++        std::vector<uint8_t> buf;
++    };
++
++    struct clip_image_f32 {
++        int nx;
++        int ny;
++
++        std::vector<float> buf;
++    };
++#else
++    // C version of the struct
++    #include <stdint.h>
++
++    struct clip_image_u8 {
++        int nx;
++        int ny;
++        uint8_t *buf;
++        size_t buf_size;
++    };
++
++    struct clip_image_f32 {
++        int nx;
++        int ny;
++        float *buf;
++        size_t buf_size;
++    };
++#endif
++
++#ifdef __cplusplus
+ extern "C" {
+ #endif
+ 

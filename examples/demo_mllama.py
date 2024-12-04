@@ -17,28 +17,23 @@ from llama import (
 from demo_models import models
 
 
-# model_id: str = 'liuhaotian/llava-v1.6-mistral-7b'
-# model_id: str = 'openbmb/MiniCPM-Llama3-V-2_5'
-model_id: str = 'openbmb/MiniCPM-V-2_6'
-# model_id: str = 'vikhyatk/moondream2'
-# model_id: str = 'BAAI/Bunny-v1_0-4B'
-
+model_id: str = 'meta-llama/Llama-3.2-11B-Vision-Instruct'
 model: Model = models[model_id]
 config = get_config(model.creator_hf_repo)
 
 options = Options(
     model=model,
-    # ctx_size=getattr(config, 'max_position_embeddings', 2048),
+    ctx_size=config.max_position_embeddings,
     predict=-2,
     temp=0.7,
     top_p=0.8,
     top_k=100,
-    # prompt='What is in the image?',
-    prompt='What is in the image? Extract (OCR) all text from page as markdown.',
+    prompt='What is in the image?',
+    # prompt='What is in the image? Extract (OCR) all text from page as markdown.',
     # prompt='Extract (OCR) all text from page as markdown.',
-    # image='examples/llama-1.png',
+    image='examples/llama-1.png',
     # image='examples/llama-3.png',
-    image='examples/llama-4.png',
+    # image='examples/llama-4.png',
     gpu_layers=99,
 )
 

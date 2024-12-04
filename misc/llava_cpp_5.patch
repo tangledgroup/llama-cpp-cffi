@@ -1,0 +1,18 @@
+--- llama.cpp-master/examples/llava/llava.cpp	2024-12-01 15:05:26.915691953 +0100
++++ llama.cpp/examples/llava/llava.cpp	2024-12-01 15:44:31.404591921 +0100
+@@ -23,6 +23,7 @@
+ #   define LOG_DBG(...) do { fprintf(stdout, __VA_ARGS__); } while (0)
+ #endif // defined(LLAVA_LOG_OFF)
+ 
++/*
+ // RGB uint8 image
+ struct clip_image_u8 {
+     int nx;
+@@ -39,6 +40,7 @@
+ 
+     std::vector<float> buf;
+ };
++*/
+ 
+ struct clip_image_grid_shape {
+     int first;

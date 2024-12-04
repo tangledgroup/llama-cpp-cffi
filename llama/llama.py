@@ -490,25 +490,17 @@ def clip_completions(model: llama_model_p,
     has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
     print(f'{has_minicpmv_projector=}')
 
-    # if has_minicpmv_projector == 2:
-    #     system_prompt = '<|begin_of_text|><|start_header_id|>user<|end_header_id|>'
-    # elif has_minicpmv_projector == 3:
-    #     system_prompt = '<|im_start|>user\n'
-    # else:
-    #     system_prompt = ''
-
     messages = [{'role': 'user', 'content': '<image>'}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
     prompt = prompt[:prompt.index('<image>') + len('<image>')]
     print('prompt [0]:', prompt)
 
-    # batch = batch_get_one_and_decode(context, system_prompt + '<image>', options.batch_size, n_past, tokenizer)
     batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
     process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
     idx += 1
     batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
 
-    if num_image_embeds > 1:
+    if has_minicpmv_projector >= 2 and num_image_embeds > 1:
         num_image_embeds_col = lib.clip_uhd_num_image_embeds_col(clip_context)
         batch = batch_get_one_and_decode(context, '<slice>', options.batch_size, n_past, tokenizer)
         i = 0
@@ -531,12 +523,6 @@ def clip_completions(model: llama_model_p,
     lib.llava_image_embed_free(embeds)
 
     # first batch
-    # if has_minicpmv_projector == 2:
-    #     prompt = f'\n{options.prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n'
-    # elif has_minicpmv_projector == 3:
-    #     prompt = f'\n{options.prompt}<|im_end|>\n<|im_start|>assistant\n'
-    # else:
-    #     prompt = f'\n{options.prompt}\n'
     messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     prompt = prompt[prompt.index(f'\n{options.prompt}'):]

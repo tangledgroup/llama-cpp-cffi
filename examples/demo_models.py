@@ -111,4 +111,16 @@ models = {
         hf_file='MiniCPM-V-2_6-Q4_K_M.gguf',
         mmproj_hf_file='mmproj-MiniCPM-V-2_6-f16.gguf',
     ),
+    'BAAI/Bunny-v1_0-4B': Model(
+        creator_hf_repo='BAAI/Bunny-v1_0-4B',
+        hf_repo='BAAI/Bunny-v1_0-4B-gguf',
+        hf_file='ggml-model-Q4_K_M.gguf',
+        mmproj_hf_file='mmproj-model-f16.gguf',
+    ),
+    'meta-llama/Llama-3.2-11B-Vision-Instruct': Model(
+        creator_hf_repo='meta-llama/Llama-3.2-11B-Vision-Instruct',
+        hf_repo='leafspark/Llama-3.2-11B-Vision-Instruct-GGUF',
+        hf_file='Llama-3.2-11B-Vision-Instruct.Q4_K_M.gguf',
+        mmproj_hf_file='Llama-3.2-11B-Vision-Instruct-mmproj.f16.gguf',
+    )
 }
