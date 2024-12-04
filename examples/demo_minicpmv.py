@@ -11,14 +11,14 @@ from llama import (
     sampler_free,
     clip_init_context,
     clip_free_context,
-    minicpmv_generate,
+    clip_completions,
 )
 
 from demo_models import models
 
 
+model_id: str = 'openbmb/MiniCPM-Llama3-V-2_5'
 # model_id: str = 'openbmb/MiniCPM-V-2_6'
-model_id: str = 'liuhaotian/llava-v1.6-mistral-7b'
 model: Model = models[model_id]
 config = get_config(model.creator_hf_repo)
 
@@ -31,7 +31,6 @@ options = Options(
     top_k=100,
     prompt='What is in the image?',
     image='examples/llama-1.jpg',
-    # image='examples/llama-1.png',
     gpu_layers=99,
 )
 
@@ -51,7 +50,7 @@ print(f'{_clip_ctx=}')
 
 input('Press any key to generate')
 
-for token in minicpmv_generate(_model, _ctx, _sampler, _clip_ctx, options):
+for token in clip_completions(_model, _ctx, _sampler, _clip_ctx, options):
     print(token, end='', flush=True)
 
 print()

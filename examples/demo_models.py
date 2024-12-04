@@ -98,6 +98,12 @@ models = {
         hf_file='llava-v1.6-mistral-7b.Q4_K_M.gguf',
         mmproj_hf_file='mmproj-model-f16.gguf',
     ),
+    'openbmb/MiniCPM-Llama3-V-2_5': Model(
+        creator_hf_repo='openbmb/MiniCPM-Llama3-V-2_5',
+        hf_repo='openbmb/MiniCPM-Llama3-V-2_5-gguf',
+        hf_file='ggml-model-Q4_K_M.gguf',
+        mmproj_hf_file='mmproj-model-f16.gguf',
+    ),
     'openbmb/MiniCPM-V-2_6': Model(
         creator_hf_repo='openbmb/MiniCPM-V-2_6',
         hf_repo='bartowski/MiniCPM-V-2_6-GGUF',

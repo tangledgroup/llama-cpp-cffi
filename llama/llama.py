@@ -1,8 +1,8 @@
 __all__ = [
+    # high-level API
     'completions',
-    'llama_generate', # FIXME: remove in 1.2.0
+
     # low-level API
-    'LLAMA_DEFAULT_SEED',
     'backend_init',
     'backend_free',
     'numa_init',
@@ -14,27 +14,26 @@ __all__ = [
     'sampler_free',
     'clip_init_context',
     'clip_free_context',
-    'generate',
-    'minicpmv_generate',
+    'text_completions',
+    'clip_completions',
+    'mllama_completions',
 ]
 
 import os
 import ctypes
 from queue import Queue
 from copy import deepcopy
-from typing import Any, Iterator, Callable, NewType
+from typing import Any, Optional, Iterator, Callable, NewType
 from threading import Thread
 from functools import partial
 
-from PIL import Image
-from transformers import AutoTokenizer, AutoProcessor
-from transformers import AutoImageProcessor
+from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
-from .formatter import get_tokenizer, get_special_tokens, format_messages
 from .model import Model
 from .options import Options, convert_options_to_bytes
 from .util import is_cuda_available, is_vulkan_available
+from .formatter import get_tokenizer, get_special_tokens, format_messages
 
 
 LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
@@ -264,8 +263,6 @@ def completions(options: Options) -> Iterator[str]:
     t.join()
 
 
-llama_generate = completions
-
 #
 # low-level API
 #
@@ -371,7 +368,10 @@ def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
 #
 # llm
 #
-def generate(model: llama_model_p, context: llama_context_p, sampler: llama_sampler_p, options: Options) -> Iterator[str]:
+def text_completions(model: llama_model_p,
+                     context: llama_context_p,
+                     sampler: llama_sampler_p,
+                     options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str)
 
     # tokenizer
@@ -426,38 +426,29 @@ def generate(model: llama_model_p, context: llama_context_p, sampler: llama_samp
 #
 # vlm
 #
-"""
-def eval_tokens(context: llama_context_p, tokens: list[int], n_batch: int, n_past: int) -> (bool, int):
-    N = len(tokens)
-    i = 0
+def batch_get_one_and_decode(context: llama_context_p, prompt: str, n_batch: int, n_past: Optional[int_p], tokenizer: AutoTokenizer) -> Optional[llama_batch]:
+    prompt_tokens: list[int] = tokenizer.encode(prompt)
+    n_prompt_tokens: int = len(prompt_tokens)
 
-    while i < N:
-        n_eval: int = N - i
-
-        if n_eval > n_batch:
-            n_eval = n_batch
-
-        _tokens = ffi.new('llama_token[]', [tokens[i]])
-        batch: llama_batch = lib.llama_batch_get_one(_tokens, n_eval)
+    for i in range(0, n_prompt_tokens, n_batch):
+        sub_prompt_tokens = prompt_tokens[i:i+n_batch]
+        n_sub_prompt_tokens = len(sub_prompt_tokens)
+        _prompt_tokens = ffi.new('llama_token[]', sub_prompt_tokens)
+        batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
 
         if lib.llama_decode(context, batch):
-            ffi.release(_tokens)
-            return False, n_past
+            ffi.release(_prompt_tokens)
+            return None
 
-        ffi.release(_tokens)
-        n_past += n_eval
-        i += n_batch
+        if n_past is not None:
+            n_past[0] += n_sub_prompt_tokens
 
-    return True, n_past
+        ffi.release(_prompt_tokens)
 
-
-def eval_string(context: llama_context_p, s: str, n_batch: int, n_past: int, add_bos: bool, tokenizer: AutoTokenizer) -> (bool, int):
-    tokens: list[int] = tokenizer.encode(s)
-    r, n_past = eval_tokens(context, tokens, n_batch, n_past)
-    return r, n_past
+    return batch
 
 
-def process_eval_image_embed(context: llama_context_p, _clip_ctx: clip_ctx_p, embeds: llava_image_embed_p, n_batch: int, n_past: int, idx: int) -> int:
+def process_eval_image_embed(context: llama_context_p, _clip_ctx: clip_ctx_p, embeds: llava_image_embed_p, n_batch: int, n_past: int_p, idx: int):
     image_embed: void_p = lib.malloc(lib.clip_embd_nbytes(_clip_ctx))
     image_embed: float_p = ffi.cast('float*', image_embed)
 
@@ -471,15 +462,15 @@ def process_eval_image_embed(context: llama_context_p, _clip_ctx: clip_ctx_p, em
     slice_embed: llava_image_embed_p = ffi.cast('struct llava_image_embed*', slice_embed)
     slice_embed.embed = image_embed
     slice_embed.n_image_pos = lib.clip_n_patches(_clip_ctx)
-    n_past_p: int_p = ffi.new('int[]', [n_past])
-    lib.llava_eval_image_embed(context, slice_embed, n_batch, n_past_p)
+    lib.llava_eval_image_embed(context, slice_embed, n_batch, n_past)
     lib.llava_image_embed_free(slice_embed)
-    n_past: int = n_past_p[0]
-    ffi.release(n_past_p)
-    return n_past
 
 
-def minicpmv_generate(model: llama_model_p, context: llama_context_p, sampler: llama_sampler_p, _clip_ctx: clip_ctx_p, options: Options) -> Iterator[str]:
+def clip_completions(model: llama_model_p,
+                      context: llama_context_p,
+                      sampler: llama_sampler_p,
+                      _clip_ctx: clip_ctx_p,
+                      options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str)
     assert isinstance(options.image, str)
 
@@ -492,8 +483,7 @@ def minicpmv_generate(model: llama_model_p, context: llama_context_p, sampler: l
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
 
     # llava - process image
-    system_prompt = ''
-    n_past: int = 0
+    n_past: int_p = ffi.new('int*', 0)
     embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(_clip_ctx, options.threads, options.image.encode())
     idx: int = 0
     num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(_clip_ctx)
@@ -504,168 +494,50 @@ def minicpmv_generate(model: llama_model_p, context: llama_context_p, sampler: l
         system_prompt = '<|begin_of_text|><|start_header_id|>user<|end_header_id|>\n\n'
     elif has_minicpmv_projector == 3:
         system_prompt = '<|im_start|>user\n'
+    else:
+        system_prompt = ''
 
-    r, n_past = eval_string(context, system_prompt + '<image>', options.batch_size, n_past, False, tokenizer)
-    n_past = process_eval_image_embed(context, _clip_ctx, embeds, options.batch_size, n_past, idx)
+    batch = batch_get_one_and_decode(context, system_prompt + '<image>', options.batch_size, n_past, tokenizer)
+    process_eval_image_embed(context, _clip_ctx, embeds, options.batch_size, n_past, idx)
     idx += 1
-    r, n_past = eval_string(context, '</image>', options.batch_size, n_past, False, tokenizer)
+    batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
 
     if num_image_embeds > 1:
         num_image_embeds_col = lib.clip_uhd_num_image_embeds_col(_clip_ctx)
-        r, n_past = eval_string(context, '<slice>', options.batch_size, n_past, False, tokenizer)
+        batch = batch_get_one_and_decode(context, '<slice>', options.batch_size, n_past, tokenizer)
         i = 0
 
         while i < (num_image_embeds - 1) / num_image_embeds_col:
             j = 0
 
             while j < num_image_embeds_col:
-                r, n_past = eval_string(context, '<image>', options.batch_size, n_past, False, tokenizer)
-                n_past = process_eval_image_embed(context, _clip_ctx, embeds, options.batch_size, n_past, idx)
+                batch = batch_get_one_and_decode(context, '<image>', options.batch_size, n_past, tokenizer)
+                process_eval_image_embed(context, _clip_ctx, embeds, options.batch_size, n_past, idx)
                 idx += 1
-                r, n_past = eval_string(context, '</image>', options.batch_size, n_past, False, tokenizer)
-
-                if j == num_image_embeds_col - 1:
-                    r, n_past = eval_string(context, '\n', options.batch_size, n_past, False, tokenizer)
-
+                batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
                 j += 1
 
+            batch = batch_get_one_and_decode(context, '\n', options.batch_size, n_past, tokenizer)
             i += 1
 
-        r, n_past = eval_string(context, '</slice>', options.batch_size, n_past, False, tokenizer)
+        batch = batch_get_one_and_decode(context, '</slice>', options.batch_size, n_past, tokenizer)
 
     lib.llava_image_embed_free(embeds)
 
     # first batch
-    prompt_tokens: list[int] = tokenizer.encode(options.prompt)
-    n_prompt_tokens: int = len(prompt_tokens)
-    _prompt_tokens = ffi.new('llama_token[]', prompt_tokens)
-    batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
-
-    total_n_prompt_tokens: int = n_prompt_tokens
-    new_token_id: int
-    _new_prompt_tokens = None
-
-    while True:
-        if options.predict == -1:
-            pass
-        elif options.predict == -2:
-            if check_context_size(context, batch):
-                break
-        elif total_n_prompt_tokens >= options.predict:
-            break
-
-        if lib.llama_decode(context, batch):
-            break
-
-        new_token_id = lib.llama_sampler_sample(sampler, context, -1)
-
-        if lib.llama_token_is_eog(model, new_token_id):
-            break
-
-        piece: str = tokenizer.decode([new_token_id])
-        yield piece
-
-        # next batch
-        if _new_prompt_tokens is not None:
-            ffi.release(_new_prompt_tokens)
-
-        _new_prompt_tokens = ffi.new('llama_token[]', [new_token_id])
-        batch = lib.llama_batch_get_one(_new_prompt_tokens, 1)
-        total_n_prompt_tokens += 1
-
-    if _new_prompt_tokens is not None:
-        ffi.release(_new_prompt_tokens)
-"""
-
-def minicpmv_generate(model: llama_model_p, context: llama_context_p, sampler: llama_sampler_p, _clip_ctx: clip_ctx_p, options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str)
-    assert isinstance(options.image, str)
-
-    # tokenizer
-    tokenizer: AutoTokenizer
-
-    if options.model.tokenizer_hf_repo:
-        tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
+    if has_minicpmv_projector == 2:
+        prompt = f'\n{options.prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n'
+    elif has_minicpmv_projector == 3:
+        prompt = f'\n{options.prompt}<|im_end|>\n<|im_start|>assistant\n'
     else:
-        tokenizer = get_tokenizer(options.model.creator_hf_repo)
+        prompt = '' # TODO
 
-    processor = AutoProcessor.from_pretrained(options.model.creator_hf_repo, trust_remote_code=True)
-    # image_processor = AutoImageProcessor.from_pretrained(options.model.creator_hf_repo, trust_remote_code=True)
-    image_processor = processor.image_processor
-
-    image = Image.open(options.image).convert('RGB')
-    print(image)
-
-    prompt = options.prompt
-    r = image_processor(images=image, text=prompt, return_tensors='pt')
-    # print(f'{r=}')
-    print(f'{len(r["pixel_values"])=}')
-    print(f'{len(r["image_sizes"])=}')
-    print(f'{len(r["tgt_sizes"])=}')
-
-    # conversation = [
-    #     {
-    #         "role": "user",
-    #         "content": [
-    #             {"type": "text", "text": options.prompt},
-    #             {"type": "image"},
-    #         ],
-    #     },
-    # ]
-
-    # chat_template: str = '''
-    # '''
-
-    print(f'{options.image=}')
-
-    # prompt: str = processor.apply_chat_template(conversation, chat_template=chat_template, add_generation_prompt=True)
-    # prompt: str = processor.apply_chat_template(conversation, add_generation_prompt=True)
-    # prompt: str = '<|im_start|>user\n<image></image>'
-    # prompt: str = f'<|im_start|>user\n<image>./</image>\n{options.prompt}'
-    # prompt: str = f'<image>./</image>\n{options.prompt}'
-    # prompt: str = f'{options.prompt}\n<image>./</image>\n'
-    # prompt: str = f'<|im_start|>user\n<image>./</image>\n{options.prompt}<im_end>\n<|im_start|>assistant\n'
-    # prompt: str = f'<|im_start|system\n<im_end>\n<|im_start|>user\n{options.prompt}\n(<image>./</image>)\n<im_end>\n<|im_start|>assistant\n'
-    # prompt: str = f'<|im_start|system\n<im_end>\n<|im_start|>user\n{options.prompt}\n(<image>./</image>)\n<im_end>\n<|im_start|>assistant\n'
-    # prompt: str = f'<|im_start|system\n<im_end>\n<|im_start|>user\n(<image>./</image>)\n{options.prompt}<im_end>\n<|im_start|>assistant\n'
-    prompt: str = f'<|im_start|>user\n(<image>./</image>)\n{options.prompt}<im_end>\n<|im_start|>assistant\n'
-    # prompt: str = options.prompt
-    print(f'{len(prompt)=}')
-    print(f'{prompt=}')
-    print(prompt)
-
-    # first batch
-    image = Image.open(options.image).convert('RGB')
-    # prompt_tokens: list[int] = tokenizer.encode(options.prompt)
-    # prompt_tokens: list[int] = tokenizer.encode(prompt)
-    # batch_feature: 'BatchFeature' = processor(images=image, text=prompt, return_tensors='pt')
-    batch_feature: 'BatchFeature' = processor(
-        images=image,
-        text=prompt,
-        # use_image_id=True,
-        # max_slice_nums=1,
-        # max_inp_length=8192,
-        return_tensors='pt',
-    )
-
-    print(f'{batch_feature=}')
-    print(f'{len(batch_feature)=}')
-    print(f'{batch_feature["input_ids"]=}')
-    print(f'{len(batch_feature["input_ids"])=}')
-    print(f'{len(batch_feature["input_ids"][0])=}')
-    prompt_tokens: list[int] = batch_feature['input_ids'][0].tolist()
-    print(f'{len(prompt_tokens)=}')
-    print(f'{prompt_tokens=}')
-
-    prompt2: str = tokenizer.decode(prompt_tokens)
-    print(f'{prompt2=}')
-    print(prompt2)
-
+    prompt_tokens: list[int] = tokenizer.encode(prompt)
     n_prompt_tokens: int = len(prompt_tokens)
     _prompt_tokens = ffi.new('llama_token[]', prompt_tokens)
     batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
 
-    total_n_prompt_tokens: int = n_prompt_tokens
+    total_n_prompt_tokens: int = n_prompt_tokens # FIXME: get from context
     new_token_id: int
     _new_prompt_tokens = None
 
@@ -699,3 +571,8 @@ def minicpmv_generate(model: llama_model_p, context: llama_context_p, sampler: l
 
     if _new_prompt_tokens is not None:
         ffi.release(_new_prompt_tokens)
+
+    ffi.release(n_past)
+
+
+mllama_completions = None

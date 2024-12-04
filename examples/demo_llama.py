@@ -9,7 +9,7 @@ from llama import (
     context_free,
     sampler_init,
     sampler_free,
-    generate,
+    text_completions,
 )
 
 from demo_models import models
@@ -41,7 +41,7 @@ print(f'{_sampler=}')
 
 input('Press any key to generate')
 
-for token in generate(_model, _ctx, _sampler, options):
+for token in text_completions(_model, _ctx, _sampler, options):
     print(token, end='', flush=True)
 
 print()

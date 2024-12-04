@@ -4,6 +4,13 @@
 
 Added:
   - Low-level C API calls from llama.h
+  - `completions` for `llama_cli_main` API
+  - `text_completions` for low-level LLM
+  - `clip_completions` for low-level CLIP-based VLMs
+  - `mllama_completions` for low-level Mllama-based VLMs
+
+Removed:
+  - `llama_generate` function
 
 ## v0.1.23
 
