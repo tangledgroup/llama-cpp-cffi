@@ -329,15 +329,12 @@ def cleanup_code(source: str) -> str:
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    shutil.copyfile('./mllama.cpp', 'llama.cpp/examples/llava')
-    shutil.copyfile('./mllama.h', 'llama.cpp/examples/llava')
-    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/main/main.cpp', 'main_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/llava-cli.cpp', 'llava-cli_5.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/minicpmv-cli.cpp', 'minicpmv-cli_5.patch'], check=True)
+    shutil.copyfile('./mllama.cpp', './llama.cpp/examples/llava/mllama.cpp')
+    shutil.copyfile('./mllama.h', './llama.cpp/examples/llava/mllama.h')
+    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):
@@ -413,6 +410,7 @@ def build_cpu(*args, **kwargs):
         files=[
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
+            './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
         ],
     )
@@ -436,78 +434,74 @@ def build_cpu(*args, **kwargs):
     _source = cleanup_code(_source)
     print(_source)
 
-    # build
-    for name in ['llama', 'llava', 'minicpmv']:
-        #
-        # build llama.cpp
-        #
-        subprocess.run([
-            'make',
-            '-C',
-            'llama.cpp',
-            '-j',
-            f'{name}-cli-static',
-            'LLAMA_MAKEFILE=1',
-            'GGML_NO_OPENMP=1',
-            *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
-        ], check=True, env=env)
+    #
+    # build llama.cpp
+    #
+    subprocess.run([
+        'make',
+        '-C',
+        'llama.cpp',
+        '-j',
+        'libggml.a',
+        'libllama.a',
+        'libllava.a',
+        'libcommon.a',
+        'LLAMA_MAKEFILE=1',
+        'GGML_NO_OPENMP=1',
+        *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
+    ], check=True, env=env)
 
-        #
-        # cffi
-        #
-        ffibuilder = FFI()
+    #
+    # cffi
+    #
+    ffibuilder = FFI()
 
-        ffibuilder.cdef(
-            f'''
-                void *malloc(size_t size);
-                void free(void *ptr);
-                void *memcpy(void *to, const void *from, size_t num_bytes);
+    ffibuilder.cdef(
+        '''
+            void *malloc(size_t size);
+            void free(void *ptr);
+            void *memcpy(void *to, const void *from, size_t num_bytes);
+        ''' + _source,
+        override=True,
+    )
 
-                typedef void (*_llama_yield_token_t)(const char * token);
-                typedef int (*_llama_should_stop_t)(void);
-                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''' + _source,
-            override=True,
-        )
+    ffibuilder.set_source(
+        '_llama_cpp_cpu',
+        '''
+            #include <stdio.h>
+            #include "llama.h"
+            #include "llava/clip.h"
+            #include "llava/llava.h"
+            #include "llava/mllama.h"
+        ''',
+        libraries=[
+            'stdc++',
+            'm',
+            'pthread',
+        ],
+        extra_objects=[],
+        extra_compile_args=[
+            '-O3',
+            '-g',
+            '-fPIC',
+            '-DLLAMA_SHARED',
+            '-DLLAMA_LIB',
+            '-I../llama.cpp/ggml/include',
+            '-I../llama.cpp/include',
+            '-I../llama.cpp/examples',
+        ],
+        extra_link_args=[
+            '-O3',
+            '-g',
+            '-flto',
+            '-L../llama.cpp',
+            '-lggml',
+            '-lllama',
+            '-lllava',
+        ],
+    )
 
-        ffibuilder.set_source(
-            f'_{name}_cli_cpu',
-            f'''
-                #include <stdio.h>
-                #include "llama.h"
-                #include "llava/clip.h"
-                #include "llava/llava.h"
-
-                typedef void (*_llama_yield_token_t)(const char * token);
-                typedef int (*_llama_should_stop_t)(void);
-                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''',
-            libraries=[
-                'stdc++',
-                'm',
-                'pthread',
-            ],
-            extra_objects=[],
-            extra_compile_args=[
-                '-O3',
-                '-g',
-                '-fPIC',
-                '-DLLAMA_SHARED',
-                '-DLLAMA_LIB',
-                '-I../llama.cpp/ggml/include',
-                '-I../llama.cpp/include',
-                '-I../llama.cpp/examples',
-            ],
-            extra_link_args=[
-                '-O3',
-                '-g',
-                '-flto',
-                '-L../llama.cpp',
-                f'-l{name}_cli',
-            ],
-        )
-
-        ffibuilder.compile(tmpdir='build', verbose=True)
+    ffibuilder.compile(tmpdir='build', verbose=True)
 
     #
     # copy compiled modules
@@ -543,6 +537,7 @@ def build_vulkan_1_x(*args, **kwargs):
         files=[
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
+            './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
         ],
     )
@@ -566,79 +561,76 @@ def build_vulkan_1_x(*args, **kwargs):
     _source = cleanup_code(_source)
     print(_source)
 
-    for name in ['llama', 'llava', 'minicpmv']:
-        #
-        # build llama.cpp
-        #
-        subprocess.run([
-            'make',
-            '-C',
-            'llama.cpp',
-            '-j',
-            f'{name}-cli-static',
-            'LLAMA_MAKEFILE=1',
-            'GGML_NO_OPENMP=1',
-            'GGML_VULKAN=1',
-            *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
-        ], check=True, env=env)
+    #
+    # build llama.cpp
+    #
+    subprocess.run([
+        'make',
+        '-C',
+        'llama.cpp',
+        '-j',
+        'libggml.a',
+        'libllama.a',
+        'libllava.a',
+        'libcommon.a',
+        'LLAMA_MAKEFILE=1',
+        'GGML_NO_OPENMP=1',
+        'GGML_VULKAN=1',
+        *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
+    ], check=True, env=env)
 
-        #
-        # cffi
-        #
-        ffibuilder = FFI()
+    #
+    # cffi
+    #
+    ffibuilder = FFI()
 
-        ffibuilder.cdef(
-            f'''
-                void *malloc(size_t size);
-                void free(void *ptr);
-                void *memcpy(void *to, const void *from, size_t num_bytes);
+    ffibuilder.cdef(
+        '''
+            void *malloc(size_t size);
+            void free(void *ptr);
+            void *memcpy(void *to, const void *from, size_t num_bytes);
+        ''' + _source,
+        override=True,
+    )
 
-                typedef void (*_llama_yield_token_t)(const char * token);
-                typedef int (*_llama_should_stop_t)(void);
-                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''' + _source,
-            override=True,
-        )
+    ffibuilder.set_source(
+        '_llama_cpp_vulkan_1_x',
+        '''
+            #include <stdio.h>
+            #include "llama.h"
+            #include "llava/clip.h"
+            #include "llava/llava.h"
+            #include "llava/mllama.h"
+        ''',
+        libraries=[
+            'stdc++',
+            'm',
+            'pthread',
+            'vulkan',
+        ],
+        extra_objects=[],
+        extra_compile_args=[
+            '-O3',
+            '-g',
+            '-fPIC',
+            '-DLLAMA_SHARED',
+            '-DLLAMA_LIB',
+            '-I../llama.cpp/ggml/include',
+            '-I../llama.cpp/include',
+            '-I../llama.cpp/examples',
+        ],
+        extra_link_args=[
+            '-O3',
+            '-g',
+            '-flto',
+            '-L../llama.cpp',
+            '-lggml',
+            '-lllama',
+            '-lllava',
+        ],
+    )
 
-        ffibuilder.set_source(
-            f'_{name}_cli_vulkan_1_x',
-            f'''
-                #include <stdio.h>
-                #include "llama.h"
-                #include "llava/clip.h"
-                #include "llava/llava.h"
-
-                typedef void (*_llama_yield_token_t)(const char * token);
-                typedef int (*_llama_should_stop_t)(void);
-                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''',
-            libraries=[
-                'stdc++',
-                'm',
-                'pthread',
-                'vulkan',
-            ],
-            extra_objects=[],
-            extra_compile_args=[
-                '-O3',
-                '-g',
-                '-fPIC',
-                '-DLLAMA_SHARED',
-                '-DLLAMA_LIB',
-                '-I../llama.cpp/ggml/include',
-                '-I../llama.cpp/include',
-                '-I../llama.cpp/examples',
-            ],
-            extra_link_args=[
-                '-O3',
-                '-g',
-                '-flto',
-                '-L../llama.cpp',
-                f'-l{name}_cli',
-            ],
-        )
-
-        ffibuilder.compile(tmpdir='build', verbose=True)
+    ffibuilder.compile(tmpdir='build', verbose=True)
 
     #
     # copy compiled modules
@@ -697,6 +689,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         files=[
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
+            './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
         ],
     )
@@ -720,88 +713,85 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     _source = cleanup_code(_source)
     print(_source)
 
-    for name in ['llama', 'llava', 'minicpmv']:
-        #
-        # build llama.cpp
-        #
-        subprocess.run([
-            'make',
-            '-C',
-            'llama.cpp',
-            '-j',
-            f'{name}-cli-static',
-            'LLAMA_MAKEFILE=1',
-            'GGML_NO_OPENMP=1',
-            'GGML_CUDA=1',
-            *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
-        ], check=True, env=env)
+    #
+    # build llama.cpp
+    #
+    subprocess.run([
+        'make',
+        '-C',
+        'llama.cpp',
+        '-j',
+        'libggml.a',
+        'libllama.a',
+        'libllava.a',
+        'libcommon.a',
+        'LLAMA_MAKEFILE=1',
+        'GGML_NO_OPENMP=1',
+        'GGML_CUDA=1',
+        *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
+    ], check=True, env=env)
 
-        #
-        # cffi
-        #
-        ffibuilder = FFI()
+    #
+    # cffi
+    #
+    ffibuilder = FFI()
 
-        ffibuilder.cdef(
-            f'''
-                void *malloc(size_t size);
-                void free(void *ptr);
-                void *memcpy(void *to, const void *from, size_t num_bytes);
+    ffibuilder.cdef(
+        '''
+            void *malloc(size_t size);
+            void free(void *ptr);
+            void *memcpy(void *to, const void *from, size_t num_bytes);
+        ''' + _source,
+        override=True,
+    )
 
-                typedef void (*_llama_yield_token_t)(const char * token);
-                typedef int (*_llama_should_stop_t)(void);
-                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''' + _source,
-            override=True,
-        )
+    ffibuilder.set_source(
+        '_llama_cpp_cuda_12_6_3',
+        '''
+            #include <stdio.h>
+            #include "llama.h"
+            #include "llava/clip.h"
+            #include "llava/llava.h"
+            #include "llava/mllama.h"
+        ''',
+        libraries=[
+            'stdc++',
+            'm',
+            'pthread',
+            'cuda',
+            'cublas',
+            'culibos',
+            'cudart',
+            'cublasLt'
+        ],
+        library_dirs=[
+            f'{cuda_output_dir}/dist/lib64',
+            f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
+            f'{cuda_output_dir}/dist/lib64/stubs',
+        ],
+        extra_objects=[],
+        extra_compile_args=[
+            '-O3',
+            '-g',
+            '-fPIC',
+            '-DLLAMA_SHARED',
+            '-DLLAMA_LIB',
+            '-I../llama.cpp/ggml/include',
+            '-I../llama.cpp/include',
+            '-I../llama.cpp/examples',
+        ],
+        extra_link_args=[
+            '-O3',
+            '-g',
+            '-flto',
+            '-L../llama.cpp',
+            '-lggml',
+            '-lllama',
+            '-lllava',
+        ],
+    )
 
-        ffibuilder.set_source(
-            f'_{name}_cli_cuda_12_6_3',
-            f'''
-                #include <stdio.h>
-                #include "llama.h"
-                #include "llava/clip.h"
-                #include "llava/llava.h"
-
-                typedef void (*_llama_yield_token_t)(const char * token);
-                typedef int (*_llama_should_stop_t)(void);
-                int _{name}_cli_main(int argc, char ** argv, _llama_yield_token_t _llama_yield_token, _llama_should_stop_t _llama_should_stop);
-            ''',
-            libraries=[
-                'stdc++',
-                'm',
-                'pthread',
-                'cuda',
-                'cublas',
-                'culibos',
-                'cudart',
-                'cublasLt'
-            ],
-            library_dirs=[
-                f'{cuda_output_dir}/dist/lib64',
-                f'{cuda_output_dir}/dist/targets/x86_64-linux/lib',
-                f'{cuda_output_dir}/dist/lib64/stubs',
-            ],
-            extra_objects=[],
-            extra_compile_args=[
-                '-O3',
-                '-g',
-                '-fPIC',
-                '-DLLAMA_SHARED',
-                '-DLLAMA_LIB',
-                '-I../llama.cpp/ggml/include',
-                '-I../llama.cpp/include',
-                '-I../llama.cpp/examples',
-            ],
-            extra_link_args=[
-                '-O3',
-                '-g',
-                '-flto',
-                '-L../llama.cpp',
-                f'-l{name}_cli',
-            ],
-        )
-
-        ffibuilder.compile(tmpdir='build', verbose=True)
+    ffibuilder.compile(tmpdir='build', verbose=True)
 
     #
     # copy compiled modules
