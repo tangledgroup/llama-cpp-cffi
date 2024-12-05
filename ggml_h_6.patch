@@ -1,0 +1,26 @@
+--- llama.cpp-master/ggml/include/ggml.h	2024-12-04 20:47:44.562072458 +0100
++++ llama.cpp/ggml/include/ggml.h	2024-12-05 10:42:53.592399372 +0100
+@@ -499,6 +499,7 @@
+         GGML_OP_POOL_2D_BACK,
+         GGML_OP_UPSCALE, // nearest interpolate
+         GGML_OP_PAD,
++        GGML_OP_UNPAD,
+         GGML_OP_ARANGE,
+         GGML_OP_TIMESTEP_EMBEDDING,
+         GGML_OP_ARGSORT,
+@@ -1691,6 +1692,15 @@
+             struct ggml_context * ctx,
+             struct ggml_tensor  * a,
+             int                  p0,
++            int                  p1,
++            int                  p2,
++            int                  p3);
++
++    // unpad each dimension: [x, ..., x, y, ..., y] -> [x, ..., x]
++    GGML_API struct ggml_tensor * ggml_unpad(
++            struct ggml_context * ctx,
++            struct ggml_tensor  * a,
++            int                  p0,
+             int                  p1,
+             int                  p2,
+             int                  p3);

@@ -42,146 +42,25 @@ LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
 try:
     if LLAMA_CPP_BACKEND:
         if LLAMA_CPP_BACKEND in ('cuda', 'CUDA'):
-            from ._llama_cli_cuda_12_6_3 import lib as llama_lib, ffi as llama_ffi
-            from ._llava_cli_cuda_12_6_3 import lib as llava_lib, llava_ffi
-            from ._minicpmv_cli_cuda_12_6_3 import lib as minicpmv_lib, ffi as minicpmv_ffi
+            from ._llama_cpp_cuda_12_6_3 import lib, ffi
         elif LLAMA_CPP_BACKEND in ('vulkan', 'VULKAN'):
-            from ._llama_cli_vulkan_1_x import lib as llama_lib, ffi as llama_ffi
-            from ._llava_cli_vulkan_1_x import lib as llava_lib, ffi as llava_ffi
-            from ._minicpmv_cli_vulkan_1_x import lib as minicpmv_lib, ffi as minicpmv_ffi
+            from ._llama_cpp_vulkan_1_x import lib, ffi
         elif LLAMA_CPP_BACKEND in ('cpu', 'CPU'):
-            from ._llama_cli_cpu import lib as llama_lib, ffi as llama_ffi
-            from ._llava_cli_cpu import lib as llava_lib, ffi as llava_ffi
-            from ._minicpmv_cli_cpu import lib as minicpmv_lib, ffi as minicpmv_ffi
+            from ._llama_cpp_cpu import lib, ffi
         else:
             raise ValueError(f'{LLAMA_CPP_BACKEND = }')
     else:
         if is_cuda_available():
-            from ._llama_cli_cuda_12_6_3 import lib as llama_lib, ffi as llama_ffi
-            from ._llava_cli_cuda_12_6_3 import lib as llava_lib, ffi as llava_ffi
-            from ._minicpmv_cli_cuda_12_6_3 import lib as minicpmv_lib, ffi as minicpmv_ffi
+            from ._llama_cpp_cuda_12_6_3 import lib, ffi
         elif is_vulkan_available():
-            from ._llama_cli_vulkan_1_x import lib as llama_lib, ffi as llama_ffi
-            from ._llava_cli_vulkan_1_x import lib as llava_lib, ffi as llava_ffi
-            from ._minicpmv_cli_vulkan_1_x import lib as minicpmv_lib, ffi as minicpmv_ffi
+            from ._llama_cpp_vulkan_1_x import lib, ffi
         else:
-            from ._llama_cli_cpu import lib as llama_lib, ffi as llama_ffi
-            from ._llava_cli_cpu import lib as llava_lib, ffi as llava_ffi
-            from ._minicpmv_cli_cpu import lib as minicpmv_lib, ffi as minicpmv_ffi
+            from ._llama_cpp_cpu import lib, ffi
 except ImportError:
-    from ._llama_cli_cpu import lib as llama_lib, ffi as llama_ffi
-    from ._llava_cli_cpu import lib as llava_lib, ffi as llava_ffi
-    from ._minicpmv_cli_cpu import lib as minicpmv_lib, ffi as minicpmv_ffi
+    from ._llama_cpp_cpu import lib, ffi
 
 
-_LLAMA_YIELD_TOKEN_T = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
-_LLAMA_SHOULD_STOP_T = ctypes.CFUNCTYPE(ctypes.c_int)
-
-
-def _llama_yield_token_func(chunk_bytes: bytes, queue: Queue, metadata: dict):
-    stop_on_special_token = metadata['stop_on_special_token']
-    special_tokens = metadata['special_tokens']
-
-    try:
-        b: bytes = metadata['prev_chunk_bytes'] + chunk_bytes
-        chunk = b.decode()
-    except UnicodeDecodeError:
-        metadata['prev_chunk_bytes'] += chunk_bytes
-        return
-
-    metadata['prev_chunk_bytes'] = b''
-
-    if not stop_on_special_token:
-        queue.put(chunk)
-        return
-
-    # detect stop token
-    buffer = metadata['buffer']
-    buffer += chunk
-    metadata['buffer'] = buffer
-
-    subtoken_found = False
-    token_found = False
-
-    for token in special_tokens:
-        for i in range(len(token)):
-            subtoken = token[:i + 1]
-
-            if buffer[-len(subtoken):] == subtoken:
-                subtoken_found = True
-
-                if token in buffer:
-                    index = buffer.index(token)
-                    chunk = buffer[:index]
-                    buffer = buffer[index + len(token):]
-                    metadata['buffer'] = buffer
-                    metadata['should_stop'] = True
-                    token_found = True
-                    break
-
-        if subtoken_found or token_found:
-            break
-
-    if subtoken_found:
-        return
-
-    if token_found:
-        return
-
-    buffer = metadata['buffer']
-    queue.put(buffer)
-    metadata['buffer'] = ''
-
-
-def _llama_should_stop_func(queue: Queue, metadata: dict) -> int:
-    return 1 if metadata['should_stop'] else 0
-
-
-def _llama_cli_main(argc, argv, queue: Queue, metadata: dict):
-    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, metadata=metadata))
-    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, metadata=metadata))
-
-    _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
-    _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
-
-    cffi__llama_yield_token_callback = llama_ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
-    cffi__llama_should_stop_callback = llama_ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
-
-    r = llama_lib._llama_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
-    # assert r == 0
-    queue.put(None)
-
-
-def _llava_cli_main(argc, argv, queue: Queue, metadata: dict):
-    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, metadata=metadata))
-    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, metadata=metadata))
-
-    _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
-    _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
-
-    cffi__llama_yield_token_callback = llama_ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
-    cffi__llama_should_stop_callback = llama_ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
-
-    r = llava_lib._llava_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
-    # assert r == 0
-    queue.put(None)
-
-
-def _minicpmv_cli_main(argc, argv, queue: Queue, metadata: dict):
-    _llama_yield_token = _LLAMA_YIELD_TOKEN_T(partial(_llama_yield_token_func, queue=queue, metadata=metadata))
-    _llama_should_stop = _LLAMA_SHOULD_STOP_T(partial(_llama_should_stop_func, queue=queue, metadata=metadata))
-
-    _llama_yield_token_address = ctypes.cast(_llama_yield_token, ctypes.c_void_p).value
-    _llama_should_stop_address = ctypes.cast(_llama_should_stop, ctypes.c_void_p).value
-
-    cffi__llama_yield_token_callback = llama_ffi.cast('void (*_llama_yield_token_t)(const char * token)', _llama_yield_token_address)
-    cffi__llama_should_stop_callback = llama_ffi.cast('int (*_llama_should_stop_t)(void)', _llama_should_stop_address)
-
-    r = minicpmv_lib._minicpmv_cli_main(argc, argv, cffi__llama_yield_token_callback, cffi__llama_should_stop_callback)
-    # assert r == 0
-    queue.put(None)
-
-
+"""
 def completions(options: Options) -> Iterator[str]:
     tokenizer: AutoTokenizer
     creator_hf_repo: str
@@ -261,13 +140,12 @@ def completions(options: Options) -> Iterator[str]:
 
     queue.join()
     t.join()
+"""
 
 
 #
 # low-level API
 #
-lib, ffi = llama_lib, llama_ffi
-
 void_p = NewType('void*', ffi.typeof('void*'))
 char_p = NewType('char*', ffi.typeof('char*'))
 int_p = NewType('int*', ffi.typeof('int*'))

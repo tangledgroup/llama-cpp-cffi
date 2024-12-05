@@ -1,0 +1,20 @@
+--- llama.cpp-master/ggml/src/ggml-cuda/ggml-cuda.cu	2024-12-04 20:47:44.572072684 +0100
++++ llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu	2024-12-05 10:45:46.029535144 +0100
+@@ -2081,6 +2081,9 @@
+         case GGML_OP_PAD:
+             ggml_cuda_op_pad(ctx, dst);
+             break;
++        case GGML_OP_UNPAD:
++            ggml_cuda_op_unpad(ctx, dst);
++            break;
+         case GGML_OP_ARANGE:
+             ggml_cuda_op_arange(ctx, dst);
+             break;
+@@ -3006,6 +3009,7 @@
+         case GGML_OP_GROUP_NORM:
+         case GGML_OP_UPSCALE:
+         case GGML_OP_PAD:
++        case GGML_OP_UNPAD:
+         case GGML_OP_ARANGE:
+         case GGML_OP_TIMESTEP_EMBEDDING:
+         case GGML_OP_LEAKY_RELU:

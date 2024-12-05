@@ -1,0 +1,69 @@
+--- llama.cpp-master/ggml/src/ggml.c	2024-12-04 20:47:44.592073134 +0100
++++ llama.cpp/ggml/src/ggml.c	2024-12-05 11:39:31.954511613 +0100
+@@ -950,6 +950,7 @@
+     "POOL_2D_BACK",
+     "UPSCALE",
+     "PAD",
++    "UNPAD",
+     "ARANGE",
+     "TIMESTEP_EMBEDDING",
+     "ARGSORT",
+@@ -983,7 +984,7 @@
+     "OPT_STEP_ADAMW",
+ };
+ 
+-static_assert(GGML_OP_COUNT == 81, "GGML_OP_COUNT != 81");
++static_assert(GGML_OP_COUNT == 82, "GGML_OP_COUNT != 82");
+ 
+ static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
+     "none",
+@@ -1045,6 +1046,7 @@
+     "pool_2d_back(x)",
+     "upscale(x)",
+     "pad(x)",
++    "unpad(x)",
+     "arange(start, stop, step)",
+     "timestep_embedding(timesteps, dim, max_period)",
+     "argsort(x)",
+@@ -1078,7 +1080,7 @@
+     "adamw(x)",
+ };
+ 
+-static_assert(GGML_OP_COUNT == 81, "GGML_OP_COUNT != 81");
++static_assert(GGML_OP_COUNT == 82, "GGML_OP_COUNT != 82");
+ 
+ static_assert(GGML_OP_POOL_COUNT == 2, "GGML_OP_POOL_COUNT != 2");
+ 
+@@ -4095,6 +4097,32 @@
+     result->src[0] = a;
+ 
+     return result;
++}
++
++// ggml_unpad
++
++struct ggml_tensor * ggml_unpad(
++    struct ggml_context * ctx,
++    struct ggml_tensor  * a,
++    int p0, int p1, int p2, int p3) {
++    bool is_node = false;
++
++    if (a->grad) {
++        GGML_ABORT("fatal error"); // TODO: implement backward
++        is_node = true;
++    }
++
++    struct ggml_tensor * result = ggml_new_tensor_4d(ctx, a->type,
++            a->ne[0] - p0,
++            a->ne[1] - p1,
++            a->ne[2] - p2,
++            a->ne[3] - p3);
++
++    result->op = GGML_OP_UNPAD;
++    result->grad = is_node ? ggml_dup_tensor(ctx, result) : NULL;
++    result->src[0] = a;
++
++    return result;
+ }
+ 
+ // ggml_arange

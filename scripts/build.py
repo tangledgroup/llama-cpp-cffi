@@ -22,6 +22,7 @@ REPLACE_CODE_ITEMS = {
     'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
     'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
     'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
+    # 'bool clip_image_batch_encode(struct clip_ctx * ctx, int n_threads, const struct clip_image_f32_batch * imgs, float * vec);': '',
 }
 
 
@@ -329,12 +330,15 @@ def cleanup_code(source: str) -> str:
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    shutil.copyfile('./mllama.cpp', './llama.cpp/examples/llava/mllama.cpp')
-    shutil.copyfile('./mllama.h', './llama.cpp/examples/llava/mllama.h')
+    subprocess.run(['git', 'clone', 'https://github.com/ollama/ollama.git'], check=True)
+    shutil.copyfile('./ollama/llama/mllama.cpp', './llama.cpp/examples/llava/mllama.cpp')
+    shutil.copyfile('./ollama/llama/mllama.h', './llama.cpp/examples/llava/mllama.h')
+    shutil.copyfile('./ollama/llama/patches/0011-add-unpad-operator.patch', './llama.cpp/')
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
+    # subprocess.run(['git', 'apply', '0011-add-unpad-operator.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):
@@ -392,7 +396,8 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
+    # env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
+    env['CXXFLAGS'] = '-O3'
     print('build_cpu:')
     pprint(env)
 
@@ -400,7 +405,7 @@ def build_cpu(*args, **kwargs):
     _source = preprocess_library_code(
         cc=env.get('CC', 'gcc'),
         cflags=[
-            '-DLLAMA_LIB',
+            # '-DLLAMA_LIB',
             *(['-DGGML_USE_CPU_AARCH64'] if platform.machine() == 'aarch64' else []),
         ],
         include_dirs=[
@@ -484,8 +489,8 @@ def build_cpu(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
-            '-DLLAMA_SHARED',
-            '-DLLAMA_LIB',
+            # '-DLLAMA_SHARED',
+            # '-DLLAMA_LIB',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -498,6 +503,7 @@ def build_cpu(*args, **kwargs):
             '-lggml',
             '-lllama',
             '-lllava',
+            '-lcommon',
         ],
     )
 
@@ -818,16 +824,16 @@ def build(*args, **kwargs):
         clean_llama_cpp()
         build_cpu(*args, **kwargs)
 
-    # vulkan 1.x
-    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-        clean_llama_cpp()
-        build_vulkan_1_x(*args, **kwargs)
+    # # vulkan 1.x
+    # if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #     clean_llama_cpp()
+    #     build_vulkan_1_x(*args, **kwargs)
 
-    # cuda 12.6.3
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+    # # cuda 12.6.3
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':
