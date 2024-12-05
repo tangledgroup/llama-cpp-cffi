@@ -1,5 +1,5 @@
 --- llama.cpp-master/ggml/src/ggml.c	2024-12-05 14:21:15.899390305 +0100
-+++ llama.cpp/ggml/src/ggml.c	2024-12-05 14:59:44.184381000 +0100
++++ llama.cpp/ggml/src/ggml.c	2024-12-05 15:18:11.829089894 +0100
 @@ -951,6 +951,7 @@
      "UPSCALE",
      "PAD",
@@ -46,12 +46,12 @@
 +    struct ggml_context * ctx,
 +    struct ggml_tensor  * a,
 +    int p0, int p1, int p2, int p3) {
-+    bool is_node = false;
-+
-+    if (a->grad) {
-+        GGML_ABORT("fatal error"); // TODO: implement backward
-+        is_node = true;
-+    }
++    // bool is_node = false;
++    //
++    // if (a->grad) {
++    //     GGML_ABORT("fatal error"); // TODO: implement backward
++    //     is_node = true;
++    // }
 +
 +    struct ggml_tensor * result = ggml_new_tensor_4d(ctx, a->type,
 +            a->ne[0] - p0,
@@ -60,7 +60,7 @@
 +            a->ne[3] - p3);
 +
 +    result->op = GGML_OP_UNPAD;
-+    result->grad = is_node ? ggml_dup_tensor(ctx, result) : NULL;
++    // result->grad = is_node ? ggml_dup_tensor(ctx, result) : NULL;
 +    result->src[0] = a;
 +
 +    return result;

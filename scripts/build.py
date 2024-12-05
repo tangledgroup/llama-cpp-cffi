@@ -22,7 +22,7 @@ REPLACE_CODE_ITEMS = {
     'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
     'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
     'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
-    # 'bool clip_image_batch_encode(struct clip_ctx * ctx, int n_threads, const struct clip_image_f32_batch * imgs, float * vec);': '',
+    'struct mllama_ctx *mllama_model_load_cpu(const char *fname, int verbosity);': '',
 }
 
 
@@ -330,9 +330,6 @@ def cleanup_code(source: str) -> str:
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    subprocess.run(['git', 'clone', 'https://github.com/ollama/ollama.git'], check=True)
-    shutil.copyfile('./ollama/llama/mllama.cpp', './llama.cpp/examples/llava/mllama.cpp')
-    shutil.copyfile('./ollama/llama/mllama.h', './llama.cpp/examples/llava/mllama.h')
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/include/ggml.h', 'ggml_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu', 'ggml_cuda_cu_6.patch'], check=True)
@@ -345,6 +342,12 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
+
+    # ollama/mllama
+    subprocess.run(['git', 'clone', 'https://github.com/ollama/ollama.git'], check=True)
+    shutil.copyfile('./ollama/llama/mllama.cpp', './llama.cpp/examples/llava/mllama.cpp')
+    shutil.copyfile('./ollama/llama/mllama.h', './llama.cpp/examples/llava/mllama.h')
+    subprocess.run(['patch', './llama.cpp/examples/llava/mllama.cpp', 'mllama_cpp_6.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):

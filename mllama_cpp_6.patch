@@ -1,0 +1,10 @@
+--- ollama-master/llama/mllama.cpp	2024-12-05 15:35:56.476171614 +0100
++++ ollama/llama/mllama.cpp	2024-12-05 15:36:25.383483228 +0100
+@@ -4,6 +4,7 @@
+ #include "ggml-alloc.h"
+ #include "ggml-backend.h"
+ #include "ggml.h"
++#include "ggml-cpu.h"
+ 
+ #ifdef GGML_USE_CUDA
+ #include "ggml-cuda.h"

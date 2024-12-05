@@ -28,7 +28,6 @@ config = get_config(model.creator_hf_repo)
 
 options = Options(
     model=model,
-    # ctx_size=getattr(config, 'max_position_embeddings', 2048),
     predict=-2,
     temp=0.7,
     top_p=0.8,
@@ -37,8 +36,8 @@ options = Options(
     prompt='What is in the image? Extract (OCR) all text from page as markdown.',
     # prompt='Extract (OCR) all text from page as markdown.',
     # image='examples/llama-1.png',
-    # image='examples/llama-3.png',
-    image='examples/llama-4.png',
+    image='examples/llama-3.png',
+    # image='examples/llama-4.png',
     gpu_layers=99,
 )
 
