@@ -333,7 +333,6 @@ def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ollama/ollama.git'], check=True)
     shutil.copyfile('./ollama/llama/mllama.cpp', './llama.cpp/examples/llava/mllama.cpp')
     shutil.copyfile('./ollama/llama/mllama.h', './llama.cpp/examples/llava/mllama.h')
-    shutil.copyfile('./ollama/llama/patches/0011-add-unpad-operator.patch', './llama.cpp/')
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/include/ggml.h', 'ggml_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu', 'ggml_cuda_cu_6.patch'], check=True)
@@ -346,7 +345,6 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
-    # subprocess.run(['git', 'apply', '0011-add-unpad-operator.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):

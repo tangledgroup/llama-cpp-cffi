@@ -1,5 +1,5 @@
 --- llama.cpp-master/ggml/src/ggml-cuda/ggml-cuda.cu	2024-12-04 20:47:44.572072684 +0100
-+++ llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu	2024-12-05 10:45:46.029535144 +0100
++++ llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu	2024-12-05 14:30:01.887830677 +0100
 @@ -2081,6 +2081,9 @@
          case GGML_OP_PAD:
              ggml_cuda_op_pad(ctx, dst);

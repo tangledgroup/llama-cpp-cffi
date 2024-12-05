@@ -1,6 +1,6 @@
---- llama.cpp-master/ggml/src/ggml-cpu/ggml-cpu.c	2024-12-04 20:47:44.568739275 +0100
-+++ llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c	2024-12-05 11:48:54.300454794 +0100
-@@ -10439,6 +10439,60 @@
+--- llama.cpp-master/ggml/src/ggml-cpu/ggml-cpu.c	2024-12-05 14:21:15.896056897 +0100
++++ llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c	2024-12-05 15:06:35.286891827 +0100
+@@ -10552,6 +10552,61 @@
      }
  }
  
@@ -58,12 +58,13 @@
 +            }
 +    }
 +}
- 
++
  // ggml_compute_forward_arange
  
-@@ -12535,6 +12589,10 @@
+ static void ggml_compute_forward_arange_f32(
+@@ -12651,6 +12706,10 @@
              {
-                 ggml_compute_forward_pad(params, tensor);
+                 ggml_compute_forward_pad_reflect_1d(params, tensor);
              } break;
 +        case GGML_OP_UNPAD:
 +            {
@@ -72,10 +73,10 @@
          case GGML_OP_ARANGE:
              {
                  ggml_compute_forward_arange(params, tensor);
-@@ -12877,6 +12935,7 @@
-             } break;
+@@ -12994,6 +13053,7 @@
          case GGML_OP_UPSCALE:
          case GGML_OP_PAD:
+         case GGML_OP_PAD_REFLECT_1D:
 +        case GGML_OP_UNPAD:
          case GGML_OP_ARANGE:
          case GGML_OP_TIMESTEP_EMBEDDING:

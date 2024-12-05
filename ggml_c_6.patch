@@ -1,40 +1,40 @@
---- llama.cpp-master/ggml/src/ggml.c	2024-12-04 20:47:44.592073134 +0100
-+++ llama.cpp/ggml/src/ggml.c	2024-12-05 11:39:31.954511613 +0100
-@@ -950,6 +950,7 @@
-     "POOL_2D_BACK",
+--- llama.cpp-master/ggml/src/ggml.c	2024-12-05 14:21:15.899390305 +0100
++++ llama.cpp/ggml/src/ggml.c	2024-12-05 14:59:44.184381000 +0100
+@@ -951,6 +951,7 @@
      "UPSCALE",
      "PAD",
+     "PAD_REFLECT_1D",
 +    "UNPAD",
      "ARANGE",
      "TIMESTEP_EMBEDDING",
      "ARGSORT",
-@@ -983,7 +984,7 @@
+@@ -984,7 +985,7 @@
      "OPT_STEP_ADAMW",
  };
  
--static_assert(GGML_OP_COUNT == 81, "GGML_OP_COUNT != 81");
-+static_assert(GGML_OP_COUNT == 82, "GGML_OP_COUNT != 82");
+-static_assert(GGML_OP_COUNT == 82, "GGML_OP_COUNT != 82");
++static_assert(GGML_OP_COUNT == 83, "GGML_OP_COUNT != 83");
  
  static const char * GGML_OP_SYMBOL[GGML_OP_COUNT] = {
      "none",
-@@ -1045,6 +1046,7 @@
-     "pool_2d_back(x)",
+@@ -1047,6 +1048,7 @@
      "upscale(x)",
      "pad(x)",
+     "pad_reflect_1d(x)",
 +    "unpad(x)",
      "arange(start, stop, step)",
      "timestep_embedding(timesteps, dim, max_period)",
      "argsort(x)",
-@@ -1078,7 +1080,7 @@
+@@ -1080,7 +1082,7 @@
      "adamw(x)",
  };
  
--static_assert(GGML_OP_COUNT == 81, "GGML_OP_COUNT != 81");
-+static_assert(GGML_OP_COUNT == 82, "GGML_OP_COUNT != 82");
+-static_assert(GGML_OP_COUNT == 82, "GGML_OP_COUNT != 82");
++static_assert(GGML_OP_COUNT == 83, "GGML_OP_COUNT != 83");
  
  static_assert(GGML_OP_POOL_COUNT == 2, "GGML_OP_POOL_COUNT != 2");
  
-@@ -4095,6 +4097,32 @@
+@@ -4128,6 +4130,32 @@
      result->src[0] = a;
  
      return result;

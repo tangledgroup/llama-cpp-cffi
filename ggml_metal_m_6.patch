@@ -1,34 +1,37 @@
---- llama.cpp-master/ggml/src/ggml-metal/ggml-metal.m	2024-12-04 20:47:44.582072908 +0100
-+++ llama.cpp/ggml/src/ggml-metal/ggml-metal.m	2024-12-05 11:18:04.208915931 +0100
-@@ -310,6 +310,7 @@
-     GGML_METAL_KERNEL_TYPE_CONV_TRANSPOSE_1D_F16_F32,
+--- llama.cpp-master/ggml/src/ggml-metal/ggml-metal.m	2024-12-05 14:21:15.899390305 +0100
++++ llama.cpp/ggml/src/ggml-metal/ggml-metal.m	2024-12-05 14:41:02.275943788 +0100
+@@ -311,6 +311,7 @@
      GGML_METAL_KERNEL_TYPE_UPSCALE_F32,
      GGML_METAL_KERNEL_TYPE_PAD_F32,
+     GGML_METAL_KERNEL_TYPE_PAD_REFLECT_1D_F32,
 +    GGML_METAL_KERNEL_TYPE_UNPAD_F32,
      GGML_METAL_KERNEL_TYPE_ARANGE_F32,
      GGML_METAL_KERNEL_TYPE_TIMESTEP_EMBEDDING_F32,
      GGML_METAL_KERNEL_TYPE_ARGSORT_F32_I32_ASC,
-@@ -877,6 +878,7 @@
-         GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_CONV_TRANSPOSE_1D_F16_F32,     conv_transpose_1d_f16_f32,      true);
+@@ -881,8 +882,9 @@
          GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_UPSCALE_F32,                   upscale_f32,                    true);
          GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_PAD_F32,                       pad_f32,                        true);
+         GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_PAD_REFLECT_1D_F32,            pad_reflect_1d_f32,             true);
+-        GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_TIMESTEP_EMBEDDING_F32,        timestep_embedding_f32,         true);
 +        GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_UNPAD_F32,                     unpad_f32,                      true);
-         GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_TIMESTEP_EMBEDDING_F32,        timestep_embedding_f32,         true);
          GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_ARANGE_F32,                    arange_f32,                     true);
++        GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_TIMESTEP_EMBEDDING_F32,        timestep_embedding_f32,         true);
          GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_ARGSORT_F32_I32_ASC,           argsort_f32_i32_asc,            true);
-@@ -1099,6 +1101,7 @@
-         case GGML_OP_POOL_2D:
+         GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_ARGSORT_F32_I32_DESC,          argsort_f32_i32_desc,           true);
+         GGML_METAL_ADD_KERNEL(GGML_METAL_KERNEL_TYPE_LEAKY_RELU_F32,                leaky_relu_f32,                 true);
+@@ -1106,6 +1108,7 @@
          case GGML_OP_UPSCALE:
          case GGML_OP_PAD:
+         case GGML_OP_PAD_REFLECT_1D:
 +        case GGML_OP_UNPAD:
          case GGML_OP_ARANGE:
          case GGML_OP_TIMESTEP_EMBEDDING:
          case GGML_OP_ARGSORT:
-@@ -3260,6 +3263,36 @@
+@@ -3309,6 +3312,36 @@
  
                  [encoder dispatchThreadgroups:MTLSizeMake(ne1, ne2, ne3) threadsPerThreadgroup:MTLSizeMake(nth, 1, 1)];
              } break;
-+         case GGML_OP_UNPAD:
++        case GGML_OP_UNPAD:
 +            {
 +                GGML_ASSERT(src0->type == GGML_TYPE_F32);
 +

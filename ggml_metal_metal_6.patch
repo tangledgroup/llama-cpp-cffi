@@ -1,6 +1,6 @@
---- llama.cpp-master/ggml/src/ggml-metal/ggml-metal.metal	2024-12-04 20:47:44.582072908 +0100
-+++ llama.cpp/ggml/src/ggml-metal/ggml-metal.metal	2024-12-05 11:28:44.729980424 +0100
-@@ -2897,6 +2897,51 @@
+--- llama.cpp-master/ggml/src/ggml-metal/ggml-metal.metal	2024-12-05 14:21:15.899390305 +0100
++++ llama.cpp/ggml/src/ggml-metal/ggml-metal.metal	2024-12-05 14:42:53.468432097 +0100
+@@ -2944,6 +2944,51 @@
      }
  }
  
