@@ -14,7 +14,7 @@ from llama import (
     clip_completions,
 )
 
-from demo_models import models
+from demo_models import demo_models
 
 
 # model_id: str = 'liuhaotian/llava-v1.6-mistral-7b'
@@ -23,7 +23,7 @@ model_id: str = 'openbmb/MiniCPM-V-2_6'
 # model_id: str = 'vikhyatk/moondream2'
 # model_id: str = 'BAAI/Bunny-v1_0-4B'
 
-model: Model = models[model_id]
+model: Model = demo_models[model_id]
 config = get_config(model.creator_hf_repo)
 
 options = Options(

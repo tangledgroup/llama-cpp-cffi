@@ -1,16 +1,22 @@
 # CHANGELOG
 
-## v0.1.24
+## v0.2.0
 
 Added:
-  - Low-level C API calls from llama.h
-  - `completions` for `llama_cli_main` API
-  - `text_completions` for low-level LLM
+  - New high-level Python API
+  - Low-level C API calls from llama.h, llava.h, clip.h
+  - `text_completions` for low-level LLMs
   - `clip_completions` for low-level CLIP-based VLMs
-  - `mllama_completions` for low-level Mllama-based VLMs
+  - WIP `mllama_completions` for low-level Mllama-based VLMs
+
+Changed:
+  - All examples
 
 Removed:
   - `llama_generate` function
+  - `llama_cpp_cli`
+  - `llava_cpp_cli`
+  - `minicpmv_cpp_cli`
 
 ## v0.1.23
 

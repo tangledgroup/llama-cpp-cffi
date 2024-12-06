@@ -26,20 +26,19 @@ import ctypes
 from queue import Queue
 from copy import deepcopy
 from typing import Any, Optional, Iterator, Callable, NewType
-from threading import Thread
+from threading import Thread, Lock
 from functools import partial
 
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
-from .model import Model
+# from .model import Model
 from .options import Options, convert_options_to_bytes
 from .util import is_cuda_available, is_vulkan_available
 from .formatter import get_tokenizer, get_special_tokens, format_messages
 
 
 LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
-
 
 try:
     if LLAMA_CPP_BACKEND:
@@ -60,89 +59,6 @@ try:
             from ._llama_cpp_cpu import lib, ffi
 except ImportError:
     from ._llama_cpp_cpu import lib, ffi
-
-
-"""
-def completions(options: Options) -> Iterator[str]:
-    tokenizer: AutoTokenizer
-    creator_hf_repo: str
-    prompt: str
-    queue: Queue
-
-    assert options.model and isinstance(options.model, Model)
-
-    options: Options = deepcopy(options)
-
-    engine = options.engine
-    engine_func: str = f'_{engine}_cli_main'
-    engine_func: Callable = globals()[engine_func]
-
-    model: Model = options.model
-
-    if model.tokenizer_hf_repo:
-        tokenizer = get_tokenizer(model.tokenizer_hf_repo)
-    else:
-        tokenizer = get_tokenizer(model.creator_hf_repo)
-
-    if model.mmproj_hf_file:
-        options.mmproj = hf_hub_download(repo_id=model.hf_repo, filename=model.mmproj_hf_file)
-
-    options.model = hf_hub_download(repo_id=model.hf_repo, filename=model.hf_file)
-
-    if isinstance(options.prompt, list):
-        options.prompt = format_messages(tokenizer, options.prompt, options)
-
-    if options.no_display_prompt == False:
-        # print('options.prompt:')
-        print(options.prompt, end='')
-
-    if options.no_display_prompt == False:
-        options.no_display_prompt = None
-
-    if options.log_disable == False:
-        options.log_disable = None
-
-    queue = Queue()
-    special_tokens: list[str] = get_special_tokens(tokenizer, force_standard_special_tokens=True)
-
-    metadata: dict = {
-        'prev_chunk_bytes': b'',
-        'buffer': '',
-        'stop_on_special_token': True,
-        'should_stop': False,
-        'special_tokens': special_tokens,
-    }
-
-    if isinstance(options.stop, str):
-        metadata['special_tokens'].append(options.stop)
-    elif isinstance(options.stop, (list, tuple)):
-        metadata['special_tokens'].extend(list(options.stop))
-    elif options.stop is not None:
-        raise ValueError(options.stop)
-
-    argv: list[bytes] = [b'llama-cli'] + convert_options_to_bytes(options)
-    argv = [llama_ffi.new('char[]', n) for n in argv]
-    argc = len(argv)
-
-    t = Thread(target=engine_func, args=(argc, argv, queue, metadata))
-    t.start()
-
-    try:
-        while True:
-            chunk = queue.get()
-            queue.task_done()
-
-            if chunk is None:
-                break
-
-            yield chunk
-    except GeneratorExit:
-        # give signal to thread to stop
-        metadata['should_stop'] = True
-
-    queue.join()
-    t.join()
-"""
 
 
 #
@@ -169,8 +85,11 @@ mllama_ctx  = NewType('mllama_ctx', ffi.typeof('struct mllama_ctx'))
 mllama_ctx_p  = NewType('mllama_ctx*', ffi.typeof('struct mllama_ctx*'))
 llava_image_embed  = NewType('llava_image_embed', ffi.typeof('struct llava_image_embed'))
 llava_image_embed_p  = NewType('llava_image_embed*', ffi.typeof('struct llava_image_embed*'))
+mllama_image  = NewType('mllama_image', ffi.typeof('struct mllama_image'))
+mllama_image_p  = NewType('mllama_image*', ffi.typeof('struct mllama_image*'))
 
 LLAMA_DEFAULT_SEED = 0xFFFFFFFF
+lock = Lock()
 
 
 def backend_init():
@@ -322,8 +241,9 @@ def text_completions(model: llama_model_p,
         elif total_n_prompt_tokens >= options.predict:
             break
 
-        if lib.llama_decode(context, batch):
-            break
+        with lock:
+            if lib.llama_decode(context, batch):
+                break
 
         new_token_id = lib.llama_sampler_sample(sampler, context, -1)
 
@@ -394,7 +314,7 @@ def clip_completions(model: llama_model_p,
     messages = [{'role': 'user', 'content': '<image>'}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
     prompt = prompt[:prompt.index('<image>') + len('<image>')]
-    print('prompt [0]:', prompt)
+    # print('prompt [0]:', prompt)
 
     batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
     clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
@@ -402,7 +322,7 @@ def clip_completions(model: llama_model_p,
     batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
 
     has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
-    print(f'{has_minicpmv_projector=}')
+    # print(f'{has_minicpmv_projector=}')
 
     if has_minicpmv_projector >= 2:
         num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(clip_context)
@@ -433,7 +353,7 @@ def clip_completions(model: llama_model_p,
     messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     prompt = prompt[prompt.index(f'\n{options.prompt}'):]
-    print('prompt [1]:', prompt)
+    # print('prompt [1]:', prompt)
 
     prompt_tokens: list[int] = tokenizer.encode(prompt)
     n_prompt_tokens: int = len(prompt_tokens)
@@ -453,16 +373,17 @@ def clip_completions(model: llama_model_p,
         elif total_n_prompt_tokens >= options.predict:
             break
 
-        if lib.llama_decode(context, batch):
-            break
+        with lock:
+            if lib.llama_decode(context, batch):
+                break
 
         new_token_id = lib.llama_sampler_sample(sampler, context, -1)
 
         if lib.llama_token_is_eog(model, new_token_id):
             break
 
-        piece: str = tokenizer.decode(new_token_id)
-        yield piece
+        token: str = tokenizer.decode(new_token_id)
+        yield token
 
         # next batch
         if _new_prompt_tokens is not None:
@@ -479,7 +400,7 @@ def clip_completions(model: llama_model_p,
 
 
 #
-# mllama
+# TODO: mllama
 #
 def mllama_process_eval_image_embed(context: llama_context_p,
                                     mllama_context: mllama_ctx_p,
@@ -505,10 +426,10 @@ def mllama_process_eval_image_embed(context: llama_context_p,
 
 
 def mllama_completions(model: llama_model_p,
-                     context: llama_context_p,
-                     sampler: llama_sampler_p,
-                     mllama_context: mllama_ctx_p,
-                     options: Options) -> Iterator[str]:
+                       context: llama_context_p,
+                       sampler: llama_sampler_p,
+                       mllama_context: mllama_ctx_p,
+                       options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str)
     assert isinstance(options.image, str)
 
@@ -522,7 +443,7 @@ def mllama_completions(model: llama_model_p,
 
     # llava - process image
     n_past: int_p = ffi.new('int*', 0)
-    embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(mllama_context, options.threads, options.image.encode())
+    # embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(mllama_context, options.threads, options.image.encode())
     idx: int = 0
 
     messages = [{'role': 'user', 'content': '<image>'}]
@@ -531,11 +452,11 @@ def mllama_completions(model: llama_model_p,
     print('prompt [0]:', prompt)
 
     batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
-    clip_process_eval_image_embed(context, mllama_context, embeds, options.batch_size, n_past, idx)
-    idx += 1
+    # mllama_process_eval_image_embed(context, mllama_context, embeds, options.batch_size, n_past, idx)
+    # idx += 1
     batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
 
-    lib.llava_image_embed_free(embeds)
+    # lib.llava_image_embed_free(embeds)
 
     # first batch
     messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
@@ -561,16 +482,17 @@ def mllama_completions(model: llama_model_p,
         elif total_n_prompt_tokens >= options.predict:
             break
 
-        if lib.llama_decode(context, batch):
-            break
+        with lock:
+            if lib.llama_decode(context, batch):
+                break
 
         new_token_id = lib.llama_sampler_sample(sampler, context, -1)
 
         if lib.llama_token_is_eog(model, new_token_id):
             break
 
-        piece: str = tokenizer.decode(new_token_id)
-        yield piece
+        token: str = tokenizer.decode(new_token_id)
+        yield token
 
         # next batch
         if _new_prompt_tokens is not None:

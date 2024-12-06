@@ -14,11 +14,11 @@ from llama import (
     mllama_completions,
 )
 
-from demo_models import models
+from demo_models import demo_models
 
 
 model_id: str = 'meta-llama/Llama-3.2-11B-Vision-Instruct'
-model: Model = models[model_id]
+model: Model = demo_models[model_id]
 config = get_config(model.creator_hf_repo)
 
 options = Options(
