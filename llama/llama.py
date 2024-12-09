@@ -22,12 +22,13 @@ __all__ = [
 ]
 
 import os
-import ctypes
-from queue import Queue
-from copy import deepcopy
-from typing import Any, Optional, Iterator, Callable, NewType
-from threading import Thread, Lock
-from functools import partial
+# import ctypes
+# from queue import Queue
+# from copy import deepcopy
+# from typing import Any, Optional, Iterator, Callable, NewType
+from typing import Optional, Iterator, NewType
+from threading import Lock
+# from functools import partial
 
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
@@ -35,7 +36,7 @@ from huggingface_hub import hf_hub_download
 # from .model import Model
 from .options import Options
 from .util import is_cuda_available, is_vulkan_available
-from .formatter import get_tokenizer, get_special_tokens, format_messages
+from .formatter import get_tokenizer, format_messages, VLM_TEMPLATE
 
 
 os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true')
@@ -297,7 +298,7 @@ def text_completions(model: llama_model_p,
                      context: llama_context_p,
                      sampler: llama_sampler_p,
                      options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str)
+    assert isinstance(options.prompt, str) or isinstance(options.messages, list)
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -306,6 +307,10 @@ def text_completions(model: llama_model_p,
         tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
+
+    # format messages if present
+    if options.messages:
+        options.prompt = format_messages(tokenizer, options.messages, options)
 
     # first batch
     prompt_tokens: list[int] = tokenizer.encode(options.prompt)
@@ -380,8 +385,8 @@ def clip_completions(model: llama_model_p,
                      sampler: llama_sampler_p,
                      clip_context: clip_ctx_p,
                      options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str)
-    assert isinstance(options.image, str)
+    assert isinstance(options.prompt, str) or isinstance(options.messages, list)
+    assert isinstance(options.image, str) or isinstance(options.messages, list)
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -391,6 +396,12 @@ def clip_completions(model: llama_model_p,
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
 
+    # format messages if present
+    if options.messages:
+        # options.chat_template = VLM_TEMPLATE
+        options.prompt = format_messages(tokenizer, options.messages, options)
+        print('options.prompt[0]', options.prompt)
+
     # llava - process image
     with lock:
         n_past: int_p = ffi.new('int*', 0)
@@ -399,8 +410,9 @@ def clip_completions(model: llama_model_p,
 
         messages = [{'role': 'user', 'content': '<image>'}]
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-        prompt = prompt[:prompt.index('<image>') + len('<image>')]
         # print('prompt [0]:', prompt)
+        prompt = prompt[:prompt.index('<image>') + len('<image>')]
+        # print('prompt [1]:', prompt)
 
         batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
         clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
@@ -439,7 +451,7 @@ def clip_completions(model: llama_model_p,
     messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     prompt = prompt[prompt.index(f'\n{options.prompt}'):]
-    # print('prompt [1]:', prompt)
+    # print('prompt [2]:', prompt)
 
     prompt_tokens: list[int] = tokenizer.encode(prompt)
     n_prompt_tokens: int = len(prompt_tokens)
@@ -516,7 +528,7 @@ def mllama_completions(model: llama_model_p,
                        sampler: llama_sampler_p,
                        mllama_context: mllama_ctx_p,
                        options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str)
+    assert isinstance(options.prompt, str) or isinstance(options.messages, list)
     assert isinstance(options.image, str)
 
     # tokenizer
@@ -526,6 +538,10 @@ def mllama_completions(model: llama_model_p,
         tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
+
+    # format messages if present
+    if options.messages:
+        options.prompt = format_messages(tokenizer, options.messages, options)
 
     # llava - process image
     n_past: int_p = ffi.new('int*', 0)

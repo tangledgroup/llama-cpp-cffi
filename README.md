@@ -20,6 +20,7 @@ NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musll
 
 ## News
 
+**Dec 9 2024, v0.2.0**: Support for low-level and high-level APIs: llama, llava, clip and ggml API
 **Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.
 
 ## Install
@@ -30,36 +31,38 @@ Basic library install:
 pip install llama-cpp-cffi
 ```
 
+<!--
 In case you want [OpenAI © Chat Completions API](https://platform.openai.com/docs/overview) compatible API:
 
 ```bash
 pip install llama-cpp-cffi[openai]
 ```
+-->
 
 **IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12**. If you don't have CUDA 12.X installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
 
 GPU Compute Capability: `compute_61`, `compute_70`, `compute_75`, `compute_80`, `compute_86`, `compute_89` covering from most of GPUs from **GeForce GTX 1050** to **NVIDIA H100**. [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
 
-## Example
-
-### Library Usage
-
-References:
-- `examples/demo_tinyllama_chat.py`
-- `examples/demo_tinyllama_tool.py`
+## LLM Example
 
 ```python
-from llama import completions, get_config, Model, Options
+from llama import Model
 
 
+#
+# first define and load/init model
+#
 model = Model(
-    creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
-    hf_repo='TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF',
-    hf_file='tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
+    creator_hf_repo='HuggingFaceTB/SmolLM2-1.7B-Instruct',
+    hf_repo='bartowski/SmolLM2-1.7B-Instruct-GGUF',
+    hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
 )
 
-config = get_config(model.creator_hf_repo)
+model.init(ctx_size=8192, predict=1024, gpu_layers=99)
 
+#
+# messages
+#
 messages = [
     {'role': 'system', 'content': 'You are a helpful assistant.'},
     {'role': 'user', 'content': '1 + 1 = ?'},
@@ -67,20 +70,52 @@ messages = [
     {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
 ]
 
-options = Options(
-    ctx_size=config.max_position_embeddings,
-    predict=-2,
-    model=model,
-    prompt=messages,
-)
-
-for chunk in completions(options):
+for chunk in model.completions(messages=messages, temp=0.7, top_p=0.8, top_k=100):
     print(chunk, flush=True, end='')
+else:
+    print()
 
-# newline
-print()
+#
+# prompt
+#
+for chunk in model.completions(prompt='Evaluate 1 + 2 in Python. Result in Python is', temp=0.7, top_p=0.8, top_k=100):
+    print(chunk, flush=True, end='')
+else:
+    print()
 ```
 
+## VLM Example
+
+```python
+from llama import Model
+
+
+#
+# first define and load/init model
+#
+model = Model( # 1.87B
+    creator_hf_repo='vikhyatk/moondream2',
+    hf_repo='vikhyatk/moondream2',
+    hf_file='moondream2-text-model-f16.gguf',
+    mmproj_hf_file='moondream2-mmproj-f16.gguf',
+)
+
+model.init(ctx_size=8192, predict=1024, gpu_layers=99)
+
+#
+# prompt
+#
+for chunk in model.completions(prompt='Describe this image.', image='examples/llama-1.png'):
+    print(chunk, flush=True, end='')
+else:
+    print()
+```
+
+## References
+- `examples/llm.py`
+- `examples/vlm.py`
+
+<!--
 ### OpenAI © compatible Chat Completions API - Server and Client
 
 Run OpenAI compatible server:
@@ -162,3 +197,4 @@ python -B examples/demo_smollm_tool.py
 python -B examples/demo_rwkv_chat.py
 python -B examples/demo_rwkv_tool.py
 ```
+-->

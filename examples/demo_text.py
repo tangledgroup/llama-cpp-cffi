@@ -1,5 +1,5 @@
 from threading import Thread
-from llama import get_config, Model, Options
+from llama import Model, Options
 
 from llama import (
     backend_init,
@@ -19,12 +19,9 @@ from demo_models import demo_models
 def demo_low_level():
     model_id: str = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     model: Model = demo_models[model_id]
-    # config = get_config(model.creator_hf_repo)
 
     options = Options(
         model=model,
-        # ctx_size=config.max_position_embeddings,
-        ctx_size=0,
         predict=512,
         gpu_layers=99,
         prompt='Meaning of life is',
@@ -53,6 +50,53 @@ def demo_low_level():
     context_free(_context)
     model_free(_model)
     backend_free()
+
+
+def demo_high_level():
+    # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
+    # model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
+    model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
+    # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
+    # model_id = 'arcee-ai/arcee-lite'
+
+    model = demo_models[model_id]
+    model.init(predict=512, gpu_layers=99)
+
+    # input('Press any key to generate')
+
+    for token in model.completions(prompt='Meaning of life is'):
+        print(token, end='', flush=True)
+
+    print()
+
+    # input('Press any key to exit')
+
+
+def demo_high_level_chat():
+    # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
+    # model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
+    model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
+    # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
+    # model_id = 'arcee-ai/arcee-lite'
+
+    model = demo_models[model_id]
+    model.init(predict=512, gpu_layers=99)
+
+    # input('Press any key to generate')
+
+    messages = [
+        {'role': 'system', 'content': 'You are a helpful assistant.'},
+        {'role': 'user', 'content': '1 + 1 = ?'},
+        {'role': 'assistant', 'content': '2'},
+        {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
+    ]
+
+    for token in model.completions(messages=messages):
+        print(token, end='', flush=True)
+
+    print()
+
+    # input('Press any key to exit')
 
 
 def demo_high_level_gpt():
@@ -183,7 +227,9 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    demo_low_level()
-    demo_high_level_gpt()
-    demo_high_level_rwkv()
+    # demo_low_level()
+    # demo_high_level()
+    demo_high_level_chat()
+    # demo_high_level_gpt()
+    # demo_high_level_rwkv()
     # demo_high_level_json()

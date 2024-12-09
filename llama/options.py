@@ -14,6 +14,8 @@ LLAMA_DEFAULT_SEED = 0xFFFFFFFF
 
 @define
 class Options:
+    prompt: Optional[str] = field(default=None)  # prompt to start generation with
+    messages: Optional[list[dict[str, str]]] = field(default=None)  # prompt messages to start generation with
     threads: int = field(default=psutil.cpu_count(logical=False))  # number of threads to use during generation (default: -1)
     # threads_batch: Optional[int] = field(default=None)  # number of threads for batch and prompt processing (default: same as --threads)
     # cpu_mask: str = field(default="")  # CPU affinity mask: arbitrarily long hex (default: "")
@@ -32,7 +34,6 @@ class Options:
     # ubatch_size: int = field(default=512)  # physical maximum batch size (default: 512)
     # keep: int = field(default=0)  # number of tokens to keep from initial prompt (default: 0, -1 = all)
     # flash_attn: Optional[bool] = field(default=None)  # enable Flash Attention (default: disabled)
-    prompt: Optional[str] = field(default=None)  # prompt to start generation with
     # no_perf: bool = field(default=False)  # disable internal libllama performance timings (default: false)
     # file: Optional[str] = field(default=None)  # a file containing the prompt (default: none)
     # binary_file: Optional[str] = field(default=None)  # binary file containing the prompt (default: none)
@@ -116,7 +117,7 @@ class Options:
     # no_warmup: bool = field(default=False)  # skip warming up the model with an empty run
     # grp_attn_n: int = field(default=1)  # group-attention factor (default: 1)
     # grp_attn_w: int = field(default=512)  # group-attention width (default: 512)
-    # chat_template: Optional[str] = field(default=None)  # set custom jinja chat template (default: from model's metadata)
+    chat_template: Optional[str] = field(default=None)  # set custom jinja chat template (default: from model's metadata)
 
     # Multi-modality options
     mmproj: Optional[str] = field(default=None) # Path to a multimodal projector file for LLaVA

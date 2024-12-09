@@ -2,6 +2,7 @@ __all__ = [
     'CHATML_CHAT_TEMPLATE',
     'ZEPHYR_CHAT_TEMPLATE',
     'SYSTEM_USER_ASSISTANT_TEMPLATE',
+    'VLM_TEMPLATE',
     'create_alternate_messages',
     'get_fallback_chat_template',
     'get_config',
@@ -55,6 +56,28 @@ SYSTEM_USER_ASSISTANT_TEMPLATE = (
 
         "{% if loop.last and add_generation_prompt %}"
             "{{ 'Assistant:' }}"
+        "{% endif %}"
+    "{% endfor %}"
+)
+
+VLM_TEMPLATE = (
+    "{% for message in messages %}"
+        "{% if message['role'] == 'system' %}"
+            "{{ message['content'] }}\n"
+        "{% elif message['role'] == 'user' %}"
+            "{% for item in message['content'] %}"
+                "{% if item['type'] == 'image_url' %}"
+                    "{{ '<image>\n' }}"
+                "{% elif item['type'] == 'text' %}"
+                    "{{ item['text'] }}\n"
+                "{% endif %}"
+            "{% endfor %}"
+        "{% elif message['role'] == 'assistant' %}"
+            "{{ message['content'] }}\n"
+        "{% endif %}"
+
+        "{% if loop.last and add_generation_prompt %}"
+            "{{ '' }}"
         "{% endif %}"
     "{% endfor %}"
 )

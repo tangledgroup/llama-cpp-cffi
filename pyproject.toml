@@ -47,6 +47,7 @@ script = "scripts/build.py"
 [tool.cibuildwheel]
 
 [tool.cibuildwheel.linux]
+container-engine = { name = "docker", create-args = ["--cpus", "16"]}
 build-frontend = "build"
 before-build = """
 ARCH=$(uname -m)

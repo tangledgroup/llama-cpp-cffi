@@ -4,10 +4,11 @@
 
 Added:
   - New high-level Python API
-  - Low-level C API calls from llama.h, llava.h, clip.h
-  - `text_completions` for low-level LLMs
-  - `clip_completions` for low-level CLIP-based VLMs
-  - WIP `mllama_completions` for low-level Mllama-based VLMs
+  - Low-level C API calls from llama.h, llava.h, clip.h, ggml.h
+  - `completions` for high-level function for LLMs / VLMs
+  - `text_completions` for low-level function for LLMs
+  - `clip_completions` for low-level function for CLIP-based VLMs
+  - WIP: `mllama_completions` for low-level function for Mllama-based VLMs
 
 Changed:
   - All examples
