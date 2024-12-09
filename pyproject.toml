@@ -57,7 +57,7 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf update -y
     dnf install -y epel-release
     dnf update -y
-    dnf install -y unzip p7zip p7zip-plugins upx
+    dnf install -y unzip p7zip p7zip-plugins upx clang-tools-extra
 
     # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then
@@ -66,7 +66,7 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
         dnf install -y https://pkgs.sysadmins.ws/el8/extras/x86_64/glslc-2023.1-3.el8.x86_64.rpm https://pkgs.sysadmins.ws/el8/extras/x86_64/glslang-12.0.0-1.el8.x86_64.rpm
     fi
 else
-    apk -U add unzip 7zip upx
+    apk -U add unzip 7zip upx clang-extra-tools
 
     # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then
@@ -87,7 +87,7 @@ manylinux-pypy_aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
 musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:latest"
 musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:latest"
 build-verbosity=3
-# repair-wheel-command = ""
+repair-wheel-command = ""
 # repair-wheel-command = """
 # for file in {wheel}; do
 #     tempdir=$(mktemp -d)
