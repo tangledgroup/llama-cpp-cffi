@@ -330,6 +330,7 @@ def cleanup_code(source: str) -> str:
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
+    subprocess.run(['git', 'reset', '--hard', '6fe624783166e7355cec915de0094e63cd3558eb'], cwd='llama.cpp', check=True) # issue with Vulkan
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/include/ggml.h', 'ggml_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu', 'ggml_cuda_cu_6.patch'], check=True)
@@ -419,7 +420,7 @@ def build_cpu(*args, **kwargs):
         ],
         include_dirs=[
             './llama.cpp/ggml/include',
-            # './llama.cpp/common',
+            './llama.cpp/common',
         ],
         files=[
             './llama.cpp/examples/llava/clip.h',
@@ -459,7 +460,7 @@ def build_cpu(*args, **kwargs):
         'libggml.a',
         'libllama.a',
         'libllava.a',
-        # 'libcommon.a',
+        'libcommon.a',
         'LLAMA_MAKEFILE=1',
         'GGML_NO_OPENMP=1',
         *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
@@ -512,7 +513,7 @@ def build_cpu(*args, **kwargs):
             '-lggml',
             '-lllama',
             '-lllava',
-            # '-lcommon',
+            '-lcommon',
         ],
     )
 
@@ -547,7 +548,7 @@ def build_vulkan_1_x(*args, **kwargs):
         ],
         include_dirs=[
             './llama.cpp/ggml/include',
-            # './llama.cpp/common',
+            './llama.cpp/common',
         ],
         files=[
             './llama.cpp/examples/llava/clip.h',
@@ -587,7 +588,7 @@ def build_vulkan_1_x(*args, **kwargs):
         'libggml.a',
         'libllama.a',
         'libllava.a',
-        # 'libcommon.a',
+        'libcommon.a',
         'LLAMA_MAKEFILE=1',
         'GGML_NO_OPENMP=1',
         'GGML_VULKAN=1',
@@ -699,7 +700,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         ],
         include_dirs=[
             './llama.cpp/ggml/include',
-            # './llama.cpp/common',
+            './llama.cpp/common',
         ],
         files=[
             './llama.cpp/examples/llava/clip.h',
@@ -739,7 +740,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         'libggml.a',
         'libllama.a',
         'libllava.a',
-        # 'libcommon.a',
+        'libcommon.a',
         'LLAMA_MAKEFILE=1',
         'GGML_NO_OPENMP=1',
         'GGML_CUDA=1',
@@ -838,11 +839,11 @@ def build(*args, **kwargs):
         clean_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 
-    # cuda 12.6.3
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+    # # cuda 12.6.3
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':

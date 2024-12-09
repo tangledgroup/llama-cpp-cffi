@@ -33,10 +33,13 @@ from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
 # from .model import Model
-from .options import Options, convert_options_to_bytes
+from .options import Options
 from .util import is_cuda_available, is_vulkan_available
 from .formatter import get_tokenizer, get_special_tokens, format_messages
 
+
+os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true')
+os.environ['GGML_VK_DISABLE_COOPMAT'] = os.getenv('GGML_VK_DISABLE_COOPMAT', '1')
 
 LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
 
@@ -88,7 +91,6 @@ llava_image_embed_p  = NewType('llava_image_embed*', ffi.typeof('struct llava_im
 mllama_image  = NewType('mllama_image', ffi.typeof('struct mllama_image'))
 mllama_image_p  = NewType('mllama_image*', ffi.typeof('struct mllama_image*'))
 
-LLAMA_DEFAULT_SEED = 0xFFFFFFFF
 lock = Lock()
 
 
@@ -131,14 +133,97 @@ def context_free(context: llama_context_p):
     lib.llama_free(context)
 
 
-def sampler_init(options: Options) -> llama_sampler_p:
+def sampler_init(model: llama_model_p, context: llama_context_p, options: Options) -> llama_sampler_p:
     sampler_params: llama_sampler_chain_params = lib.llama_sampler_chain_default_params()
     sampler: llama_sampler_p = lib.llama_sampler_chain_init(sampler_params)
+
+    # dry
+    seq_breakers: char_p = ffi.new('char*[]', options.dry_sequence_breaker)
+    num_breakers: int = len(options.dry_sequence_breaker)
+
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dry(
+        model,
+        options.dry_multiplier,
+        options.dry_base,
+        options.dry_allowed_length,
+        options.dry_penalty_last_n,
+        seq_breakers,
+        num_breakers,
+    ))
+
+    # common
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_temp(options.temp))
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_k(options.top_k))
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_p(options.top_p, 1))
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_min_p(options.min_p, 1))
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_temp(options.temp))
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dist(LLAMA_DEFAULT_SEED))
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dist(options.seed))
+
+    # penalties
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_penalties(
+        lib.llama_n_vocab(model),
+        lib.llama_token_eos(model),
+        lib.llama_token_nl(model),
+        options.repeat_last_n,      # last n tokens to penalize (0 = disable penalty, -1 = context size)
+        options.repeat_penalty,     # 1.0 = disabled
+        options.frequency_penalty,  # 0.0 = disabled
+        options.presence_penalty,   # 0.0 = disabled
+        options.penalize_nl,        # consider newlines as a repeatable token
+        options.ignore_eos,         # ignore the end-of-sequence token
+    ))
+
+    """
+    # grammar
+    if options.grammar:
+        grammar_str: char_p = ffi.new('char[]', options.grammar.encode())
+        grammar_root: char_p = ffi.new('char[]', b'root')
+
+        grmr = lib.llama_sampler_init_grammar(
+            model,
+            grammar_str,
+            grammar_root,
+        )
+
+    if options.json_schema:
+        assert options.json_schema == '{}'
+
+        grammar = r'''
+root   ::= object
+value  ::= object | array | string | number | ("true" | "false" | "null") ws
+
+object ::=
+    "{" ws (
+            string ":" ws value
+    ("," ws string ":" ws value)*
+    )? "}" ws
+
+array  ::=
+    "[" ws (
+            value
+    ("," ws value)*
+    )? "]" ws
+
+string ::=
+    "\"" (
+    [^"\\\x7F\x00-\x1F] |
+    "\\" (["\\bfnrt] | "u" [0-9a-fA-F]{4}) # escapes
+    )* "\"" ws
+
+number ::= ("-"? ([0-9] | [1-9] [0-9]{0,15})) ("." [0-9]+)? ([eE] [-+]? [0-9] [1-9]{0,15})? ws
+
+# Optional space: by convention, applied in this grammar after literal chars when allowed
+ws ::= | " " | "\n" [ \t]{0,20}
+        '''
+
+        grammar_str: char_p = ffi.new('char[]', grammar.encode())
+        grammar_root: char_p = ffi.new('char[]', b'root')
+
+        grmr = lib.llama_sampler_init_grammar(
+            model,
+            grammar_str,
+            grammar_root,
+        )
+    """
+
     return sampler
 
 
@@ -307,47 +392,48 @@ def clip_completions(model: llama_model_p,
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
 
     # llava - process image
-    n_past: int_p = ffi.new('int*', 0)
-    embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
-    idx: int = 0
+    with lock:
+        n_past: int_p = ffi.new('int*', 0)
+        embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
+        idx: int = 0
 
-    messages = [{'role': 'user', 'content': '<image>'}]
-    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-    prompt = prompt[:prompt.index('<image>') + len('<image>')]
-    # print('prompt [0]:', prompt)
+        messages = [{'role': 'user', 'content': '<image>'}]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+        prompt = prompt[:prompt.index('<image>') + len('<image>')]
+        # print('prompt [0]:', prompt)
 
-    batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
-    clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
-    idx += 1
-    batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
+        batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
+        clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
+        idx += 1
+        batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
 
-    has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
-    # print(f'{has_minicpmv_projector=}')
+        has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
+        # print(f'{has_minicpmv_projector=}')
 
-    if has_minicpmv_projector >= 2:
-        num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(clip_context)
+        if has_minicpmv_projector >= 2:
+            num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(clip_context)
 
-        if num_image_embeds > 1:
-            num_image_embeds_col = lib.clip_uhd_num_image_embeds_col(clip_context)
-            batch = batch_get_one_and_decode(context, '<slice>', options.batch_size, n_past, tokenizer)
-            i = 0
+            if num_image_embeds > 1:
+                num_image_embeds_col = lib.clip_uhd_num_image_embeds_col(clip_context)
+                batch = batch_get_one_and_decode(context, '<slice>', options.batch_size, n_past, tokenizer)
+                i = 0
 
-            while i < (num_image_embeds - 1) / num_image_embeds_col:
-                j = 0
+                while i < (num_image_embeds - 1) / num_image_embeds_col:
+                    j = 0
 
-                while j < num_image_embeds_col:
-                    batch = batch_get_one_and_decode(context, '<image>', options.batch_size, n_past, tokenizer)
-                    clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
-                    idx += 1
-                    batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
-                    j += 1
+                    while j < num_image_embeds_col:
+                        batch = batch_get_one_and_decode(context, '<image>', options.batch_size, n_past, tokenizer)
+                        clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
+                        idx += 1
+                        batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
+                        j += 1
 
-                batch = batch_get_one_and_decode(context, '\n', options.batch_size, n_past, tokenizer)
-                i += 1
+                    batch = batch_get_one_and_decode(context, '\n', options.batch_size, n_past, tokenizer)
+                    i += 1
 
-            batch = batch_get_one_and_decode(context, '</slice>', options.batch_size, n_past, tokenizer)
+                batch = batch_get_one_and_decode(context, '</slice>', options.batch_size, n_past, tokenizer)
 
-    lib.llava_image_embed_free(embeds)
+        lib.llava_image_embed_free(embeds)
 
     # first batch
     messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
@@ -400,7 +486,7 @@ def clip_completions(model: llama_model_p,
 
 
 #
-# TODO: mllama
+# TODO: mllama, work in progress
 #
 def mllama_process_eval_image_embed(context: llama_context_p,
                                     mllama_context: mllama_ctx_p,

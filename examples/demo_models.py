@@ -1,3 +1,6 @@
+#
+# NOTE: this is work in progress demo, DO NOT use it!
+#
 __all__ = ['demo_models']
 
 from llama.model import Model
