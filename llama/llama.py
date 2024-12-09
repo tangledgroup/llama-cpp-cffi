@@ -3,6 +3,8 @@ __all__ = [
     # 'completions',
 
     # low-level API
+    'lib',
+    'ffi',
     'backend_init',
     'backend_free',
     'numa_init',
@@ -134,7 +136,7 @@ def context_free(context: llama_context_p):
     lib.llama_free(context)
 
 
-def sampler_init(model: llama_model_p, context: llama_context_p, options: Options) -> llama_sampler_p:
+def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
     sampler_params: llama_sampler_chain_params = lib.llama_sampler_chain_default_params()
     sampler: llama_sampler_p = lib.llama_sampler_chain_init(sampler_params)
 
@@ -228,6 +230,10 @@ ws ::= | " " | "\n" [ \t]{0,20}
     return sampler
 
 
+def grammar_sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
+    pass
+
+
 def sampler_free(sampler: llama_sampler_p):
     lib.llama_sampler_free(sampler)
 
@@ -297,6 +303,7 @@ def batch_get_one_and_decode(context: llama_context_p,
 def text_completions(model: llama_model_p,
                      context: llama_context_p,
                      sampler: llama_sampler_p,
+                     # grmr_sampler: llama_sampler_p,
                      options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
 
@@ -383,6 +390,7 @@ def clip_process_eval_image_embed(context: llama_context_p,
 def clip_completions(model: llama_model_p,
                      context: llama_context_p,
                      sampler: llama_sampler_p,
+                     # grmr_sampler: llama_sampler_p,
                      clip_context: clip_ctx_p,
                      options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
@@ -526,6 +534,7 @@ def mllama_process_eval_image_embed(context: llama_context_p,
 def mllama_completions(model: llama_model_p,
                        context: llama_context_p,
                        sampler: llama_sampler_p,
+                       # grmr_sampler: llama_sampler_p,
                        mllama_context: mllama_ctx_p,
                        options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)

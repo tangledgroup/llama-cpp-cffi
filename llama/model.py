@@ -7,8 +7,11 @@ from attrs import define, asdict
 from .options import Options
 
 from .llama import (
-    backend_init,
-    backend_free,
+    # lib,
+    # ffi,
+    # char_p,
+    # backend_init,
+    # backend_free,
     model_init,
     model_free,
     context_init,
@@ -51,7 +54,6 @@ class Model:
 
 
     def init(self, **options: Unpack[Options]):
-        # print(f'! {options=}')
         options = Options(
             **options,
             model=self,
@@ -73,15 +75,26 @@ class Model:
             **(asdict(self._options, recurse=False) | options),
         )
 
-        _context = context_init(self._model, options)
-        _sampler = sampler_init(self._model, _context, options)
+        _model = self._model
+        _clip_context = self._clip_context
+        _context = context_init(_model, options)
+        _sampler = sampler_init(_model, options)
+        # _grmr_sampler = None
 
-        if self._clip_context:
-            for token in clip_completions(self._model, _context, _sampler, self._clip_context, options):
+        # if options.grammar or options.json_schema:
+        #     _grammar_str: char_p = ffi.new('char[]', options.grammar.encode())
+        #     _grammar_root: char_p = ffi.new('char[]', b'root')
+        #     _grmr_sampler = lib.llama_sampler_init_grammar(_model, _grammar_str, _grammar_root)
+
+        if _clip_context:
+            for token in clip_completions(_model, _context, _sampler, _clip_context, options):
                 yield token
         else:
-            for token in text_completions(self._model, _context, _sampler, options):
+            for token in text_completions(_model, _context, _sampler, options):
                 yield token
+
+        # if _grmr_sampler:
+        #     sampler_free(_grmr_sampler)
 
         sampler_free(_sampler)
         context_free(_context)
