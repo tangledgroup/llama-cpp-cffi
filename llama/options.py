@@ -14,10 +14,11 @@ LLAMA_DEFAULT_SEED = 0xFFFFFFFF
 
 @define
 class Options:
+    verbose: bool = field(default=False) # Set verbosity level to infinity (i.e. log all messages, useful for debugging)
     prompt: Optional[str] = field(default=None)  # prompt to start generation with
     messages: Optional[list[dict[str, str]]] = field(default=None)  # prompt messages to start generation with
     threads: int = field(default=psutil.cpu_count(logical=False))  # number of threads to use during generation (default: -1)
-    # threads_batch: Optional[int] = field(default=None)  # number of threads for batch and prompt processing (default: same as --threads)
+    threads_batch: Optional[int] = field(default=None)  # number of threads for batch and prompt processing (default: same as --threads)
     # cpu_mask: str = field(default="")  # CPU affinity mask: arbitrarily long hex (default: "")
     # cpu_range: Optional[str] = field(default=None)  # range of CPUs for affinity (default: "")
     # cpu_strict: int = field(default=0)  # use strict CPU placement (default: 0)
@@ -31,7 +32,7 @@ class Options:
     ctx_size: int = field(default=0)  # size of the prompt context (default: 4096, 0 = loaded from model)
     predict: int = field(default=-1)  # number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
     batch_size: int = field(default=2048)  # logical maximum batch size (default: 2048)
-    # ubatch_size: int = field(default=512)  # physical maximum batch size (default: 512)
+    ubatch_size: int = field(default=512)  # physical maximum batch size (default: 512)
     # keep: int = field(default=0)  # number of tokens to keep from initial prompt (default: 0, -1 = all)
     # flash_attn: Optional[bool] = field(default=None)  # enable Flash Attention (default: disabled)
     # no_perf: bool = field(default=False)  # disable internal libllama performance timings (default: false)
@@ -54,16 +55,16 @@ class Options:
     # cache_type_v: str = field(default="f16")  # KV cache data type for V (default: f16)
     # defrag_thold: float = field(default=0.1)  # KV cache defragmentation threshold (default: 0.1, < 0 - disabled)
     # parallel: int = field(default=1)  # number of parallel sequences to decode (default: 1)
-    # mlock: bool = field(default=False)  # force system to keep model in RAM rather than swapping or compressing
-    # no_mmap: bool = field(default=False)  # do not memory-map model (slower load but may reduce pageouts if not using mlock)
+    mlock: bool = field(default=False)  # force system to keep model in RAM rather than swapping or compressing
+    no_mmap: bool = field(default=False)  # do not memory-map model (slower load but may reduce pageouts if not using mlock)
     # numa: Optional[str] = field(default=None)  # attempt optimizations for NUMA systems
     # device: Optional[str] = field(default=None)  # comma-separated list of devices to use for offloading (default: none)
     # list_devices: bool = field(default=False)  # print list of available devices and exit
     gpu_layers: int = field(default=0)  # number of layers to store in VRAM
-    # split_mode: Optional[str] = field(default=None)  # how to split the model across multiple GPUs
+    split_mode: int = field(default=0)  # how to split the model across multiple GPUs
     # tensor_split: Optional[str] = field(default=None)  # fraction of the model to offload to each GPU
-    # main_gpu: int = field(default=0)  # the GPU to use for the model or intermediate results and KV
-    # check_tensors: bool = field(default=False)  # check model tensor data for invalid values (default: false)
+    main_gpu: int = field(default=0)  # the GPU to use for the model or intermediate results and KV
+    check_tensors: bool = field(default=False)  # check model tensor data for invalid values (default: false)
     # override_kv: List[str] = field(factory=list)  # advanced option to override model metadata by key
     # lora: List[str] = field(factory=list)  # path to LoRA adapter (can be repeated)
     # lora_scaled: List[Tuple[str, float]] = field(factory=list)  # path to LoRA adapter with user-defined scaling (can be repeated)

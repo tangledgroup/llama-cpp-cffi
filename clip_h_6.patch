@@ -2,7 +2,7 @@
 +++ llama.cpp/examples/llava/clip.h	2024-12-01 15:40:46.606247369 +0100
 @@ -19,6 +19,41 @@
  #endif
- 
+
  #ifdef __cplusplus
 +    // C++ version of the struct
 +    #include <vector>
@@ -41,4 +41,3 @@
 +#ifdef __cplusplus
  extern "C" {
  #endif
- 

@@ -30,6 +30,7 @@ import os
 # from typing import Any, Optional, Iterator, Callable, NewType
 from typing import Optional, Iterator, NewType
 from threading import Lock
+from weakref import WeakKeyDictionary
 # from functools import partial
 
 from transformers import AutoTokenizer
@@ -45,6 +46,9 @@ os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true
 os.environ['GGML_VK_DISABLE_COOPMAT'] = os.getenv('GGML_VK_DISABLE_COOPMAT', '1')
 
 LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
+LLAMA_SPLIT_MODE_NONE = 0 # single GPU
+LLAMA_SPLIT_MODE_LAYER = 1 # split layers and KV across GPUs
+LLAMA_SPLIT_MODE_ROW = 2 # split layers and KV across GPUs, use tensor parallelism if supported
 
 try:
     if LLAMA_CPP_BACKEND:
@@ -67,34 +71,57 @@ except ImportError:
     from ._llama_cpp_cpu import lib, ffi
 
 
+global_weakkeydict = WeakKeyDictionary()
+
 #
 # low-level API
 #
+INFINITY: float = lib.llama_cpp_cffi_get_pos_infinity()
+NEG_INFINITY: float = lib.llama_cpp_cffi_get_neg_infinity()
 void_p = NewType('void*', ffi.typeof('void*'))
 char_p = NewType('char*', ffi.typeof('char*'))
 int_p = NewType('int*', ffi.typeof('int*'))
 float_p = NewType('float*', ffi.typeof('float*'))
-ggml_numa_strategy  = NewType('ggml_numa_strategy', ffi.typeof('enum ggml_numa_strategy'))
-llama_model_params  = NewType('llama_model_params', ffi.typeof('struct llama_model_params'))
-llama_model  = NewType('llama_model', ffi.typeof('struct llama_model'))
-llama_model_p  = NewType('llama_model*', ffi.typeof('struct llama_model*'))
-llama_context  = NewType('llama_context', ffi.typeof('struct llama_context'))
-llama_context_p  = NewType('llama_context*', ffi.typeof('struct llama_context*'))
-llama_context_params  = NewType('llama_context_params', ffi.typeof('struct llama_context_params'))
-llama_sampler  = NewType('llama_sampler', ffi.typeof('struct llama_sampler'))
-llama_sampler_p  = NewType('llama_sampler*', ffi.typeof('struct llama_sampler*'))
-llama_sampler_chain_params  = NewType('llama_sampler_chain_params', ffi.typeof('struct llama_sampler_chain_params'))
-llama_batch  = NewType('llama_batch', ffi.typeof('struct llama_batch'))
-clip_ctx  = NewType('clip_ctx', ffi.typeof('struct clip_ctx'))
-clip_ctx_p  = NewType('clip_ctx*', ffi.typeof('struct clip_ctx*'))
-mllama_ctx  = NewType('mllama_ctx', ffi.typeof('struct mllama_ctx'))
-mllama_ctx_p  = NewType('mllama_ctx*', ffi.typeof('struct mllama_ctx*'))
-llava_image_embed  = NewType('llava_image_embed', ffi.typeof('struct llava_image_embed'))
-llava_image_embed_p  = NewType('llava_image_embed*', ffi.typeof('struct llava_image_embed*'))
-mllama_image  = NewType('mllama_image', ffi.typeof('struct mllama_image'))
-mllama_image_p  = NewType('mllama_image*', ffi.typeof('struct mllama_image*'))
+ggml_log_level = NewType('ggml_log_level', ffi.typeof('enum ggml_log_level'))
+ggml_numa_strategy = NewType('ggml_numa_strategy', ffi.typeof('enum ggml_numa_strategy'))
+llama_model_params = NewType('llama_model_params', ffi.typeof('struct llama_model_params'))
+llama_model = NewType('llama_model', ffi.typeof('struct llama_model'))
+llama_model_p = NewType('llama_model*', ffi.typeof('struct llama_model*'))
+llama_context = NewType('llama_context', ffi.typeof('struct llama_context'))
+llama_context_p = NewType('llama_context*', ffi.typeof('struct llama_context*'))
+llama_context_params = NewType('llama_context_params', ffi.typeof('struct llama_context_params'))
+llama_sampler = NewType('llama_sampler', ffi.typeof('struct llama_sampler'))
+llama_sampler_p = NewType('llama_sampler*', ffi.typeof('struct llama_sampler*'))
+llama_sampler_chain_params = NewType('llama_sampler_chain_params', ffi.typeof('struct llama_sampler_chain_params'))
+llama_batch = NewType('llama_batch', ffi.typeof('struct llama_batch'))
+llama_token = NewType('llama_token', ffi.typeof('int32_t'))
+llama_token_data = NewType('llama_token_data', ffi.typeof('struct llama_token_data'))
+llama_token_data_p = NewType('llama_token_data*', ffi.typeof('struct llama_token_data*'))
+llama_token_data_array = NewType('llama_token_data_array', ffi.typeof('struct llama_token_data_array'))
+llama_token_data_array_p = NewType('llama_token_data_array*', ffi.typeof('struct llama_token_data_array*'))
+clip_ctx = NewType('clip_ctx', ffi.typeof('struct clip_ctx'))
+clip_ctx_p = NewType('clip_ctx*', ffi.typeof('struct clip_ctx*'))
+mllama_ctx = NewType('mllama_ctx', ffi.typeof('struct mllama_ctx'))
+mllama_ctx_p = NewType('mllama_ctx*', ffi.typeof('struct mllama_ctx*'))
+llava_image_embed = NewType('llava_image_embed', ffi.typeof('struct llava_image_embed'))
+llava_image_embed_p = NewType('llava_image_embed*', ffi.typeof('struct llava_image_embed*'))
+mllama_image = NewType('mllama_image', ffi.typeof('struct mllama_image'))
+mllama_image_p = NewType('mllama_image*', ffi.typeof('struct mllama_image*'))
 
 lock = Lock()
+
+# Set callback for all future logging events.
+# If this is not called, or NULL is supplied, everything is output on stderr.
+#
+# LLAMA_API void llama_log_set(ggml_log_callback log_callback, void * user_data);
+#
+# typedef void (*ggml_log_callback)(enum ggml_log_level level, const char * text, void * user_data);
+@ffi.def_extern()
+def llama_cpp_cffi_ggml_log_callback(level: ggml_log_level, text: char_p, user_data: void_p):
+    pass
+
+# disable logs by default
+lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
 
 
 def backend_init():
@@ -114,6 +141,11 @@ def model_init(options: Options) -> llama_model_p:
 
     model_params: llama_model_params = lib.llama_model_default_params()
     model_params.n_gpu_layers = options.gpu_layers
+    model_params.split_mode = options.split_mode
+    model_params.main_gpu = options.main_gpu
+    model_params.use_mmap = not options.no_mmap
+    model_params.use_mlock = options.mlock
+    model_params.check_tensors = options.check_tensors
 
     model: llama_model_p = lib.llama_load_model_from_file(model_path.encode(), model_params)
     return model
@@ -127,6 +159,13 @@ def context_init(model: llama_model_p, options: Options) -> llama_context_p:
     ctx_params: llama_context_params = lib.llama_context_default_params()
     ctx_params.n_ctx = options.ctx_size
     ctx_params.n_batch = options.batch_size
+    ctx_params.n_ubatch = options.ubatch_size
+    ctx_params.n_threads = options.threads
+
+    if options.threads_batch is None:
+        ctx_params.n_threads_batch = options.threads
+    else:
+        ctx_params.n_threads_batch = options.threads_batch
 
     context = lib.llama_new_context_with_model(model, ctx_params)
     return context
@@ -182,51 +221,61 @@ def grammar_sampler_init(model: llama_model_p, options: Options) -> llama_sample
     if options.grammar:
         grammar_str: char_p = ffi.new('char[]', options.grammar.encode())
         grammar_root: char_p = ffi.new('char[]', b'root')
-
-        grmr = lib.llama_sampler_init_grammar(
-            model,
-            grammar_str,
-            grammar_root,
-        )
     elif options.json_schema:
         assert options.json_schema == '{}'
+        # print(f'{options.json_schema=}')
 
-        grammar = r'''
-root   ::= object
-value  ::= object | array | string | number | ("true" | "false" | "null") ws
+#         grammar = r'''root   ::= object
+# value  ::= object | array | string | number | ("true" | "false" | "null") ws
+#
+# object ::=
+#     "{" ws (
+#             string ":" ws value
+#     ("," ws string ":" ws value)*
+#     )? "}" ws
+#
+# array  ::=
+#     "[" ws (
+#             value
+#     ("," ws value)*
+#     )? "]" ws
+#
+# string ::=
+#     "\"" (
+#     [^"\\\x7F\x00-\x1F] |
+#     "\\" (["\\bfnrt] | "u" [0-9a-fA-F]{4}) # escapes
+#     )* "\"" ws
+#
+# number ::= ("-"? ([0-9] | [1-9] [0-9]{0,15})) ("." [0-9]+)? ([eE] [-+]? [0-9] [1-9]{0,15})? ws
+#
+# # Optional space: by convention, applied in this grammar after literal chars when allowed
+# ws ::= | " " | "\n" [ \t]{0,20}
+#         '''
 
-object ::=
-    "{" ws (
-            string ":" ws value
-    ("," ws string ":" ws value)*
-    )? "}" ws
-
-array  ::=
-    "[" ws (
-            value
-    ("," ws value)*
-    )? "]" ws
-
-string ::=
-    "\"" (
-    [^"\\\x7F\x00-\x1F] |
-    "\\" (["\\bfnrt] | "u" [0-9a-fA-F]{4}) # escapes
-    )* "\"" ws
-
-number ::= ("-"? ([0-9] | [1-9] [0-9]{0,15})) ("." [0-9]+)? ([eE] [-+]? [0-9] [1-9]{0,15})? ws
-
-# Optional space: by convention, applied in this grammar after literal chars when allowed
-ws ::= | " " | "\n" [ \t]{0,20}
-        '''
+        grammar = r'''array ::= "[" space ( value ("," space value)* )? "]" space
+boolean ::= ("true" | "false") space
+char ::= [^"\\\x7F\x00-\x1F] | [\\] (["\\bfnrt] | "u" [0-9a-fA-F]{4})
+decimal-part ::= [0-9]{1,16}
+integral-part ::= [0] | [1-9] [0-9]{0,15}
+null ::= "null" space
+number ::= ("-"? integral-part) ("." decimal-part)? ([eE] [-+]? integral-part)? space
+object ::= "{" space ( string ":" space value ("," space string ":" space value)* )? "}" space
+space ::= | " " | "\n" [ \t]{0,20}
+string ::= "\"" char* "\"" space
+value ::= object | array | string | number | boolean | null
+root ::= object
+'''
 
         grammar_str: char_p = ffi.new('char[]', grammar.encode())
         grammar_root: char_p = ffi.new('char[]', b'root')
 
-        grmr = lib.llama_sampler_init_grammar(
-            model,
-            grammar_str,
-            grammar_root,
-        )
+    grmr: llama_sampler_p = lib.llama_sampler_init_grammar(
+        model,
+        grammar_str,
+        grammar_root,
+    )
+
+    return grmr
 
 
 def sampler_free(sampler: llama_sampler_p):
@@ -292,18 +341,104 @@ def batch_get_one_and_decode(context: llama_context_p,
     return batch
 
 
+def set_logits(ctx: llama_context_p, idx: int):
+    logits: float_p = lib.llama_get_logits_ith(ctx, idx)
+    n_vocab: int = lib.llama_n_vocab(lib.llama_get_model(ctx))
+
+    cur: llama_token_data_p = ffi.new(
+        'llama_token_data[]',
+        [(token_id, logits[token_id], 0.0) for token_id in range(n_vocab)],
+    )
+
+    cur_p: llama_token_data_array_p = ffi.new('llama_token_data_array*', [cur, n_vocab, -1, False])
+    global_weakkeydict[cur_p] = cur
+    return cur, cur_p
+
+
+def _llama_sampler_sample(smpl: llama_sampler_p, ctx: llama_context_p, idx: int):
+    cur, cur_p = set_logits(ctx, idx)
+    lib.llama_sampler_apply(smpl, cur_p)
+    token: llama_token = cur_p.data[cur_p.selected].id
+    lib.llama_sampler_accept(smpl, token)
+    return token
+
+
+def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: llama_context_p, idx: int, grammar_first):
+    # return _llama_sampler_sample(chain, ctx, idx)
+
+    cur, cur_p = set_logits(ctx, idx)
+
+    if grammar_first:
+        lib.llama_sampler_apply(grmr, cur_p)
+
+    lib.llama_sampler_apply(chain, cur_p)
+    assert cur_p.selected != -1, "no selected token during sampling - check your sampling configuration"
+
+    id: llama_token = cur_p.data[cur_p.selected].id
+    # print(f'{id=}')
+
+    if grammar_first:
+        return id
+
+    # check if it the sampled token fits the grammar
+    single_token_data: llama_token_data_p = ffi.new(
+        'llama_token_data*',
+        [id, 1.0, 0.0],
+    )
+
+    single_token_data_array: llama_token_data_array_p = ffi.new(
+        'llama_token_data_array*',
+        [single_token_data, 1, -1, False]
+    )
+
+    global_weakkeydict[single_token_data_array] = single_token_data
+    lib.llama_sampler_apply(grmr, single_token_data_array)
+
+    # print(f'{single_token_data_array.data[0].logit=}')
+    is_valid: bool = single_token_data_array.data[0].logit != -INFINITY
+
+    if is_valid:
+        # print(f'{id=} {is_valid=}')
+        return id
+
+    # resampling
+    cur, cur_p = set_logits(ctx, idx)
+    lib.llama_sampler_apply(grmr,  cur_p)
+    lib.llama_sampler_apply(chain, cur_p)
+    assert cur_p.selected != -1, "no selected token during re-sampling - check your sampling configuration"
+
+    id: llama_token = cur_p.data[cur_p.selected].id
+    return id
+
+
+def _common_sampler_accept(grmr: llama_sampler_p, chain: llama_sampler_p, token: llama_token, accept_grammar: bool):
+    if accept_grammar:
+        lib.llama_sampler_accept(grmr, token)
+
+    lib.llama_sampler_accept(chain, token)
+
+
 #
 # llm
 #
-def text_completions(model: llama_model_p,
-                     context: llama_context_p,
-                     # sampler: llama_sampler_p,
-                     # grmr_sampler: llama_sampler_p,
-                     options: Options) -> Iterator[str]:
+def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
 
+    if options.verbose:
+        lib.llama_log_set(ffi.NULL, ffi.NULL)
+    else:
+        lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
+
+    context = context_init(model, options)
     sampler = sampler_init(model, options)
-    # print(f'{sampler=}')
+    print(f'{sampler=}')
+
+    if options.grammar or options.json_schema:
+        grammar_sampler = grammar_sampler_init(model, options)
+    else:
+        grammar_sampler = None
+
+    print(f'{grammar_sampler=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -340,7 +475,10 @@ def text_completions(model: llama_model_p,
             if lib.llama_decode(context, batch):
                 break
 
-        new_token_id = lib.llama_sampler_sample(sampler, context, -1)
+        # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+        # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
+        new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
+        _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
 
         if lib.llama_token_is_eog(model, new_token_id):
             break
@@ -360,6 +498,7 @@ def text_completions(model: llama_model_p,
         ffi.release(_new_prompt_tokens)
 
     sampler_free(sampler)
+    context_free(context)
 
 #
 # clip
@@ -387,18 +526,17 @@ def clip_process_eval_image_embed(context: llama_context_p,
     lib.llava_image_embed_free(slice_embed)
 
 
-def clip_completions(model: llama_model_p,
-                     context: llama_context_p,
-                     # sampler: llama_sampler_p,
-                     # grmr_sampler: llama_sampler_p,
-                     # clip_context: clip_ctx_p,
-                     options: Options) -> Iterator[str]:
+def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
     assert isinstance(options.image, str) or isinstance(options.messages, list)
 
-    sampler = sampler_init(model, options)
-    # print(f'{sampler=}')
+    if options.verbose:
+        lib.llama_log_set(ffi.NULL, ffi.NULL)
+    else:
+        lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
 
+    context = context_init(model, options)
+    sampler = sampler_init(model, options)
     clip_context = clip_init_context(options)
 
     # tokenizer
@@ -510,6 +648,7 @@ def clip_completions(model: llama_model_p,
     ffi.release(n_past)
     clip_free_context(clip_context)
     sampler_free(sampler)
+    context_free(context)
 
 
 #
@@ -538,15 +677,16 @@ def mllama_process_eval_image_embed(context: llama_context_p,
     lib.llava_image_embed_free(slice_embed)
 
 
-def mllama_completions(model: llama_model_p,
-                       context: llama_context_p,
-                       # sampler: llama_sampler_p,
-                       # grmr_sampler: llama_sampler_p,
-                       # mllama_context: mllama_ctx_p,
-                       options: Options) -> Iterator[str]:
+def mllama_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
     assert isinstance(options.image, str)
 
+    if options.verbose:
+        lib.llama_log_set(ffi.NULL, ffi.NULL)
+    else:
+        lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
+
+    context = context_init(model, options)
     sampler = sampler_init(model, options)
     # print(f'{sampler=}')
 
@@ -628,3 +768,4 @@ def mllama_completions(model: llama_model_p,
 
     ffi.release(n_past)
     sampler_free(sampler)
+    context_free(context)

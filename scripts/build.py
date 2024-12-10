@@ -330,7 +330,6 @@ def cleanup_code(source: str) -> str:
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    subprocess.run(['git', 'reset', '--hard', '6fe624783166e7355cec915de0094e63cd3558eb'], cwd='llama.cpp', check=True) # issue with Vulkan
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/include/ggml.h', 'ggml_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu', 'ggml_cuda_cu_6.patch'], check=True)
@@ -472,22 +471,34 @@ def build_cpu(*args, **kwargs):
     ffibuilder = FFI()
 
     ffibuilder.cdef(
-        '''
+        _source + '''
             void *malloc(size_t size);
             void free(void *ptr);
             void *memcpy(void *to, const void *from, size_t num_bytes);
-        ''' + _source,
+
+            float llama_cpp_cffi_get_pos_infinity(void);
+            float llama_cpp_cffi_get_neg_infinity(void);
+            extern "Python" void llama_cpp_cffi_ggml_log_callback(enum ggml_log_level level, const char * text, void * user_data);
+        ''',
         override=True,
     )
 
     ffibuilder.set_source(
         '_llama_cpp_cpu',
         '''
-            #include <stdio.h>
+            #include <math.h>
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
             #include "llava/mllama.h"
+
+            float llama_cpp_cffi_get_pos_infinity(void) {
+                return INFINITY;
+            }
+
+            float llama_cpp_cffi_get_neg_infinity(void) {
+                return -INFINITY;
+            }
         ''',
         libraries=[
             'stdc++',
@@ -501,6 +512,7 @@ def build_cpu(*args, **kwargs):
             '-fPIC',
             # '-DLLAMA_SHARED',
             # '-DLLAMA_LIB',
+            '-DLLAVA_LOG_OFF',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -601,22 +613,34 @@ def build_vulkan_1_x(*args, **kwargs):
     ffibuilder = FFI()
 
     ffibuilder.cdef(
-        '''
+        _source + '''
             void *malloc(size_t size);
             void free(void *ptr);
             void *memcpy(void *to, const void *from, size_t num_bytes);
-        ''' + _source,
+
+            float llama_cpp_cffi_get_pos_infinity(void);
+            float llama_cpp_cffi_get_neg_infinity(void);
+            extern "Python" void llama_cpp_cffi_ggml_log_callback(enum ggml_log_level level, const char * text, void * user_data);
+        ''',
         override=True,
     )
 
     ffibuilder.set_source(
         '_llama_cpp_vulkan_1_x',
         '''
-            #include <stdio.h>
+            #include <math.h>
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
             #include "llava/mllama.h"
+
+            float llama_cpp_cffi_get_pos_infinity(void) {
+                return INFINITY;
+            }
+
+            float llama_cpp_cffi_get_neg_infinity(void) {
+                return -INFINITY;
+            }
         ''',
         libraries=[
             'stdc++',
@@ -629,8 +653,9 @@ def build_vulkan_1_x(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
-            '-DLLAMA_SHARED',
-            '-DLLAMA_LIB',
+            # '-DLLAMA_SHARED',
+            # '-DLLAMA_LIB',
+            '-DLLAVA_LOG_OFF',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -753,22 +778,34 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     ffibuilder = FFI()
 
     ffibuilder.cdef(
-        '''
+        _source + '''
             void *malloc(size_t size);
             void free(void *ptr);
             void *memcpy(void *to, const void *from, size_t num_bytes);
-        ''' + _source,
+
+            float llama_cpp_cffi_get_pos_infinity(void);
+            float llama_cpp_cffi_get_neg_infinity(void);
+            extern "Python" void llama_cpp_cffi_ggml_log_callback(enum ggml_log_level level, const char * text, void * user_data);
+        ''',
         override=True,
     )
 
     ffibuilder.set_source(
         '_llama_cpp_cuda_12_6_3',
         '''
-            #include <stdio.h>
+            #include <math.h>
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
             #include "llava/mllama.h"
+
+            float llama_cpp_cffi_get_pos_infinity(void) {
+                return INFINITY;
+            }
+
+            float llama_cpp_cffi_get_neg_infinity(void) {
+                return -INFINITY;
+            }
         ''',
         libraries=[
             'stdc++',
@@ -790,8 +827,9 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
-            '-DLLAMA_SHARED',
-            '-DLLAMA_LIB',
+            # '-DLLAMA_SHARED',
+            # '-DLLAMA_LIB',
+            '-DLLAVA_LOG_OFF',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',

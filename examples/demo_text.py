@@ -8,8 +8,6 @@ from llama import (
     model_free,
     context_init,
     context_free,
-    # sampler_init,
-    # sampler_free,
     text_completions,
 )
 
@@ -30,24 +28,16 @@ def demo_low_level():
     backend_init()
 
     _model = model_init(options)
-    print(f'{_model=}')
-
-    _context = context_init(_model, options)
-    print(f'{_context=}')
-
-    # _sampler = sampler_init(_model, options)
-    # print(f'{_sampler=}')
+    # print(f'{_model=}')
 
     # input('Press any key to generate')
 
-    for token in text_completions(_model, _context, options):
+    for token in text_completions(_model, options):
         print(token, end='', flush=True)
 
     print()
     # input('Press any key to exit')
 
-    # sampler_free(_sampler)
-    context_free(_context)
     model_free(_model)
     backend_free()
 
@@ -182,54 +172,34 @@ def demo_high_level_rwkv():
 
 
 def demo_high_level_json():
-    models_ids = [
-        'Qwen/Qwen2.5-0.5B-Instruct',
-        # 'Qwen/Qwen2.5-1.5B-Instruct',
-        # 'HuggingFaceTB/SmolLM2-360M-Instruct',
-        # 'HuggingFaceTB/SmolLM2-1.7B-Instruct',
-        # 'arcee-ai/arcee-lite',
-        # 'RWKV/v6-Finch-1B6-HF',
-        # 'RWKV/v6-Finch-3B-HF',
-    ]
+    # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
+    # model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
+    model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
+    # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
+    # model_id = 'arcee-ai/arcee-lite'
+    # model_id = 'RWKV/v6-Finch-1B6-HF'
+    # model_id = 'RWKV/v6-Finch-3B-HF'
 
-    models = [demo_models[models_id] for models_id in models_ids]
-
-    for model in models:
-        model.init(predict=512, gpu_layers=99)
+    model = demo_models[model_id]
+    model.init(predict=512, gpu_layers=99)
 
     # input('Press any key to generate')
 
-    def gen(idx, model, **options):
-        text: list[str] | str = []
+    prompt = 'Explain meaning of life in JSON format.\n'
+    json_schema = '{}'
 
-        for token in model.completions(**options):
-            print(f'[{idx}]: {token}', end='', flush=True)
-            text.append(token)
+    for token in model.completions(prompt=prompt, json_schema=json_schema):
+        print(token, end='', flush=True)
 
-        text = ''.join(text)
-        print(f'[{idx}]: [END]')
-        print(f'[Final {idx} {model}]:', text)
-
-
-    threads = []
-
-    for i, model in enumerate(models):
-        t = Thread(target=gen, args=[i, model], kwargs=dict(prompt='Explain meaning of life in JSON format.\n', json_schema='{}'))
-        threads.append(t)
-
-    for t in threads:
-        t.start()
-
-    for t in threads:
-        t.join()
+    print()
 
     # input('Press any key to exit')
 
 
 if __name__ == '__main__':
-    demo_low_level()
-    demo_high_level()
-    demo_high_level_chat()
-    demo_high_level_gpt()
-    demo_high_level_rwkv()
+    # demo_low_level()
+    # demo_high_level()
+    # demo_high_level_chat()
+    # demo_high_level_gpt()
+    # demo_high_level_rwkv()
     demo_high_level_json()

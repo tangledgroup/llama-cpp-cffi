@@ -45,29 +45,17 @@ def demo_low_level():
     backend_init()
 
     _model = model_init(options)
-    print(f'{_model=}')
-
-    _context = context_init(_model, options)
-    print(f'{_context=}')
-
-    _sampler = sampler_init(_model, _context, options)
-    print(f'{_sampler=}')
-
-    _clip_context = clip_init_context(options)
-    print(f'{_clip_context=}')
+    # print(f'{_model=}')
 
     # input('Press any key to generate')
 
-    for token in clip_completions(_model, _context, _sampler, _clip_context, options):
+    for token in clip_completions(_model, options):
         print(token, end='', flush=True)
 
     print()
 
     # input('Press any key to exit')
 
-    clip_free_context(_clip_context)
-    sampler_free(_sampler)
-    context_free(_context)
     model_free(_model)
     backend_free()
 
@@ -127,5 +115,5 @@ def demo_high_level_gpt():
 
 
 if __name__ == '__main__':
-    # demo_low_level()
+    demo_low_level()
     demo_high_level_gpt()
