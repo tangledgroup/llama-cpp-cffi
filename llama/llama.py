@@ -174,7 +174,10 @@ def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
         options.ignore_eos,         # ignore the end-of-sequence token
     ))
 
-    """
+    return sampler
+
+
+def grammar_sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
     # grammar
     if options.grammar:
         grammar_str: char_p = ffi.new('char[]', options.grammar.encode())
@@ -185,8 +188,7 @@ def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
             grammar_str,
             grammar_root,
         )
-
-    if options.json_schema:
+    elif options.json_schema:
         assert options.json_schema == '{}'
 
         grammar = r'''
@@ -225,13 +227,6 @@ ws ::= | " " | "\n" [ \t]{0,20}
             grammar_str,
             grammar_root,
         )
-    """
-
-    return sampler
-
-
-def grammar_sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
-    pass
 
 
 def sampler_free(sampler: llama_sampler_p):
@@ -302,10 +297,13 @@ def batch_get_one_and_decode(context: llama_context_p,
 #
 def text_completions(model: llama_model_p,
                      context: llama_context_p,
-                     sampler: llama_sampler_p,
+                     # sampler: llama_sampler_p,
                      # grmr_sampler: llama_sampler_p,
                      options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
+
+    sampler = sampler_init(model, options)
+    # print(f'{sampler=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -361,6 +359,8 @@ def text_completions(model: llama_model_p,
     if _new_prompt_tokens is not None:
         ffi.release(_new_prompt_tokens)
 
+    sampler_free(sampler)
+
 #
 # clip
 #
@@ -389,12 +389,15 @@ def clip_process_eval_image_embed(context: llama_context_p,
 
 def clip_completions(model: llama_model_p,
                      context: llama_context_p,
-                     sampler: llama_sampler_p,
+                     # sampler: llama_sampler_p,
                      # grmr_sampler: llama_sampler_p,
                      clip_context: clip_ctx_p,
                      options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
     assert isinstance(options.image, str) or isinstance(options.messages, list)
+
+    sampler = sampler_init(model, options)
+    # print(f'{sampler=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -503,6 +506,7 @@ def clip_completions(model: llama_model_p,
         ffi.release(_new_prompt_tokens)
 
     ffi.release(n_past)
+    sampler_free(sampler)
 
 
 #
@@ -533,12 +537,15 @@ def mllama_process_eval_image_embed(context: llama_context_p,
 
 def mllama_completions(model: llama_model_p,
                        context: llama_context_p,
-                       sampler: llama_sampler_p,
+                       # sampler: llama_sampler_p,
                        # grmr_sampler: llama_sampler_p,
                        mllama_context: mllama_ctx_p,
                        options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
     assert isinstance(options.image, str)
+
+    sampler = sampler_init(model, options)
+    # print(f'{sampler=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -617,3 +624,4 @@ def mllama_completions(model: llama_model_p,
         ffi.release(_new_prompt_tokens)
 
     ffi.release(n_past)
+    sampler_free(sampler)

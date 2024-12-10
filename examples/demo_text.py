@@ -8,8 +8,8 @@ from llama import (
     model_free,
     context_init,
     context_free,
-    sampler_init,
-    sampler_free,
+    # sampler_init,
+    # sampler_free,
     text_completions,
 )
 
@@ -35,18 +35,18 @@ def demo_low_level():
     _context = context_init(_model, options)
     print(f'{_context=}')
 
-    _sampler = sampler_init(_model, _context, options)
-    print(f'{_sampler=}')
+    # _sampler = sampler_init(_model, options)
+    # print(f'{_sampler=}')
 
     # input('Press any key to generate')
 
-    for token in text_completions(_model, _context, _sampler, options):
+    for token in text_completions(_model, _context, options):
         print(token, end='', flush=True)
 
     print()
     # input('Press any key to exit')
 
-    sampler_free(_sampler)
+    # sampler_free(_sampler)
     context_free(_context)
     model_free(_model)
     backend_free()
@@ -227,9 +227,9 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    # demo_low_level()
-    # demo_high_level()
+    demo_low_level()
+    demo_high_level()
     demo_high_level_chat()
-    # demo_high_level_gpt()
-    # demo_high_level_rwkv()
-    # demo_high_level_json()
+    demo_high_level_gpt()
+    demo_high_level_rwkv()
+    demo_high_level_json()

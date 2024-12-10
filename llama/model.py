@@ -7,11 +7,6 @@ from attrs import define, asdict
 from .options import Options
 
 from .llama import (
-    # lib,
-    # ffi,
-    # char_p,
-    # backend_init,
-    # backend_free,
     model_init,
     model_free,
     context_init,
@@ -35,7 +30,7 @@ class Model:
     mmproj_hf_file: Optional[str] = ''
     tokenizer_hf_repo: Optional[str] = ''
     _model: Any = None
-    _clip_context: Any = None
+    # _clip_context: Any = None
     _options: Options = Options()
 
 
@@ -44,9 +39,9 @@ class Model:
 
 
     def __del__(self):
-        if self._clip_context:
-            clip_free_context(self._clip_context)
-            self._clip_context = None
+        # if self._clip_context:
+        #     clip_free_context(self._clip_context)
+        #     self._clip_context = None
 
         if self._model:
             model_free(self._model)
@@ -61,11 +56,11 @@ class Model:
 
         self._model = model_init(options)
 
-        config = get_config(self.creator_hf_repo)
-        model_type = config.model_type
+        # config = get_config(self.creator_hf_repo)
+        # model_type = config.model_type
 
-        if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type:
-            self._clip_context = clip_init_context(options)
+        # if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type:
+        #     self._clip_context = clip_init_context(options)
 
         self._options = options
 
@@ -76,9 +71,9 @@ class Model:
         )
 
         _model = self._model
-        _clip_context = self._clip_context
+        # _clip_context = self._clip_context
         _context = context_init(_model, options)
-        _sampler = sampler_init(_model, options)
+        # _sampler = sampler_init(_model, options)
         # _grmr_sampler = None
 
         # if options.grammar or options.json_schema:
@@ -86,15 +81,19 @@ class Model:
         #     _grammar_root: char_p = ffi.new('char[]', b'root')
         #     _grmr_sampler = lib.llama_sampler_init_grammar(_model, _grammar_str, _grammar_root)
 
-        if _clip_context:
-            for token in clip_completions(_model, _context, _sampler, _clip_context, options):
-                yield token
+        config = get_config(self.creator_hf_repo)
+        model_type = config.model_type
+
+        if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type:
+            completions_func = clip_completions
         else:
-            for token in text_completions(_model, _context, _sampler, options):
-                yield token
+            completions_func = text_completions
+
+        for token in completions_func(_model, _context, options):
+            yield token
 
         # if _grmr_sampler:
         #     sampler_free(_grmr_sampler)
 
-        sampler_free(_sampler)
+        # sampler_free(_sampler)
         context_free(_context)
