@@ -391,13 +391,15 @@ def clip_completions(model: llama_model_p,
                      context: llama_context_p,
                      # sampler: llama_sampler_p,
                      # grmr_sampler: llama_sampler_p,
-                     clip_context: clip_ctx_p,
+                     # clip_context: clip_ctx_p,
                      options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
     assert isinstance(options.image, str) or isinstance(options.messages, list)
 
     sampler = sampler_init(model, options)
     # print(f'{sampler=}')
+
+    clip_context = clip_init_context(options)
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -506,6 +508,7 @@ def clip_completions(model: llama_model_p,
         ffi.release(_new_prompt_tokens)
 
     ffi.release(n_past)
+    clip_free_context(clip_context)
     sampler_free(sampler)
 
 
@@ -539,7 +542,7 @@ def mllama_completions(model: llama_model_p,
                        context: llama_context_p,
                        # sampler: llama_sampler_p,
                        # grmr_sampler: llama_sampler_p,
-                       mllama_context: mllama_ctx_p,
+                       # mllama_context: mllama_ctx_p,
                        options: Options) -> Iterator[str]:
     assert isinstance(options.prompt, str) or isinstance(options.messages, list)
     assert isinstance(options.image, str)

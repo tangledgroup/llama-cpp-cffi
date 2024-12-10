@@ -81,7 +81,7 @@ def demo_high_level_gpt():
     models = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=8192, predict=1024, gpu_layers=8)
+        model.init(ctx_size=1024, predict=1024, gpu_layers=8)
 
     # input('Press any key to generate')
 
