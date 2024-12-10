@@ -339,6 +339,8 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-metal/ggml-metal.metal', 'ggml_metal_metal_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml.c', 'ggml_c_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
@@ -405,7 +407,6 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    # env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
     env['CXXFLAGS'] = '-O3'
     print('build_cpu:')
     pprint(env)
@@ -414,7 +415,6 @@ def build_cpu(*args, **kwargs):
     _source = preprocess_library_code(
         cc=env.get('CC', 'gcc'),
         cflags=[
-            # '-DLLAMA_LIB',
             *(['-DGGML_USE_CPU_AARCH64'] if platform.machine() == 'aarch64' else []),
         ],
         include_dirs=[
@@ -426,6 +426,7 @@ def build_cpu(*args, **kwargs):
             './llama.cpp/examples/llava/llava.h',
             './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
+            './llama.cpp/common/json-schema-to-grammar.h',
         ],
     )
 
@@ -476,8 +477,6 @@ def build_cpu(*args, **kwargs):
             void free(void *ptr);
             void *memcpy(void *to, const void *from, size_t num_bytes);
 
-            float llama_cpp_cffi_get_pos_infinity(void);
-            float llama_cpp_cffi_get_neg_infinity(void);
             extern "Python" void llama_cpp_cffi_ggml_log_callback(enum ggml_log_level level, const char * text, void * user_data);
         ''',
         override=True,
@@ -486,19 +485,11 @@ def build_cpu(*args, **kwargs):
     ffibuilder.set_source(
         '_llama_cpp_cpu',
         '''
-            #include <math.h>
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
             #include "llava/mllama.h"
-
-            float llama_cpp_cffi_get_pos_infinity(void) {
-                return INFINITY;
-            }
-
-            float llama_cpp_cffi_get_neg_infinity(void) {
-                return -INFINITY;
-            }
+            #include "json-schema-to-grammar.h"
         ''',
         libraries=[
             'stdc++',
@@ -510,12 +501,11 @@ def build_cpu(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
-            # '-DLLAMA_SHARED',
-            # '-DLLAMA_LIB',
-            '-DLLAVA_LOG_OFF',
+            '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
+            '-I../llama.cpp/common',
         ],
         extra_link_args=[
             '-O3',
@@ -547,7 +537,7 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
+    env['CXXFLAGS'] = '-O3'
     print('build_vulkan_1_x:')
     pprint(env)
 
@@ -555,7 +545,6 @@ def build_vulkan_1_x(*args, **kwargs):
     _source = preprocess_library_code(
         cc=env.get('CC', 'gcc'),
         cflags=[
-            '-DLLAMA_LIB',
             *(['-DGGML_USE_CPU_AARCH64'] if platform.machine() == 'aarch64' else []),
         ],
         include_dirs=[
@@ -567,6 +556,7 @@ def build_vulkan_1_x(*args, **kwargs):
             './llama.cpp/examples/llava/llava.h',
             './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
+            './llama.cpp/common/json-schema-to-grammar.h',
         ],
     )
 
@@ -618,8 +608,6 @@ def build_vulkan_1_x(*args, **kwargs):
             void free(void *ptr);
             void *memcpy(void *to, const void *from, size_t num_bytes);
 
-            float llama_cpp_cffi_get_pos_infinity(void);
-            float llama_cpp_cffi_get_neg_infinity(void);
             extern "Python" void llama_cpp_cffi_ggml_log_callback(enum ggml_log_level level, const char * text, void * user_data);
         ''',
         override=True,
@@ -628,19 +616,11 @@ def build_vulkan_1_x(*args, **kwargs):
     ffibuilder.set_source(
         '_llama_cpp_vulkan_1_x',
         '''
-            #include <math.h>
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
             #include "llava/mllama.h"
-
-            float llama_cpp_cffi_get_pos_infinity(void) {
-                return INFINITY;
-            }
-
-            float llama_cpp_cffi_get_neg_infinity(void) {
-                return -INFINITY;
-            }
+            #include "json-schema-to-grammar.h"
         ''',
         libraries=[
             'stdc++',
@@ -653,12 +633,11 @@ def build_vulkan_1_x(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
-            # '-DLLAMA_SHARED',
-            # '-DLLAMA_LIB',
-            '-DLLAVA_LOG_OFF',
+            '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
+            '-I../llama.cpp/common',
         ],
         extra_link_args=[
             '-O3',
@@ -668,6 +647,7 @@ def build_vulkan_1_x(*args, **kwargs):
             '-lggml',
             '-lllama',
             '-lllava',
+            '-lcommon',
         ],
     )
 
@@ -702,7 +682,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
     env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/g++-13'
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
-    env['CXXFLAGS'] = '-O3 -DLLAMA_LIB'
+    env['CXXFLAGS'] = '-O3'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
     env['NVCCFLAGS'] = '\
@@ -720,7 +700,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     _source = preprocess_library_code(
         cc=env.get('CC', 'gcc'),
         cflags=[
-            '-DLLAMA_LIB',
             *(['-DGGML_USE_CPU_AARCH64'] if platform.machine() == 'aarch64' else []),
         ],
         include_dirs=[
@@ -732,6 +711,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             './llama.cpp/examples/llava/llava.h',
             './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
+            './llama.cpp/common/json-schema-to-grammar.h',
         ],
     )
 
@@ -783,8 +763,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             void free(void *ptr);
             void *memcpy(void *to, const void *from, size_t num_bytes);
 
-            float llama_cpp_cffi_get_pos_infinity(void);
-            float llama_cpp_cffi_get_neg_infinity(void);
             extern "Python" void llama_cpp_cffi_ggml_log_callback(enum ggml_log_level level, const char * text, void * user_data);
         ''',
         override=True,
@@ -793,19 +771,11 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     ffibuilder.set_source(
         '_llama_cpp_cuda_12_6_3',
         '''
-            #include <math.h>
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
             #include "llava/mllama.h"
-
-            float llama_cpp_cffi_get_pos_infinity(void) {
-                return INFINITY;
-            }
-
-            float llama_cpp_cffi_get_neg_infinity(void) {
-                return -INFINITY;
-            }
+            #include "json-schema-to-grammar.h"
         ''',
         libraries=[
             'stdc++',
@@ -827,12 +797,11 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
-            # '-DLLAMA_SHARED',
-            # '-DLLAMA_LIB',
-            '-DLLAVA_LOG_OFF',
+            '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
+            '-I../llama.cpp/common',
         ],
         extra_link_args=[
             '-O3',
@@ -842,6 +811,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             '-lggml',
             '-lllama',
             '-lllava',
+            '-lcommon',
         ],
     )
 

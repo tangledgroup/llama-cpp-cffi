@@ -76,8 +76,6 @@ global_weakkeydict = WeakKeyDictionary()
 #
 # low-level API
 #
-INFINITY: float = lib.llama_cpp_cffi_get_pos_infinity()
-NEG_INFINITY: float = lib.llama_cpp_cffi_get_neg_infinity()
 void_p = NewType('void*', ffi.typeof('void*'))
 char_p = NewType('char*', ffi.typeof('char*'))
 int_p = NewType('int*', ffi.typeof('int*'))
@@ -138,10 +136,11 @@ def numa_init(numa: ggml_numa_strategy):
 
 def model_init(options: Options) -> llama_model_p:
     model_path = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.hf_file)
+    # print(f'{model_path=}')
 
     model_params: llama_model_params = lib.llama_model_default_params()
     model_params.n_gpu_layers = options.gpu_layers
-    model_params.split_mode = options.split_mode
+    # model_params.split_mode = options.split_mode # FIXME: check Options
     model_params.main_gpu = options.main_gpu
     model_params.use_mmap = not options.no_mmap
     model_params.use_mlock = options.mlock
@@ -222,49 +221,29 @@ def grammar_sampler_init(model: llama_model_p, options: Options) -> llama_sample
         grammar_str: char_p = ffi.new('char[]', options.grammar.encode())
         grammar_root: char_p = ffi.new('char[]', b'root')
     elif options.json_schema:
-        assert options.json_schema == '{}'
-        # print(f'{options.json_schema=}')
-
-#         grammar = r'''root   ::= object
-# value  ::= object | array | string | number | ("true" | "false" | "null") ws
-#
-# object ::=
-#     "{" ws (
-#             string ":" ws value
-#     ("," ws string ":" ws value)*
-#     )? "}" ws
-#
-# array  ::=
-#     "[" ws (
-#             value
-#     ("," ws value)*
-#     )? "]" ws
-#
-# string ::=
-#     "\"" (
-#     [^"\\\x7F\x00-\x1F] |
-#     "\\" (["\\bfnrt] | "u" [0-9a-fA-F]{4}) # escapes
-#     )* "\"" ws
-#
-# number ::= ("-"? ([0-9] | [1-9] [0-9]{0,15})) ("." [0-9]+)? ([eE] [-+]? [0-9] [1-9]{0,15})? ws
-#
-# # Optional space: by convention, applied in this grammar after literal chars when allowed
-# ws ::= | " " | "\n" [ \t]{0,20}
-#         '''
-
-        grammar = r'''array ::= "[" space ( value ("," space value)* )? "]" space
-boolean ::= ("true" | "false") space
-char ::= [^"\\\x7F\x00-\x1F] | [\\] (["\\bfnrt] | "u" [0-9a-fA-F]{4})
-decimal-part ::= [0-9]{1,16}
-integral-part ::= [0] | [1-9] [0-9]{0,15}
-null ::= "null" space
-number ::= ("-"? integral-part) ("." decimal-part)? ([eE] [-+]? integral-part)? space
-object ::= "{" space ( string ":" space value ("," space string ":" space value)* )? "}" space
-space ::= | " " | "\n" [ \t]{0,20}
-string ::= "\"" char* "\"" space
-value ::= object | array | string | number | boolean | null
-root ::= object
-'''
+        if options.json_schema == '{}':
+            grammar = r'''
+                array ::= "[" space ( value ("," space value)* )? "]" space
+                boolean ::= ("true" | "false") space
+                char ::= [^"\\\x7F\x00-\x1F] | [\\] (["\\bfnrt] | "u" [0-9a-fA-F]{4})
+                decimal-part ::= [0-9]{1,16}
+                integral-part ::= [0] | [1-9] [0-9]{0,15}
+                null ::= "null" space
+                number ::= ("-"? integral-part) ("." decimal-part)? ([eE] [-+]? integral-part)? space
+                object ::= "{" space ( string ":" space value ("," space string ":" space value)* )? "}" space
+                space ::= | " " | "\n" [ \t]{0,20}
+                string ::= "\"" char* "\"" space
+                value ::= object | array | string | number | boolean | null
+                root ::= object
+            '''
+        else:
+            _c_value: char_p = ffi.new('char[]', options.json_schema.encode())
+            _grammar: char_p = lib.llama_json_schema_to_grammar(_c_value)
+            grammar: str = ffi.string(_grammar).decode()
+            lib.free(_grammar)
+            ffi.release(_c_value)
+            # print('grammar:')
+            # print(grammar)
 
         grammar_str: char_p = ffi.new('char[]', grammar.encode())
         grammar_root: char_p = ffi.new('char[]', b'root')
@@ -395,7 +374,7 @@ def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: l
     lib.llama_sampler_apply(grmr, single_token_data_array)
 
     # print(f'{single_token_data_array.data[0].logit=}')
-    is_valid: bool = single_token_data_array.data[0].logit != -INFINITY
+    is_valid: bool = single_token_data_array.data[0].logit != float('-inf')
 
     if is_valid:
         # print(f'{id=} {is_valid=}')
@@ -477,8 +456,11 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
         # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
         # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
-        new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
-        _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
+        if grammar_sampler:
+            new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
+            _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
+        else:
+            new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
 
         if lib.llama_token_is_eog(model, new_token_id):
             break
@@ -496,6 +478,9 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
     if _new_prompt_tokens is not None:
         ffi.release(_new_prompt_tokens)
+
+    if grammar_sampler:
+        sampler_free(grammar_sampler)
 
     sampler_free(sampler)
     context_free(context)
@@ -536,8 +521,16 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
         lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
 
     context = context_init(model, options)
-    sampler = sampler_init(model, options)
     clip_context = clip_init_context(options)
+    sampler = sampler_init(model, options)
+    print(f'{sampler=}')
+
+    if options.grammar or options.json_schema:
+        grammar_sampler = grammar_sampler_init(model, options)
+    else:
+        grammar_sampler = None
+
+    print(f'{grammar_sampler=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -626,7 +619,13 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
             if lib.llama_decode(context, batch):
                 break
 
-        new_token_id = lib.llama_sampler_sample(sampler, context, -1)
+        # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+        # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
+        if grammar_sampler:
+            new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
+            _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
+        else:
+            new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
 
         if lib.llama_token_is_eog(model, new_token_id):
             break
@@ -646,8 +645,12 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
         ffi.release(_new_prompt_tokens)
 
     ffi.release(n_past)
-    clip_free_context(clip_context)
+
+    if grammar_sampler:
+        sampler_free(grammar_sampler)
+
     sampler_free(sampler)
+    clip_free_context(clip_context)
     context_free(context)
 
 
@@ -688,7 +691,14 @@ def mllama_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
     context = context_init(model, options)
     sampler = sampler_init(model, options)
-    # print(f'{sampler=}')
+    print(f'{sampler=}')
+
+    if options.grammar or options.json_schema:
+        grammar_sampler = grammar_sampler_init(model, options)
+    else:
+        grammar_sampler = None
+
+    print(f'{grammar_sampler=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -747,7 +757,13 @@ def mllama_completions(model: llama_model_p, options: Options) -> Iterator[str]:
             if lib.llama_decode(context, batch):
                 break
 
-        new_token_id = lib.llama_sampler_sample(sampler, context, -1)
+        # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+        # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
+        if grammar_sampler:
+            new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
+            _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
+        else:
+            new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
 
         if lib.llama_token_is_eog(model, new_token_id):
             break
@@ -767,5 +783,9 @@ def mllama_completions(model: llama_model_p, options: Options) -> Iterator[str]:
         ffi.release(_new_prompt_tokens)
 
     ffi.release(n_past)
+
+    if grammar_sampler:
+        sampler_free(grammar_sampler)
+
     sampler_free(sampler)
     context_free(context)

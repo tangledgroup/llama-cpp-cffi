@@ -114,6 +114,44 @@ def demo_high_level_gpt():
     # input('Press any key to exit')
 
 
+def demo_high_level_json():
+    model_id = 'vikhyatk/moondream2'
+    # model_id = 'openbmb/MiniCPM-V-2_6'
+
+    model = demo_models[model_id]
+    model.init(predict=512, gpu_layers=99)
+
+    # input('Press any key to generate')
+
+    prompt = 'What is in the image? Output in JSON format.\n'
+    image='examples/llama-1.png'
+    # json_schema = '{}'
+    json_schema = '''{
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        }
+      },
+      "required": ["title", "description", "score"],
+      "additionalProperties": false
+    }'''
+
+    for token in model.completions(prompt=prompt, image=image, json_schema=json_schema):
+        print(token, end='', flush=True)
+
+    print()
+
+    # input('Press any key to exit')
+
+
 if __name__ == '__main__':
-    demo_low_level()
-    demo_high_level_gpt()
+    # demo_low_level()
+    # demo_high_level_gpt()
+    demo_high_level_json()

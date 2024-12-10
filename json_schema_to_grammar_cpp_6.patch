@@ -1,0 +1,18 @@
+--- llama.cpp-master/common/json-schema-to-grammar.cpp	2024-12-10 13:12:06.967697599 +0100
++++ llama.cpp/common/json-schema-to-grammar.cpp	2024-12-10 18:09:03.484780909 +0100
+@@ -1043,3 +1043,15 @@
+     converter.check_errors();
+     return converter.format_grammar();
+ }
++
++char * llama_json_schema_to_grammar(const char * c_value) {
++    std::string value(c_value);
++    std::string grammar = json_schema_to_grammar(json::parse(value));
++
++    // Allocate memory for the result string, including space for the null terminator
++    char* result = new char[grammar.length() + 1];
++    std::strcpy(result, grammar.c_str());
++
++    // The caller is now responsible for deleting this memory
++    return result;
++}

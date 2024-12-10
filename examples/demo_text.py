@@ -28,7 +28,7 @@ def demo_low_level():
     backend_init()
 
     _model = model_init(options)
-    # print(f'{_model=}')
+    print(f'{_model=}')
 
     # input('Press any key to generate')
 
@@ -186,7 +186,23 @@ def demo_high_level_json():
     # input('Press any key to generate')
 
     prompt = 'Explain meaning of life in JSON format.\n'
-    json_schema = '{}'
+    # json_schema = '{}'
+    json_schema = '''{
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number"
+        }
+      },
+      "required": ["title", "description", "score"],
+      "additionalProperties": false
+    }'''
 
     for token in model.completions(prompt=prompt, json_schema=json_schema):
         print(token, end='', flush=True)
@@ -197,7 +213,7 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    # demo_low_level()
+    demo_low_level()
     # demo_high_level()
     # demo_high_level_chat()
     # demo_high_level_gpt()

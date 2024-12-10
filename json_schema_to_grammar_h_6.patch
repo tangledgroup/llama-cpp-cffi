@@ -1,0 +1,37 @@
+--- llama.cpp-master/common/json-schema-to-grammar.h	2024-12-10 13:12:06.967697599 +0100
++++ llama.cpp/common/json-schema-to-grammar.h	2024-12-10 16:58:38.467639632 +0100
+@@ -3,6 +3,34 @@
+ #include "ggml.h"
+ // Change JSON_ASSERT from assert() to GGML_ASSERT:
+ #define JSON_ASSERT GGML_ASSERT
++
++#ifdef LLAMA_SHARED
++#    if defined(_WIN32) && !defined(__MINGW32__)
++#        ifdef LLAMA_BUILD
++#            define LLAMA_API __declspec(dllexport)
++#        else
++#            define LLAMA_API __declspec(dllimport)
++#        endif
++#    else
++#        define LLAMA_API __attribute__ ((visibility ("default")))
++#    endif
++#else
++#    define LLAMA_API
++#endif
++
++#ifdef __cplusplus
+ #include "json.hpp"
+
+ std::string json_schema_to_grammar(const nlohmann::ordered_json& schema);
++#endif
++
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++LLAMA_API char * llama_json_schema_to_grammar(const char * c_value);
++
++#ifdef __cplusplus
++}
++#endif
