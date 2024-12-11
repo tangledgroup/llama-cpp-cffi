@@ -20,9 +20,9 @@
  	common/base64.hpp \
  	$(OBJ_ALL)
 -	$(CXX) $(CXXFLAGS) -static -fPIC -c $< -o $@ -Wno-cast-qual
-+	$(CXX) $(CXXFLAGS) -DLLAVA_LOG_OFF -c examples/llava/llava.cpp -o examples/llava/llava.o
-+	$(CXX) $(CXXFLAGS) -DLLAVA_LOG_OFF -c examples/llava/clip.cpp -o examples/llava/clip.o
-+	$(CXX) $(CXXFLAGS) -DLLAVA_LOG_OFF -c examples/llava/mllama.cpp -o examples/llava/mllama.o
++	$(CXX) $(CXXFLAGS) -c examples/llava/llava.cpp -o examples/llava/llava.o
++	$(CXX) $(CXXFLAGS) -c examples/llava/clip.cpp -o examples/llava/clip.o
++	$(CXX) $(CXXFLAGS) -c examples/llava/mllama.cpp -o examples/llava/mllama.o
 +	ar rcs $@ examples/llava/llava.o examples/llava/clip.o examples/llava/mllama.o
 
  llama-llava-cli: examples/llava/llava-cli.cpp \

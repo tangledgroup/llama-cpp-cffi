@@ -263,7 +263,7 @@ def sampler_free(sampler: llama_sampler_p):
 
 def clip_init_context(options: Options) -> clip_ctx_p:
     mmproj_path: str = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.mmproj_hf_file)
-    clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), 1)
+    clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), 0) # path, verbosity
     return clip_context
 
 
