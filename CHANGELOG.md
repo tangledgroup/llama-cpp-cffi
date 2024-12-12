@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.2.1
+
+Fixed:
+  - Batch "decode" process. Encode part is missing for encoder-decoder models.
+
+Removed:
+  - `mllama_completions` for low-level function for Mllama-based VLMs
+
 ## v0.2.0
 
 Added:

@@ -1,19 +1,5 @@
 from threading import Thread
-from llama import Model, Options
-
-from llama import (
-    backend_init,
-    backend_free,
-    model_init,
-    model_free,
-    context_init,
-    context_free,
-    sampler_init,
-    sampler_free,
-    clip_init_context,
-    clip_free_context,
-    clip_completions,
-)
+from llama import Model, Options, model_init, model_free, clip_completions
 
 from demo_models import demo_models
 
@@ -29,6 +15,7 @@ def demo_low_level():
 
     options = Options(
         model=model,
+        ctx_size=8 * 1024,
         predict=1024,
         temp=0.7,
         top_p=0.8,
@@ -41,8 +28,6 @@ def demo_low_level():
         # image='examples/llama-4.png',
         gpu_layers=99,
     )
-
-    backend_init()
 
     _model = model_init(options)
     # print(f'{_model=}')
@@ -57,7 +42,6 @@ def demo_low_level():
     # input('Press any key to exit')
 
     model_free(_model)
-    backend_free()
 
 
 def demo_high_level_gpt():
@@ -114,17 +98,42 @@ def demo_high_level_gpt():
     # input('Press any key to exit')
 
 
+def demo_high_level():
+    # model_id = 'vikhyatk/moondream2'
+    model_id = 'openbmb/MiniCPM-V-2_6'
+
+    model = demo_models[model_id]
+    model.init(ctx_size=8 * 1024, predict=1024, gpu_layers=99)
+
+    # input('Press any key to generate')
+
+    prompt = 'What is in the image? Output in JSON format.\n'
+    # image = 'examples/llama-1.png'
+    image = 'examples/Capital-Call-Notice-pdf-0.jpg'
+
+    for token in model.completions(prompt=prompt, image=image):
+        print(token, end='', flush=True)
+
+    for token in model.completions(prompt=prompt, image=image):
+        print(token, end='', flush=True)
+
+    print()
+
+    # input('Press any key to exit')
+
+
 def demo_high_level_json():
     model_id = 'vikhyatk/moondream2'
     # model_id = 'openbmb/MiniCPM-V-2_6'
 
     model = demo_models[model_id]
-    model.init(predict=512, gpu_layers=99)
+    model.init(ctx_size=8 * 1024, predict=1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
     prompt = 'What is in the image? Output in JSON format.\n'
-    image='examples/llama-1.png'
+    image = 'examples/llama-1.png'
+
     # json_schema = '{}'
     json_schema = '''{
       "type": "object",
@@ -154,4 +163,5 @@ def demo_high_level_json():
 if __name__ == '__main__':
     # demo_low_level()
     # demo_high_level_gpt()
-    demo_high_level_json()
+    demo_high_level()
+    # demo_high_level_json()

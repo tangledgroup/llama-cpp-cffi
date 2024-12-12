@@ -20,8 +20,8 @@ NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musll
 
 ## News
 
-**Dec 9 2024, v0.2.0**: Support for low-level and high-level APIs: llama, llava, clip and ggml API
-**Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.
+- **Dec 9 2024, v0.2.0**: Support for low-level and high-level APIs: llama, llava, clip and ggml API
+- **Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.
 
 ## Install
 

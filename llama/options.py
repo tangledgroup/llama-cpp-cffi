@@ -30,7 +30,8 @@ class Options:
     # prio_batch: int = field(default=0)  # set process/thread priority for batch (default: 0)
     # poll_batch: Optional[int] = field(default=None)  # use polling to wait for work for batch (default: same as --poll)
     ctx_size: int = field(default=0)  # size of the prompt context (default: 4096, 0 = loaded from model)
-    predict: int = field(default=-1)  # number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
+    # predict: int = field(default=-1)  # number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled)
+    predict: int = field(default=512)  # number of tokens to predict
     batch_size: int = field(default=2048)  # logical maximum batch size (default: 2048)
     ubatch_size: int = field(default=512)  # physical maximum batch size (default: 512)
     # keep: int = field(default=0)  # number of tokens to keep from initial prompt (default: 0, -1 = all)

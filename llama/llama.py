@@ -16,27 +16,19 @@ __all__ = [
     'sampler_free',
     'clip_init_context',
     'clip_free_context',
-    'mllama_init_context',
-    'mllama_free_context',
     'text_completions',
     'clip_completions',
-    'mllama_completions',
 ]
 
 import os
-# import ctypes
-# from queue import Queue
-# from copy import deepcopy
-# from typing import Any, Optional, Iterator, Callable, NewType
+import atexit
 from typing import Optional, Iterator, NewType
 from threading import Lock
 from weakref import WeakKeyDictionary
-# from functools import partial
 
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
-# from .model import Model
 from .options import Options
 from .util import is_cuda_available, is_vulkan_available
 from .formatter import get_tokenizer, format_messages, VLM_TEMPLATE
@@ -92,19 +84,17 @@ llama_sampler = NewType('llama_sampler', ffi.typeof('struct llama_sampler'))
 llama_sampler_p = NewType('llama_sampler*', ffi.typeof('struct llama_sampler*'))
 llama_sampler_chain_params = NewType('llama_sampler_chain_params', ffi.typeof('struct llama_sampler_chain_params'))
 llama_batch = NewType('llama_batch', ffi.typeof('struct llama_batch'))
+llama_pos = NewType('llama_pos', ffi.typeof('int32_t'))
 llama_token = NewType('llama_token', ffi.typeof('int32_t'))
+llama_seq_id = NewType('llama_seq_id', ffi.typeof('int32_t'))
 llama_token_data = NewType('llama_token_data', ffi.typeof('struct llama_token_data'))
 llama_token_data_p = NewType('llama_token_data*', ffi.typeof('struct llama_token_data*'))
 llama_token_data_array = NewType('llama_token_data_array', ffi.typeof('struct llama_token_data_array'))
 llama_token_data_array_p = NewType('llama_token_data_array*', ffi.typeof('struct llama_token_data_array*'))
 clip_ctx = NewType('clip_ctx', ffi.typeof('struct clip_ctx'))
 clip_ctx_p = NewType('clip_ctx*', ffi.typeof('struct clip_ctx*'))
-mllama_ctx = NewType('mllama_ctx', ffi.typeof('struct mllama_ctx'))
-mllama_ctx_p = NewType('mllama_ctx*', ffi.typeof('struct mllama_ctx*'))
 llava_image_embed = NewType('llava_image_embed', ffi.typeof('struct llava_image_embed'))
 llava_image_embed_p = NewType('llava_image_embed*', ffi.typeof('struct llava_image_embed*'))
-mllama_image = NewType('mllama_image', ffi.typeof('struct mllama_image'))
-mllama_image_p = NewType('mllama_image*', ffi.typeof('struct mllama_image*'))
 
 lock = Lock()
 
@@ -271,56 +261,10 @@ def clip_free_context(clip_context: clip_ctx_p):
     lib.clip_free(clip_context)
 
 
-def mllama_init_context(options: Options) -> mllama_ctx_p:
-    mmproj_path: str = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.mmproj_hf_file)
-    mllama_context: mllama_ctx_p = lib.mllama_model_load(mmproj_path.encode(), 1)
-    return mllama_context
-
-
-def mllama_free_context(mllama_context: mllama_ctx_p):
-    lib.mllama_free(mllama_context)
-
-
 #
 # util
 #
-def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
-    n_ctx: int = lib.llama_n_ctx(context)
-    n_ctx_used: int = lib.llama_get_kv_cache_used_cells(context)
-
-    if n_ctx_used + batch.n_tokens > n_ctx:
-        return 1
-
-    return 0
-
-
-def batch_get_one_and_decode(context: llama_context_p,
-                             prompt: str,
-                             n_batch: int,
-                             n_past: Optional[int_p],
-                             tokenizer: AutoTokenizer) -> Optional[llama_batch]:
-    prompt_tokens: list[int] = tokenizer.encode(prompt)
-    n_prompt_tokens: int = len(prompt_tokens)
-
-    for i in range(0, n_prompt_tokens, n_batch):
-        sub_prompt_tokens = prompt_tokens[i:i+n_batch]
-        n_sub_prompt_tokens = len(sub_prompt_tokens)
-        _prompt_tokens = ffi.new('llama_token[]', sub_prompt_tokens)
-        batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
-
-        if lib.llama_decode(context, batch):
-            ffi.release(_prompt_tokens)
-            return None
-
-        if n_past is not None:
-            n_past[0] += n_sub_prompt_tokens
-
-        ffi.release(_prompt_tokens)
-
-    return batch
-
-
-def set_logits(ctx: llama_context_p, idx: int):
+def _set_logits(ctx: llama_context_p, idx: int):
     logits: float_p = lib.llama_get_logits_ith(ctx, idx)
     n_vocab: int = lib.llama_n_vocab(lib.llama_get_model(ctx))
 
@@ -335,7 +279,8 @@ def set_logits(ctx: llama_context_p, idx: int):
 
 
 def _llama_sampler_sample(smpl: llama_sampler_p, ctx: llama_context_p, idx: int):
-    cur, cur_p = set_logits(ctx, idx)
+    # reimplementation of C code
+    cur, cur_p = _set_logits(ctx, idx)
     lib.llama_sampler_apply(smpl, cur_p)
     token: llama_token = cur_p.data[cur_p.selected].id
     lib.llama_sampler_accept(smpl, token)
@@ -343,9 +288,7 @@ def _llama_sampler_sample(smpl: llama_sampler_p, ctx: llama_context_p, idx: int)
 
 
 def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: llama_context_p, idx: int, grammar_first):
-    # return _llama_sampler_sample(chain, ctx, idx)
-
-    cur, cur_p = set_logits(ctx, idx)
+    cur, cur_p = _set_logits(ctx, idx)
 
     if grammar_first:
         lib.llama_sampler_apply(grmr, cur_p)
@@ -381,7 +324,7 @@ def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: l
         return id
 
     # resampling
-    cur, cur_p = set_logits(ctx, idx)
+    cur, cur_p = _set_logits(ctx, idx)
     lib.llama_sampler_apply(grmr,  cur_p)
     lib.llama_sampler_apply(chain, cur_p)
     assert cur_p.selected != -1, "no selected token during re-sampling - check your sampling configuration"
@@ -397,6 +340,22 @@ def _common_sampler_accept(grmr: llama_sampler_p, chain: llama_sampler_p, token:
     lib.llama_sampler_accept(chain, token)
 
 
+def _common_batch_clear(batch: llama_batch):
+    batch.n_tokens = 0
+
+
+def _common_batch_add(batch: llama_batch, id: llama_token, pos: llama_pos, seq_ids: list[llama_seq_id], logits: bool):
+    assert batch.seq_id[batch.n_tokens], "llama_batch size exceeded"
+    batch.token[batch.n_tokens] = id
+    batch.pos[batch.n_tokens] = pos
+    batch.n_seq_id[batch.n_tokens] = len(seq_ids)
+
+    for i in range(len(seq_ids)):
+        batch.seq_id[batch.n_tokens][i] = seq_ids[i]
+
+    batch.logits[batch.n_tokens] = logits
+    batch.n_tokens += 1
+
 #
 # llm
 #
@@ -410,14 +369,14 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
     context = context_init(model, options)
     sampler = sampler_init(model, options)
-    print(f'{sampler=}')
+    # print(f'{sampler=}')
 
     if options.grammar or options.json_schema:
         grammar_sampler = grammar_sampler_init(model, options)
     else:
         grammar_sampler = None
 
-    print(f'{grammar_sampler=}')
+    # print(f'{grammar_sampler=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -427,40 +386,63 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
 
-    # format messages if present
+    # format messages if present into prompt
     if options.messages:
         options.prompt = format_messages(tokenizer, options.messages, options)
 
-    # first batch
+    # tokenize prompt
     prompt_tokens: list[int] = tokenizer.encode(options.prompt)
     n_prompt_tokens: int = len(prompt_tokens)
-    _prompt_tokens = ffi.new('llama_token[]', prompt_tokens)
-    batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
+    # print(f'{n_prompt_tokens=}')
 
-    total_n_prompt_tokens: int = n_prompt_tokens
-    new_token_id: int
-    _new_prompt_tokens = None
+    # create a llama_batch
+    # we use this object to submit token data for decoding
+    n_batch: int = lib.llama_n_batch(context)
+    batch: llama_batch = lib.llama_batch_init(n_batch, 0, 1)
+    seq_ids: list[llama_seq_id] = [0]
+    n_past = 0
 
-    while True:
-        if options.predict == -1:
-            pass
-        elif options.predict == -2:
-            if check_context_size(context, batch):
-                break
-        elif total_n_prompt_tokens >= options.predict:
-            break
+    # evaluate the initial prompt
+    for i in range(0, n_prompt_tokens, n_batch):
+        _common_batch_clear(batch)
+        j = 0
+
+        while j < n_batch and i + j < n_prompt_tokens:
+            _common_batch_add(batch, prompt_tokens[i + j], n_past, seq_ids, False)
+            n_past += 1
+            j += 1
+
+        if i + n_batch >= n_prompt_tokens:
+            batch.logits[batch.n_tokens - 1] = True
 
         with lock:
-            if lib.llama_decode(context, batch):
-                break
+            r = lib.llama_decode(context, batch)
 
-        # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
-        # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
+        if r < 0:
+            raise Exception('llama_decode failed')
+        elif r > 0:
+            break
+
+        if i + n_batch >= n_prompt_tokens:
+            break
+
+        lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
+
+    # generate output
+    n_cur: int = n_prompt_tokens
+    n_ctx: int = lib.llama_n_ctx(context)
+    n_decode: int = 0
+
+    while n_cur < n_ctx and n_decode < options.predict:
         if grammar_sampler:
             new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
             _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
         else:
+            # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+            # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
             new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+
+        n_decode += 1
 
         if lib.llama_token_is_eog(model, new_token_id):
             break
@@ -468,16 +450,24 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
         piece: str = tokenizer.decode([new_token_id])
         yield piece
 
-        # next batch
-        if _new_prompt_tokens is not None:
-            ffi.release(_new_prompt_tokens)
+        _common_batch_clear(batch)
+        _common_batch_add(batch, new_token_id, n_past, seq_ids, True)
+        batch.logits[batch.n_tokens] = True
+        n_past += 1
+        n_cur += 1
 
-        _new_prompt_tokens = ffi.new('llama_token[]', [new_token_id])
-        batch = lib.llama_batch_get_one(_new_prompt_tokens, 1)
-        total_n_prompt_tokens += 1
+        with lock:
+            r = lib.llama_decode(context, batch)
 
-    if _new_prompt_tokens is not None:
-        ffi.release(_new_prompt_tokens)
+        if r < 0:
+            raise Exception('llama_decode failed')
+        elif r > 0:
+            break
+
+    # lib.llama_perf_sampler_print(sampler)
+    # lib.llama_perf_context_print(context)
+
+    lib.llama_batch_free(batch)
 
     if grammar_sampler:
         sampler_free(grammar_sampler)
@@ -485,9 +475,48 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     sampler_free(sampler)
     context_free(context)
 
+
 #
 # clip
 #
+"""
+def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
+    n_ctx: int = lib.llama_n_ctx(context)
+    n_ctx_used: int = lib.llama_get_kv_cache_used_cells(context)
+
+    if n_ctx_used + batch.n_tokens > n_ctx:
+        return 1
+
+    return 0
+
+
+def batch_get_one_and_decode(context: llama_context_p,
+                             prompt: str,
+                             n_batch: int,
+                             n_past: Optional[int_p],
+                             tokenizer: AutoTokenizer) -> Optional[llama_batch]:
+    prompt_tokens: list[int] = tokenizer.encode(prompt)
+    n_prompt_tokens: int = len(prompt_tokens)
+
+    for i in range(0, n_prompt_tokens, n_batch):
+        sub_prompt_tokens = prompt_tokens[i:i+n_batch]
+        n_sub_prompt_tokens = len(sub_prompt_tokens)
+        _prompt_tokens = ffi.new('llama_token[]', sub_prompt_tokens)
+        batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
+
+        if lib.llama_decode(context, batch):
+            ffi.release(_prompt_tokens)
+            return None
+
+        if n_past is not None:
+            n_past[0] += n_sub_prompt_tokens
+
+        ffi.release(_prompt_tokens)
+
+    return batch
+"""
+
+
 def clip_process_eval_image_embed(context: llama_context_p,
                                   clip_context: clip_ctx_p,
                                   embeds: llava_image_embed_p,
@@ -619,12 +648,12 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
             if lib.llama_decode(context, batch):
                 break
 
-        # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
-        # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
         if grammar_sampler:
             new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
             _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
         else:
+            # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+            # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
             new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
 
         if lib.llama_token_is_eog(model, new_token_id):
@@ -655,137 +684,7 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
 
 #
-# TODO: mllama, work in progress
+# backend
 #
-def mllama_process_eval_image_embed(context: llama_context_p,
-                                    mllama_context: mllama_ctx_p,
-                                    embeds: llava_image_embed_p,
-                                    n_batch: int,
-                                    n_past: int_p,
-                                    idx: int):
-    image_embed: void_p = lib.malloc(lib.mllama_n_embd_bytes(mllama_context))
-    image_embed: float_p = ffi.cast('float*', image_embed)
-
-    lib.memcpy(
-        image_embed,
-        embeds.embed + idx * lib.mllama_n_patches(mllama_context) * lib.mllama_n_embd(mllama_context),
-        lib.mllama_n_embd_bytes(mllama_context),
-    )
-
-    slice_embed: void_p = lib.malloc(ffi.sizeof('struct llava_image_embed'))
-    slice_embed: llava_image_embed_p = ffi.cast('struct llava_image_embed*', slice_embed)
-    slice_embed.embed = image_embed
-    slice_embed.n_image_pos = lib.mllama_n_patches(mllama_context)
-    lib.llava_eval_image_embed(context, slice_embed, n_batch, n_past)
-    lib.llava_image_embed_free(slice_embed)
-
-
-def mllama_completions(model: llama_model_p, options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str) or isinstance(options.messages, list)
-    assert isinstance(options.image, str)
-
-    if options.verbose:
-        lib.llama_log_set(ffi.NULL, ffi.NULL)
-    else:
-        lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
-
-    context = context_init(model, options)
-    sampler = sampler_init(model, options)
-    print(f'{sampler=}')
-
-    if options.grammar or options.json_schema:
-        grammar_sampler = grammar_sampler_init(model, options)
-    else:
-        grammar_sampler = None
-
-    print(f'{grammar_sampler=}')
-
-    # tokenizer
-    tokenizer: AutoTokenizer
-
-    if options.model.tokenizer_hf_repo:
-        tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
-    else:
-        tokenizer = get_tokenizer(options.model.creator_hf_repo)
-
-    # format messages if present
-    if options.messages:
-        options.prompt = format_messages(tokenizer, options.messages, options)
-
-    # llava - process image
-    n_past: int_p = ffi.new('int*', 0)
-    # embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(mllama_context, options.threads, options.image.encode())
-    idx: int = 0
-
-    messages = [{'role': 'user', 'content': '<image>'}]
-    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-    prompt = prompt[:prompt.index('<image>') + len('<image>')]
-    print('prompt [0]:', prompt)
-
-    batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
-    # mllama_process_eval_image_embed(context, mllama_context, embeds, options.batch_size, n_past, idx)
-    # idx += 1
-    batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
-
-    # lib.llava_image_embed_free(embeds)
-
-    # first batch
-    messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
-    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    prompt = prompt[prompt.index(f'\n{options.prompt}'):]
-    print('prompt [1]:', prompt)
-
-    prompt_tokens: list[int] = tokenizer.encode(prompt)
-    n_prompt_tokens: int = len(prompt_tokens)
-    _prompt_tokens = ffi.new('llama_token[]', prompt_tokens)
-    batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
-
-    total_n_prompt_tokens: int = n_prompt_tokens # FIXME: get from context
-    new_token_id: int
-    _new_prompt_tokens = None
-
-    while True:
-        if options.predict == -1:
-            pass
-        elif options.predict == -2:
-            if check_context_size(context, batch):
-                break
-        elif total_n_prompt_tokens >= options.predict:
-            break
-
-        with lock:
-            if lib.llama_decode(context, batch):
-                break
-
-        # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
-        # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
-        if grammar_sampler:
-            new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
-            _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
-        else:
-            new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
-
-        if lib.llama_token_is_eog(model, new_token_id):
-            break
-
-        token: str = tokenizer.decode(new_token_id)
-        yield token
-
-        # next batch
-        if _new_prompt_tokens is not None:
-            ffi.release(_new_prompt_tokens)
-
-        _new_prompt_tokens = ffi.new('llama_token[]', [new_token_id])
-        batch = lib.llama_batch_get_one(_new_prompt_tokens, 1)
-        total_n_prompt_tokens += 1
-
-    if _new_prompt_tokens is not None:
-        ffi.release(_new_prompt_tokens)
-
-    ffi.release(n_past)
-
-    if grammar_sampler:
-        sampler_free(grammar_sampler)
-
-    sampler_free(sampler)
-    context_free(context)
+backend_init()
+atexit.register(backend_free)

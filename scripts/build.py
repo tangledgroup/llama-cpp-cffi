@@ -22,7 +22,6 @@ REPLACE_CODE_ITEMS = {
     'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
     'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
     'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
-    'struct mllama_ctx *mllama_model_load_cpu(const char *fname, int verbosity);': '',
 }
 
 
@@ -331,25 +330,11 @@ def cleanup_code(source: str) -> str:
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/include/ggml.h', 'ggml_h_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cuda/ggml-cuda.cu', 'ggml_cuda_cu_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cuda/pad.cu', 'ggml_cuda_pad_cu_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cuda/pad.cuh', 'ggml_cuda_pad_cuh_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-metal/ggml-metal.m', 'ggml_metal_m_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-metal/ggml-metal.metal', 'ggml_metal_metal_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml.c', 'ggml_c_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
-
-    # ollama/mllama
-    subprocess.run(['git', 'clone', 'https://github.com/ollama/ollama.git'], check=True)
-    shutil.copyfile('./ollama/llama/mllama.cpp', './llama.cpp/examples/llava/mllama.cpp')
-    shutil.copyfile('./ollama/llama/mllama.h', './llama.cpp/examples/llava/mllama.h')
-    subprocess.run(['patch', './llama.cpp/examples/llava/mllama.cpp', 'mllama_cpp_6.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):
@@ -424,7 +409,6 @@ def build_cpu(*args, **kwargs):
         files=[
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
-            './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
             './llama.cpp/common/json-schema-to-grammar.h',
         ],
@@ -488,7 +472,6 @@ def build_cpu(*args, **kwargs):
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
-            #include "llava/mllama.h"
             #include "json-schema-to-grammar.h"
         ''',
         libraries=[
@@ -554,7 +537,6 @@ def build_vulkan_1_x(*args, **kwargs):
         files=[
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
-            './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
             './llama.cpp/common/json-schema-to-grammar.h',
         ],
@@ -619,7 +601,6 @@ def build_vulkan_1_x(*args, **kwargs):
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
-            #include "llava/mllama.h"
             #include "json-schema-to-grammar.h"
         ''',
         libraries=[
@@ -709,7 +690,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         files=[
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
-            './llama.cpp/examples/llava/mllama.h',
             './llama.cpp/include/llama.h',
             './llama.cpp/common/json-schema-to-grammar.h',
         ],
@@ -774,7 +754,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
-            #include "llava/mllama.h"
             #include "json-schema-to-grammar.h"
         ''',
         libraries=[
@@ -847,11 +826,11 @@ def build(*args, **kwargs):
         clean_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 
-    # cuda 12.6.3
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+    # # cuda 12.6.3
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':

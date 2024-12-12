@@ -12,9 +12,6 @@ def clean_llama_cpp():
     if not os.path.exists('./llama.cpp'):
         return
 
-    if not os.path.exists('./ollama'):
-        return
-
     subprocess.run([
         'make',
         '-C',
@@ -30,5 +27,4 @@ def clean():
     subprocess.run(['rm', '-fr', 'build'], check=True)
     subprocess.run(['rm', '-fr', 'dist'], check=True)
     subprocess.run(['rm', '-fr', 'llama.cpp'], check=True)
-    subprocess.run(['rm', '-fr', 'ollama'], check=True)
     subprocess.run(['rm', '-fr', 'wheelhouse'], check=True)

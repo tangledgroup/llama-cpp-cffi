@@ -1,15 +1,5 @@
 from threading import Thread
-from llama import Model, Options
-
-from llama import (
-    backend_init,
-    backend_free,
-    model_init,
-    model_free,
-    context_init,
-    context_free,
-    text_completions,
-)
+from llama import Model, Options, model_init, model_free, text_completions
 
 from demo_models import demo_models
 
@@ -25,8 +15,6 @@ def demo_low_level():
         prompt='Meaning of life is',
     )
 
-    backend_init()
-
     _model = model_init(options)
     print(f'{_model=}')
 
@@ -39,7 +27,6 @@ def demo_low_level():
     # input('Press any key to exit')
 
     model_free(_model)
-    backend_free()
 
 
 def demo_high_level():
@@ -48,13 +35,17 @@ def demo_high_level():
     model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
     # model_id = 'arcee-ai/arcee-lite'
+    # model_id = 'arcee-ai/Llama-3.1-SuperNova-Lite'
 
     model = demo_models[model_id]
-    model.init(predict=512, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
 
     # input('Press any key to generate')
 
-    for token in model.completions(prompt='Meaning of life is'):
+    prompt = 'Explain the meaning of life. ' * 100
+    prompt += 'Meaning of life is'
+
+    for token in model.completions(prompt=prompt):
         print(token, end='', flush=True)
 
     print()
@@ -70,7 +61,7 @@ def demo_high_level_chat():
     # model_id = 'arcee-ai/arcee-lite'
 
     model = demo_models[model_id]
-    model.init(predict=512, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -101,7 +92,7 @@ def demo_high_level_gpt():
     models = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(predict=512, gpu_layers=99)
+        model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -141,7 +132,7 @@ def demo_high_level_rwkv():
     models = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(predict=512, gpu_layers=99)
+        model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -181,11 +172,12 @@ def demo_high_level_json():
     # model_id = 'RWKV/v6-Finch-3B-HF'
 
     model = demo_models[model_id]
-    model.init(predict=512, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
 
     # input('Press any key to generate')
 
     prompt = 'Explain meaning of life in JSON format.\n'
+
     # json_schema = '{}'
     json_schema = '''{
       "type": "object",
@@ -213,7 +205,7 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    demo_low_level()
+    # demo_low_level()
     # demo_high_level()
     # demo_high_level_chat()
     # demo_high_level_gpt()

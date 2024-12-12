@@ -25,6 +25,11 @@ demo_models = {
         hf_repo='arcee-ai/arcee-lite-GGUF',
         hf_file='arcee-lite-Q4_K_M.gguf',
     ),
+    'arcee-ai/Llama-3.1-SuperNova-Lite': Model(
+        creator_hf_repo='arcee-ai/Llama-3.1-SuperNova-Lite',
+        hf_repo='arcee-ai/Llama-3.1-SuperNova-Lite-GGUF',
+        hf_file='supernova-lite-v1.Q5_K_M.gguf',
+    ),
     'HuggingFaceTB/SmolLM2-360M-Instruct': Model(
         creator_hf_repo='HuggingFaceTB/SmolLM2-360M-Instruct',
         hf_repo='bartowski/SmolLM2-360M-Instruct-GGUF',
