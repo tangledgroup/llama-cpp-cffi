@@ -22,7 +22,7 @@ __all__ = [
 
 import os
 import atexit
-from typing import Optional, Iterator, NewType
+from typing import Iterator, NewType
 from threading import Lock
 from weakref import WeakKeyDictionary
 
@@ -31,7 +31,7 @@ from huggingface_hub import hf_hub_download
 
 from .options import Options
 from .util import is_cuda_available, is_vulkan_available
-from .formatter import get_tokenizer, format_messages, VLM_TEMPLATE
+from .formatter import get_tokenizer, format_messages
 
 
 os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true')
@@ -113,15 +113,18 @@ lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
 
 
 def backend_init():
-    lib.llama_backend_init()
+    with lock:
+        lib.llama_backend_init()
 
 
 def backend_free():
-    lib.llama_backend_free()
+    with lock:
+        lib.llama_backend_free()
 
 
 def numa_init(numa: ggml_numa_strategy):
-    lib.llama_numa_init(numa)
+    with lock:
+        lib.llama_numa_init(numa)
 
 
 def model_init(options: Options) -> llama_model_p:
@@ -136,12 +139,15 @@ def model_init(options: Options) -> llama_model_p:
     model_params.use_mlock = options.mlock
     model_params.check_tensors = options.check_tensors
 
-    model: llama_model_p = lib.llama_load_model_from_file(model_path.encode(), model_params)
+    with lock:
+        model: llama_model_p = lib.llama_load_model_from_file(model_path.encode(), model_params)
+
     return model
 
 
 def model_free(model: llama_model_p):
-    lib.llama_free_model(model)
+    with lock:
+        lib.llama_free_model(model)
 
 
 def context_init(model: llama_model_p, options: Options) -> llama_context_p:
@@ -156,12 +162,15 @@ def context_init(model: llama_model_p, options: Options) -> llama_context_p:
     else:
         ctx_params.n_threads_batch = options.threads_batch
 
-    context = lib.llama_new_context_with_model(model, ctx_params)
+    with lock:
+        context: llama_context_p = lib.llama_new_context_with_model(model, ctx_params)
+
     return context
 
 
 def context_free(context: llama_context_p):
-    lib.llama_free(context)
+    with lock:
+        lib.llama_free(context)
 
 
 def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
@@ -253,17 +262,26 @@ def sampler_free(sampler: llama_sampler_p):
 
 def clip_init_context(options: Options) -> clip_ctx_p:
     mmproj_path: str = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.mmproj_hf_file)
-    clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), 0) # path, verbosity
+
+    with lock:
+        clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), 0) # path, verbosity
+
     return clip_context
 
 
 def clip_free_context(clip_context: clip_ctx_p):
-    lib.clip_free(clip_context)
+    with lock:
+        lib.clip_free(clip_context)
 
 
 #
 # util
 #
+def _llama_decode(ctx: llama_context_p, batch : llama_batch) -> int:
+    with lock:
+        return lib.llama_decode(ctx, batch)
+
+
 def _set_logits(ctx: llama_context_p, idx: int):
     logits: float_p = lib.llama_get_logits_ith(ctx, idx)
     n_vocab: int = lib.llama_n_vocab(lib.llama_get_model(ctx))
@@ -356,6 +374,38 @@ def _common_batch_add(batch: llama_batch, id: llama_token, pos: llama_pos, seq_i
     batch.logits[batch.n_tokens] = logits
     batch.n_tokens += 1
 
+
+def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: list[int], seq_ids: list[llama_seq_id], n_begin: int, n_past: int) -> int:
+    n_batch: int = lib.llama_n_batch(context)
+    n_prompt_tokens: int = len(prompt_tokens)
+
+    for i in range(n_begin, n_prompt_tokens, n_batch):
+        _common_batch_clear(batch)
+        j = 0
+
+        while j < n_batch and i + j < n_prompt_tokens:
+            _common_batch_add(batch, prompt_tokens[i + j], n_past, seq_ids, False)
+            n_past += 1
+            j += 1
+
+        if i + n_batch >= n_prompt_tokens:
+            batch.logits[batch.n_tokens - 1] = True
+
+        r = _llama_decode(context, batch)
+
+        if r < 0:
+            raise Exception('llama_decode failed')
+        elif r > 0:
+            break
+
+        if i + n_batch >= n_prompt_tokens:
+            break
+
+        lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
+
+    return n_past
+
+
 #
 # llm
 #
@@ -395,38 +445,14 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     n_prompt_tokens: int = len(prompt_tokens)
     # print(f'{n_prompt_tokens=}')
 
-    # create a llama_batch
-    # we use this object to submit token data for decoding
+    # create a llama_batch, we use this object to submit token data for decoding
     n_batch: int = lib.llama_n_batch(context)
     batch: llama_batch = lib.llama_batch_init(n_batch, 0, 1)
     seq_ids: list[llama_seq_id] = [0]
-    n_past = 0
+    n_past: int = 0
 
     # evaluate the initial prompt
-    for i in range(0, n_prompt_tokens, n_batch):
-        _common_batch_clear(batch)
-        j = 0
-
-        while j < n_batch and i + j < n_prompt_tokens:
-            _common_batch_add(batch, prompt_tokens[i + j], n_past, seq_ids, False)
-            n_past += 1
-            j += 1
-
-        if i + n_batch >= n_prompt_tokens:
-            batch.logits[batch.n_tokens - 1] = True
-
-        with lock:
-            r = lib.llama_decode(context, batch)
-
-        if r < 0:
-            raise Exception('llama_decode failed')
-        elif r > 0:
-            break
-
-        if i + n_batch >= n_prompt_tokens:
-            break
-
-        lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
+    n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, n_past, n_past)
 
     # generate output
     n_cur: int = n_prompt_tokens
@@ -456,8 +482,7 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
         n_past += 1
         n_cur += 1
 
-        with lock:
-            r = lib.llama_decode(context, batch)
+        r = _llama_decode(context, batch)
 
         if r < 0:
             raise Exception('llama_decode failed')
@@ -479,68 +504,56 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 #
 # clip
 #
-def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
-    n_ctx: int = lib.llama_n_ctx(context)
-    n_ctx_used: int = lib.llama_get_kv_cache_used_cells(context)
-
-    if n_ctx_used + batch.n_tokens > n_ctx:
-        return 1
-
-    return 0
+def _llava_image_embed_make_with_filename(ctx_clip: clip_ctx_p, n_threads: int, image_path: bytes) -> llava_image_embed_p:
+    with lock:
+        return lib.llava_image_embed_make_with_filename(ctx_clip, n_threads, image_path)
 
 
-def batch_get_one_and_decode(context: llama_context_p,
-                             prompt: str,
-                             n_batch: int,
-                             n_past: Optional[int_p],
-                             tokenizer: AutoTokenizer) -> Optional[llama_batch]:
-    prompt_tokens: list[int] = tokenizer.encode(prompt)
-    n_prompt_tokens: int = len(prompt_tokens)
-
-    for i in range(0, n_prompt_tokens, n_batch):
-        sub_prompt_tokens = prompt_tokens[i:i+n_batch]
-        n_sub_prompt_tokens = len(sub_prompt_tokens)
-        _prompt_tokens = ffi.new('llama_token[]', sub_prompt_tokens)
-        batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
-
-        if lib.llama_decode(context, batch):
-            ffi.release(_prompt_tokens)
-            return None
-
-        if n_past is not None:
-            n_past[0] += n_sub_prompt_tokens
-
-        ffi.release(_prompt_tokens)
-
-    return batch
+def _llava_image_embed_free(embed: llava_image_embed_p):
+    with lock:
+        lib.llava_image_embed_free(embed)
 
 
-def clip_process_eval_image_embed(context: llama_context_p,
-                                  clip_context: clip_ctx_p,
-                                  embeds: llava_image_embed_p,
-                                  n_batch: int,
-                                  n_past: int_p,
-                                  idx: int):
-    image_embed: void_p = lib.malloc(lib.clip_embd_nbytes(clip_context))
-    image_embed: float_p = ffi.cast('float*', image_embed)
+def _clip_process_eval_image_embed(context: llama_context_p,
+                                   clip_context: clip_ctx_p,
+                                   embeds: llava_image_embed_p,
+                                   n_past: int,
+                                   idx: int) -> int:
+    n_past_p: int_p = ffi.new('int[]', [n_past])
 
-    lib.memcpy(
-        image_embed,
-        embeds.embed + idx * lib.clip_n_patches(clip_context) * lib.clip_n_mmproj_embd(clip_context),
-        lib.clip_embd_nbytes(clip_context),
-    )
+    with lock:
+        n_batch: int = lib.llama_n_batch(context)
+        image_embed: void_p = lib.malloc(lib.clip_embd_nbytes(clip_context))
+        image_embed: float_p = ffi.cast('float*', image_embed)
 
-    slice_embed: void_p = lib.malloc(ffi.sizeof('struct llava_image_embed'))
-    slice_embed: llava_image_embed_p = ffi.cast('struct llava_image_embed*', slice_embed)
-    slice_embed.embed = image_embed
-    slice_embed.n_image_pos = lib.clip_n_patches(clip_context)
-    lib.llava_eval_image_embed(context, slice_embed, n_batch, n_past)
-    lib.llava_image_embed_free(slice_embed)
+        lib.memcpy(
+            image_embed,
+            embeds.embed + idx * lib.clip_n_patches(clip_context) * lib.clip_n_mmproj_embd(clip_context),
+            lib.clip_embd_nbytes(clip_context),
+        )
+
+        slice_embed: void_p = lib.malloc(ffi.sizeof('struct llava_image_embed'))
+        slice_embed: llava_image_embed_p = ffi.cast('struct llava_image_embed*', slice_embed)
+        slice_embed.embed = image_embed
+        slice_embed.n_image_pos = lib.clip_n_patches(clip_context)
+
+        lib.llava_eval_image_embed(context, slice_embed, n_batch, n_past_p)
+        lib.llava_image_embed_free(slice_embed)
+
+    n_past = n_past_p[0]
+    ffi.release(n_past_p)
+    return n_past
+
+
+def _clip_uhd_num_image_embeds_col(ctx_clip: clip_ctx_p) -> int:
+    with lock:
+        return lib.clip_uhd_num_image_embeds_col(ctx_clip)
 
 
 def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str) or isinstance(options.messages, list)
-    assert isinstance(options.image, str) or isinstance(options.messages, list)
+    assert isinstance(options.prompt, str)
+    assert isinstance(options.image, str)
+    assert options.messages is None
 
     if options.verbose:
         lib.llama_log_set(ffi.NULL, ffi.NULL)
@@ -567,85 +580,90 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
 
-    # format messages if present
-    if options.messages:
-        # options.chat_template = VLM_TEMPLATE
-        options.prompt = format_messages(tokenizer, options.messages, options)
-        print('options.prompt[0]', options.prompt)
+    # create a llama_batch, we use this object to submit token data for decoding
+    n_batch: int = lib.llama_n_batch(context)
+    batch: llama_batch = lib.llama_batch_init(n_batch, 0, 1)
+    seq_ids: list[llama_seq_id] = [0]
+    n_past: int = 0
+    idx: int = 0
+    prompt: str
+    prompt_tokens: list[int]
 
-    # llava - process image
-    with lock:
-        n_past: int_p = ffi.new('int*', 0)
-        embeds: llava_image_embed_p = lib.llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
-        idx: int = 0
+    # image embeddings
+    embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
 
-        messages = [{'role': 'user', 'content': '<image>'}]
-        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
-        # print('prompt [0]:', prompt)
-        prompt = prompt[:prompt.index('<image>') + len('<image>')]
-        # print('prompt [1]:', prompt)
+    # pre-embeds prompt
+    messages = [{'role': 'user', 'content': '<image>'}]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+    prompt = prompt[:prompt.index('<image>') + len('<image>')]
+    prompt_tokens = tokenizer.encode(prompt)
+    n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
-        batch = batch_get_one_and_decode(context, prompt, options.batch_size, n_past, tokenizer)
-        clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
-        idx += 1
-        batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
+    # embeds
+    n_past = _clip_process_eval_image_embed(context, clip_context, embeds, n_past, idx)
 
-        has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
-        # print(f'{has_minicpmv_projector=}')
+    idx += 1
 
-        if has_minicpmv_projector >= 2:
-            num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(clip_context)
+    # evaluate the post-embeds prompt
+    prompt = '</image>'
+    prompt_tokens = tokenizer.encode(prompt)
+    n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
-            if num_image_embeds > 1:
-                num_image_embeds_col = lib.clip_uhd_num_image_embeds_col(clip_context)
-                batch = batch_get_one_and_decode(context, '<slice>', options.batch_size, n_past, tokenizer)
-                i = 0
+    has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
+    # print(f'{has_minicpmv_projector=}')
 
-                while i < (num_image_embeds - 1) / num_image_embeds_col:
-                    j = 0
+    if has_minicpmv_projector >= 2:
+        num_image_embeds = embeds.n_image_pos / lib.clip_n_patches(clip_context)
 
-                    while j < num_image_embeds_col:
-                        batch = batch_get_one_and_decode(context, '<image>', options.batch_size, n_past, tokenizer)
-                        clip_process_eval_image_embed(context, clip_context, embeds, options.batch_size, n_past, idx)
-                        idx += 1
-                        batch = batch_get_one_and_decode(context, '</image>', options.batch_size, n_past, tokenizer)
-                        j += 1
+        if num_image_embeds > 1:
+            num_image_embeds_col = _clip_uhd_num_image_embeds_col(clip_context)
 
-                    batch = batch_get_one_and_decode(context, '\n', options.batch_size, n_past, tokenizer)
-                    i += 1
+            prompt = '<slice>'
+            prompt_tokens = tokenizer.encode(prompt)
+            n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+            i = 0
 
-                batch = batch_get_one_and_decode(context, '</slice>', options.batch_size, n_past, tokenizer)
+            while i < (num_image_embeds - 1) / num_image_embeds_col:
+                j = 0
 
-        lib.llava_image_embed_free(embeds)
+                while j < num_image_embeds_col:
+                    prompt = '<image>'
+                    prompt_tokens = tokenizer.encode(prompt)
+                    n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+                    n_past = _clip_process_eval_image_embed(context, clip_context, embeds, n_past, idx)
 
-    # first batch
-    messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
-    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    prompt = prompt[prompt.index(f'\n{options.prompt}'):]
-    # print('prompt [2]:', prompt)
+                    idx += 1
 
-    prompt_tokens: list[int] = tokenizer.encode(prompt)
-    n_prompt_tokens: int = len(prompt_tokens)
-    _prompt_tokens = ffi.new('llama_token[]', prompt_tokens)
-    batch: llama_batch = lib.llama_batch_get_one(_prompt_tokens, n_prompt_tokens)
+                    prompt = '</image>'
+                    prompt_tokens = tokenizer.encode(prompt)
+                    n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+                    j += 1
 
-    total_n_prompt_tokens: int = n_prompt_tokens # FIXME: get from context
-    new_token_id: int
-    _new_prompt_tokens = None
+                prompt = '\n'
+                prompt_tokens = tokenizer.encode(prompt)
+                n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+                i += 1
 
-    while True:
-        if options.predict == -1:
-            pass
-        elif options.predict == -2:
-            if check_context_size(context, batch):
-                break
-        elif total_n_prompt_tokens >= options.predict:
-            break
+            prompt = '</slice>'
+            prompt_tokens = tokenizer.encode(prompt)
+            n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
-        with lock:
-            if lib.llama_decode(context, batch):
-                break
+        _llava_image_embed_free(embeds)
 
+        # user prompt after image ebeds
+        messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        prompt = prompt[prompt.index(f'\n{options.prompt}'):]
+        prompt_tokens = tokenizer.encode(prompt)
+        n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+
+    # generate output
+    n_cur: int = n_past
+    n_ctx: int = lib.llama_n_ctx(context)
+    n_decode: int = 0
+    # print(f'{n_cur=} {n_ctx=} {n_decode=} {options.predict=}')
+
+    while n_cur < n_ctx and n_decode < options.predict:
         if grammar_sampler:
             new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
             _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
@@ -654,24 +672,34 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
             # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
             new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
 
+        n_decode += 1
+
         if lib.llama_token_is_eog(model, new_token_id):
+            if n_decode > 1:
+                break
+
+        if not lib.llama_token_is_eog(model, new_token_id):
+            piece: str = tokenizer.decode([new_token_id])
+            yield piece
+
+        # with lock:
+        _common_batch_clear(batch)
+        _common_batch_add(batch, new_token_id, n_past, seq_ids, True)
+        batch.logits[batch.n_tokens] = True
+        n_past += 1
+        n_cur += 1
+
+        r = _llama_decode(context, batch)
+
+        if r < 0:
+            raise Exception('llama_decode failed')
+        elif r > 0:
             break
 
-        token: str = tokenizer.decode(new_token_id)
-        yield token
+    # lib.llama_perf_sampler_print(sampler)
+    # lib.llama_perf_context_print(context)
 
-        # next batch
-        if _new_prompt_tokens is not None:
-            ffi.release(_new_prompt_tokens)
-
-        _new_prompt_tokens = ffi.new('llama_token[]', [new_token_id])
-        batch = lib.llama_batch_get_one(_new_prompt_tokens, 1)
-        total_n_prompt_tokens += 1
-
-    if _new_prompt_tokens is not None:
-        ffi.release(_new_prompt_tokens)
-
-    ffi.release(n_past)
+    lib.llama_batch_free(batch)
 
     if grammar_sampler:
         sampler_free(grammar_sampler)

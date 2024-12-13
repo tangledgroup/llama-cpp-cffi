@@ -68,8 +68,8 @@ demo_models = {
     ),
     'vikhyatk/moondream2': Model( # 1.87B
         creator_hf_repo='vikhyatk/moondream2',
-        hf_repo='vikhyatk/moondream2',
-        # hf_repo='moondream/moondream2-gguf',
+        # hf_repo='vikhyatk/moondream2',
+        hf_repo='moondream/moondream2-gguf',
         hf_file='moondream2-text-model-f16.gguf',
         mmproj_hf_file='moondream2-mmproj-f16.gguf',
     ),

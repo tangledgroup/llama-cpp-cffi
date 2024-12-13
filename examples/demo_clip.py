@@ -1,3 +1,4 @@
+import gc
 from threading import Thread
 from llama import Model, Options, model_init, model_free, clip_completions
 
@@ -16,16 +17,17 @@ def demo_low_level():
     options = Options(
         model=model,
         ctx_size=4 * 1024,
-        predict=2 * 1024,
+        predict=1024,
         temp=0.7,
         top_p=0.8,
         top_k=100,
+        repeat_penalty=1.05,
         # prompt='What is in the image?',
         prompt='What is in the image? Extract (OCR) all text from page as markdown.',
         # prompt='Extract (OCR) all text from page as markdown.',
         # image='examples/llama-1.png',
-        image='examples/llama-3.png',
-        # image='examples/llama-4.png',
+        # image='examples/llama-3.png',
+        image='examples/llama-4.png',
         gpu_layers=99,
     )
 
@@ -53,7 +55,15 @@ def demo_high_level_gpt():
     models = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=4 * 1024, predict=2 * 1024, gpu_layers=99)
+        model.init(
+            ctx_size=1 * 1024,
+            predict=512,
+            temp=0.7,
+            top_p=0.8,
+            top_k=100,
+            repeat_penalty=1.05,
+            gpu_layers=2,
+        )
 
     # input('Press any key to generate')
 
@@ -76,13 +86,10 @@ def demo_high_level_gpt():
             target=gen,
             args=[i, model],
             kwargs=dict(
-                temp=0.7,
-                top_p=0.8,
-                top_k=100,
-                repeat_penalty=1.05,
-                prompt='What is in the image? Extract (OCR) all text from page as markdown.',
-                # image='examples/llama-1.png',
-                image='examples/llama-3.png',
+                # prompt='Describe this image.',
+                prompt='What is in the image?',
+                image='examples/llama-1.png',
+                # image='examples/llama-3.png',
                 # image='examples/llama-4.png',
             ),
         )
@@ -103,7 +110,16 @@ def demo_high_level():
     model_id = 'openbmb/MiniCPM-V-2_6'
 
     model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, predict=2 * 1024, gpu_layers=99)
+
+    model.init(
+        ctx_size=4 * 1024,
+        predict=1024,
+        temp=0.7,
+        top_p=0.8,
+        top_k=100,
+        repeat_penalty=1.05,
+        gpu_layers=99,
+    )
 
     # input('Press any key to generate')
 
@@ -126,7 +142,16 @@ def demo_high_level_json():
     # model_id = 'openbmb/MiniCPM-V-2_6'
 
     model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, predict=2 * 1024, gpu_layers=99)
+
+    model.init(
+        ctx_size=4 * 1024,
+        predict=1024,
+        temp=0.7,
+        top_p=0.8,
+        top_k=100,
+        repeat_penalty=1.05,
+        gpu_layers=99,
+    )
 
     # input('Press any key to generate')
 
@@ -161,6 +186,13 @@ def demo_high_level_json():
 
 if __name__ == '__main__':
     demo_low_level()
+    gc.collect()
+
     demo_high_level_gpt()
+    gc.collect()
+
     demo_high_level()
+    gc.collect()
+
     demo_high_level_json()
+    gc.collect()

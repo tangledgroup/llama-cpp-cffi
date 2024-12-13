@@ -3,7 +3,8 @@
 ## v0.2.1
 
 Fixed:
-  - Batch "decode" process. Encode part is missing for encoder-decoder models.
+  - Batch "decode" process. NOTE: Encode part is missing for encoder-decoder models.
+  - Thread-safe calls to the most important functions of llama, llava, clip, ggml API.
 
 Removed:
   - `mllama_completions` for low-level function for Mllama-based VLMs

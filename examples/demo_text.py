@@ -1,3 +1,4 @@
+import gc
 from threading import Thread
 from llama import Model, Options, model_init, model_free, text_completions
 
@@ -206,8 +207,19 @@ def demo_high_level_json():
 
 if __name__ == '__main__':
     demo_low_level()
+    gc.collect()
+
     demo_high_level()
+    gc.collect()
+
     demo_high_level_chat()
+    gc.collect()
+
     demo_high_level_gpt()
+    gc.collect()
+
     demo_high_level_rwkv()
+    gc.collect()
+
     demo_high_level_json()
+    gc.collect()
