@@ -3,21 +3,21 @@
 @@ -985,6 +985,9 @@
  	$(DIR_COMMON)/build-info.o \
  	$(DIR_COMMON)/json-schema-to-grammar.o
- 
+
 +OBJ_LLAVA = \
 +
 +
  OBJ_ALL = $(OBJ_GGML) $(OBJ_LLAMA) $(OBJ_COMMON)
- 
+
  LIB_GGML   = $(LIB_PRE)ggml$(DSO_EXT)
 @@ -1386,7 +1389,9 @@
  	common/stb_image.h \
  	common/base64.hpp \
  	$(OBJ_ALL)
 -	$(CXX) $(CXXFLAGS) -static -fPIC -c $< -o $@ -Wno-cast-qual
-+	$(CXX) $(CXXFLAGS) -c examples/llava/llava.cpp -o examples/llava/llava.o
-+	$(CXX) $(CXXFLAGS) -c examples/llava/clip.cpp -o examples/llava/clip.o
++	$(CXX) $(CXXFLAGS) -DLLAVA_LOG_OFF -c examples/llava/llava.cpp -o examples/llava/llava.o
++	$(CXX) $(CXXFLAGS) -DLLAVA_LOG_OFF -c examples/llava/clip.cpp -o examples/llava/clip.o
 +	ar rcs $@ examples/llava/llava.o examples/llava/clip.o
- 
+
  llama-llava-cli: examples/llava/llava-cli.cpp \
  	examples/llava/llava.cpp \

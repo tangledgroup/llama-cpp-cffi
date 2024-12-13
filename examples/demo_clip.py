@@ -15,8 +15,8 @@ def demo_low_level():
 
     options = Options(
         model=model,
-        ctx_size=8 * 1024,
-        predict=1024,
+        ctx_size=4 * 1024,
+        predict=2 * 1024,
         temp=0.7,
         top_p=0.8,
         top_k=100,
@@ -53,7 +53,7 @@ def demo_high_level_gpt():
     models = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=1024, predict=1024, gpu_layers=8)
+        model.init(ctx_size=4 * 1024, predict=2 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -103,13 +103,12 @@ def demo_high_level():
     model_id = 'openbmb/MiniCPM-V-2_6'
 
     model = demo_models[model_id]
-    model.init(ctx_size=8 * 1024, predict=1024, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, predict=2 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
     prompt = 'What is in the image? Output in JSON format.\n'
-    # image = 'examples/llama-1.png'
-    image = 'examples/Capital-Call-Notice-pdf-0.jpg'
+    image = 'examples/llama-1.png'
 
     for token in model.completions(prompt=prompt, image=image):
         print(token, end='', flush=True)
@@ -127,7 +126,7 @@ def demo_high_level_json():
     # model_id = 'openbmb/MiniCPM-V-2_6'
 
     model = demo_models[model_id]
-    model.init(ctx_size=8 * 1024, predict=1024, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, predict=2 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -161,7 +160,7 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    # demo_low_level()
-    # demo_high_level_gpt()
+    demo_low_level()
+    demo_high_level_gpt()
     demo_high_level()
-    # demo_high_level_json()
+    demo_high_level_json()

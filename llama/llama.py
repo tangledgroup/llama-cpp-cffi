@@ -479,7 +479,6 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 #
 # clip
 #
-"""
 def check_context_size(context: llama_context_p, batch: llama_batch) -> int:
     n_ctx: int = lib.llama_n_ctx(context)
     n_ctx_used: int = lib.llama_get_kv_cache_used_cells(context)
@@ -514,7 +513,6 @@ def batch_get_one_and_decode(context: llama_context_p,
         ffi.release(_prompt_tokens)
 
     return batch
-"""
 
 
 def clip_process_eval_image_embed(context: llama_context_p,

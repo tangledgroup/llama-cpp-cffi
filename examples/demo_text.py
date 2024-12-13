@@ -205,9 +205,9 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    # demo_low_level()
-    # demo_high_level()
-    # demo_high_level_chat()
-    # demo_high_level_gpt()
-    # demo_high_level_rwkv()
+    demo_low_level()
+    demo_high_level()
+    demo_high_level_chat()
+    demo_high_level_gpt()
+    demo_high_level_rwkv()
     demo_high_level_json()
