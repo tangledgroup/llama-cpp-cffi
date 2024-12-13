@@ -33,18 +33,27 @@ def demo_low_level():
 def demo_high_level():
     # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
     # model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
-    model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
+    # model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
     # model_id = 'arcee-ai/arcee-lite'
-    # model_id = 'arcee-ai/Llama-3.1-SuperNova-Lite'
+    model_id = 'arcee-ai/Llama-3.1-SuperNova-Lite'
 
     model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, predict=1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
-    prompt = 'Explain the meaning of life. ' * 100
+    prompt = 'Explain the meaning of life. ' * 400
     prompt += 'Meaning of life is'
+
+    for token in model.completions(prompt=prompt):
+        print(token, end='', flush=True)
+
+    for token in model.completions(prompt=prompt):
+        print(token, end='', flush=True)
+
+    for token in model.completions(prompt=prompt):
+        print(token, end='', flush=True)
 
     for token in model.completions(prompt=prompt):
         print(token, end='', flush=True)
@@ -206,20 +215,20 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    demo_low_level()
-    gc.collect()
+    # demo_low_level()
+    # gc.collect()
 
     demo_high_level()
     gc.collect()
 
-    demo_high_level_chat()
-    gc.collect()
+    # demo_high_level_chat()
+    # gc.collect()
 
-    demo_high_level_gpt()
-    gc.collect()
+    # demo_high_level_gpt()
+    # gc.collect()
 
-    demo_high_level_rwkv()
-    gc.collect()
+    # demo_high_level_rwkv()
+    # gc.collect()
 
-    demo_high_level_json()
-    gc.collect()
+    # demo_high_level_json()
+    # gc.collect()

@@ -329,6 +329,7 @@ def cleanup_code(source: str) -> str:
 
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
+    subprocess.run(['git', 'reset', '--hard', 'c27ac678dd393af0da9b8acf10266e760c8a0912'], cwd='llama.cpp', check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)

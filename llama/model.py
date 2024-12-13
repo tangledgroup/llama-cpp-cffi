@@ -50,6 +50,12 @@ class Model:
         self._options = options
 
 
+    def free(self):
+        if self._model:
+            model_free(self._model)
+            self._model = None
+
+
     def completions(self, **options: Unpack[Options]) -> Iterator[str]:
         options = Options(
             **(asdict(self._options, recurse=False) | options),

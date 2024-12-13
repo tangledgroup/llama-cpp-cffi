@@ -401,7 +401,7 @@ def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: 
         if i + n_batch >= n_prompt_tokens:
             break
 
-        lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
+        # lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
 
     return n_past
 

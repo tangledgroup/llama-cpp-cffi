@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.2.2
+
+Added:
+  - `Model.free`
+
+Changed:
+  - Fixed revision of `llama.cpp` for all wheels
+  - `llama.cpp` revision `c27ac678dd393af0da9b8acf10266e760c8a0912`
+  - disabled `llama_kv_cache_seq_cp` in `_decode_tokens`
+
 ## v0.2.1
 
 Fixed:
