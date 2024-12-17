@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.2.6
+
+Changed:
+  - `llama.cpp` revision `5437d4aaf5132c879acda0bb67f2f8f71da4c9fe`
+
 ## v0.2.5
 
 Fixed:
@@ -13,7 +18,6 @@ Fixed:
 ## v0.2.3
 
 Changed:
-  - `llama.cpp` revision `4f51968aca049080dc77e26603aa0681ea77fe45`
   - `llama.cpp` revision `4f51968aca049080dc77e26603aa0681ea77fe45`
   - Build process now has global variable `LLAMA_CPP_GIT_REF`
 

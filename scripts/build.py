@@ -12,7 +12,7 @@ from cffi import FFI
 from clean import clean_llama_cpp, clean
 
 
-LLAMA_CPP_GIT_REF = '4f51968aca049080dc77e26603aa0681ea77fe45'
+LLAMA_CPP_GIT_REF = '5437d4aaf5132c879acda0bb67f2f8f71da4c9fe'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -830,10 +830,10 @@ def build(*args, **kwargs):
         build_vulkan_1_x(*args, **kwargs)
 
     # cuda 12.6.3
-    # if env.get('GGML_CUDA', '1') != '0':
-    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #         clean_llama_cpp()
-    #         build_linux_cuda_12_6_3(*args, **kwargs)
+    if env.get('GGML_CUDA', '1') != '0':
+        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+            clean_llama_cpp()
+            build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':
