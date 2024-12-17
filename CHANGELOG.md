@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v0.2.4
+
+Fixed:
+  - `sampler_init` because `llama_sampler_init_penalties` in `llama.cpp` changed its behaviour
+
+## v0.2.3
+
+Changed:
+  - `llama.cpp` revision `4f51968aca049080dc77e26603aa0681ea77fe45`
+  - `llama.cpp` revision `4f51968aca049080dc77e26603aa0681ea77fe45`
+  - Build process now has global variable `LLAMA_CPP_GIT_REF`
+
+Fixed:
+  - Issue with Phi 3.5 based models, `tokenizer.decode([new_token_id], clean_up_tokenization_spaces=False)`
+
 ## v0.2.2
 
 Added:

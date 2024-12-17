@@ -177,6 +177,13 @@ def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
     sampler_params: llama_sampler_chain_params = lib.llama_sampler_chain_default_params()
     sampler: llama_sampler_p = lib.llama_sampler_chain_init(sampler_params)
 
+    # common
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_logit_bias(
+        lib.llama_n_vocab(model),
+        0,
+        ffi.NULL,
+    ))
+
     # dry
     seq_breakers: char_p = ffi.new('char*[]', options.dry_sequence_breaker)
     num_breakers: int = len(options.dry_sequence_breaker)
@@ -192,23 +199,18 @@ def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
     ))
 
     # common
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_temp(options.temp))
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_k(options.top_k))
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_p(options.top_p, 1))
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_min_p(options.min_p, 1))
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_temp(options.temp))
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dist(options.seed))
 
     # penalties
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_penalties(
-        lib.llama_n_vocab(model),
-        lib.llama_token_eos(model),
-        lib.llama_token_nl(model),
         options.repeat_last_n,      # last n tokens to penalize (0 = disable penalty, -1 = context size)
         options.repeat_penalty,     # 1.0 = disabled
         options.frequency_penalty,  # 0.0 = disabled
         options.presence_penalty,   # 0.0 = disabled
-        options.penalize_nl,        # consider newlines as a repeatable token
-        options.ignore_eos,         # ignore the end-of-sequence token
     ))
 
     return sampler
@@ -473,7 +475,7 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
         if lib.llama_token_is_eog(model, new_token_id):
             break
 
-        piece: str = tokenizer.decode([new_token_id])
+        piece: str = tokenizer.decode([new_token_id], clean_up_tokenization_spaces=False)
         yield piece
 
         _common_batch_clear(batch)
@@ -679,7 +681,7 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
                 break
 
         if not lib.llama_token_is_eog(model, new_token_id):
-            piece: str = tokenizer.decode([new_token_id])
+            piece: str = tokenizer.decode([new_token_id], clean_up_tokenization_spaces=False)
             yield piece
 
         # with lock:
