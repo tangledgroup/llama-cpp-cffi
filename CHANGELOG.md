@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.2.5
+
+Fixed:
+  - Replaced `tokenizer.decode(new_token_id)` with custom `_common_token_to_piece(context, new_token_id, True)`
+
 ## v0.2.4
 
 Fixed:

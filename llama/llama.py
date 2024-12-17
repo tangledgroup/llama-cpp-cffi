@@ -377,6 +377,18 @@ def _common_batch_add(batch: llama_batch, id: llama_token, pos: llama_pos, seq_i
     batch.n_tokens += 1
 
 
+def _common_token_to_piece(ctx: llama_context_p, token: llama_token, special: bool) -> str:
+    model: llama_model_p = lib.llama_get_model(ctx)
+    _piece_size: int = 128
+    _piece: char_p = ffi.new('char[]', _piece_size)
+    n_chars: int = lib.llama_token_to_piece(model, token, _piece, _piece_size, 0, special)
+    piece: bytes = ffi.string(_piece)
+    piece = piece.decode()
+    piece = piece[:n_chars]
+    ffi.release(_piece)
+    return piece
+
+
 def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: list[int], seq_ids: list[llama_seq_id], n_begin: int, n_past: int) -> int:
     n_batch: int = lib.llama_n_batch(context)
     n_prompt_tokens: int = len(prompt_tokens)
@@ -444,6 +456,7 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
     # tokenize prompt
     prompt_tokens: list[int] = tokenizer.encode(options.prompt)
+    # print('!', tokenizer.decode(prompt_tokens))
     n_prompt_tokens: int = len(prompt_tokens)
     # print(f'{n_prompt_tokens=}')
 
@@ -460,6 +473,7 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     n_cur: int = n_prompt_tokens
     n_ctx: int = lib.llama_n_ctx(context)
     n_decode: int = 0
+    output_tokens: list[int] = []
 
     while n_cur < n_ctx and n_decode < options.predict:
         if grammar_sampler:
@@ -475,7 +489,10 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
         if lib.llama_token_is_eog(model, new_token_id):
             break
 
-        piece: str = tokenizer.decode([new_token_id], clean_up_tokenization_spaces=False)
+        output_tokens.append(new_token_id)
+
+        # piece: str = tokenizer.decode(new_token_id)
+        piece = _common_token_to_piece(context, new_token_id, True)
         yield piece
 
         _common_batch_clear(batch)
@@ -490,6 +507,11 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
             raise Exception('llama_decode failed')
         elif r > 0:
             break
+
+    # print()
+    # print('!!', tokenizer.decode(output_tokens))
+    # print('!!', output_tokens)
+    # print('!!', [(n, tokenizer.decode(n)) for n in output_tokens])
 
     # lib.llama_perf_sampler_print(sampler)
     # lib.llama_perf_context_print(context)
@@ -681,7 +703,8 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
                 break
 
         if not lib.llama_token_is_eog(model, new_token_id):
-            piece: str = tokenizer.decode([new_token_id], clean_up_tokenization_spaces=False)
+            # piece: str = tokenizer.decode(new_token_id)
+            piece = _common_token_to_piece(context, new_token_id, True)
             yield piece
 
         # with lock:

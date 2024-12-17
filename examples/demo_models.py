@@ -40,6 +40,24 @@ demo_models = {
         hf_repo='bartowski/SmolLM2-1.7B-Instruct-GGUF',
         hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
     ),
+    'microsoft/Phi-3.5-mini-instruct': Model(
+        creator_hf_repo='microsoft/Phi-3.5-mini-instruct',
+        hf_repo='bartowski/Phi-3.5-mini-instruct-GGUF',
+        hf_file='Phi-3.5-mini-instruct-Q4_K_M.gguf',
+        # hf_file='Phi-3.5-mini-instruct-Q6_K.gguf',
+        # hf_file='Phi-3.5-mini-instruct-Q8_0.gguf',
+    ),
+    'numind/NuExtract-1.5': Model(
+        creator_hf_repo='numind/NuExtract-1.5',
+        hf_repo='bartowski/NuExtract-v1.5-GGUF',
+        # hf_file='NuExtract-v1.5-Q4_K_M.gguf',
+        # hf_file='NuExtract-v1.5-Q6_K.gguf',
+        hf_file='NuExtract-v1.5-Q8_0.gguf',
+    ),
+
+    #
+    # rwkv
+    #
     'RWKV/v6-Finch-1B6-HF': Model(
         creator_hf_repo='RWKV/v6-Finch-1B6-HF',
         hf_repo='latestissue/rwkv-6-finch-1b6-gguf',

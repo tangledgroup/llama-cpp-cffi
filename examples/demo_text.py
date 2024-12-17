@@ -36,27 +36,30 @@ def demo_high_level():
     # model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
     # model_id = 'arcee-ai/arcee-lite'
-    model_id = 'arcee-ai/Llama-3.1-SuperNova-Lite'
+    # model_id = 'arcee-ai/Llama-3.1-SuperNova-Lite'
+    # model_id = 'microsoft/Phi-3.5-mini-instruct'
+    model_id = 'numind/NuExtract-1.5'
 
     model = demo_models[model_id]
     model.init(ctx_size=4 * 1024, predict=1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
-    prompt = 'Explain the meaning of life. ' * 400
+    # prompt = 'Explain the meaning of life. ' * 400
+    prompt = 'Explain the meaning of life. '
     prompt += 'Meaning of life is'
 
     for token in model.completions(prompt=prompt):
         print(token, end='', flush=True)
 
-    for token in model.completions(prompt=prompt):
-        print(token, end='', flush=True)
+    # for token in model.completions(prompt=prompt):
+    #     print(token, end='', flush=True)
 
-    for token in model.completions(prompt=prompt):
-        print(token, end='', flush=True)
+    # for token in model.completions(prompt=prompt):
+    #     print(token, end='', flush=True)
 
-    for token in model.completions(prompt=prompt):
-        print(token, end='', flush=True)
+    # for token in model.completions(prompt=prompt):
+    #     print(token, end='', flush=True)
 
     print()
 
@@ -175,9 +178,10 @@ def demo_high_level_rwkv():
 def demo_high_level_json():
     # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
     # model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
-    model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
+    # model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
     # model_id = 'arcee-ai/arcee-lite'
+    model_id = 'numind/NuExtract-1.5'
     # model_id = 'RWKV/v6-Finch-1B6-HF'
     # model_id = 'RWKV/v6-Finch-3B-HF'
 
