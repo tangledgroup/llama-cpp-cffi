@@ -42,8 +42,7 @@ class Model:
 
     def init(self, **options: Unpack[Options]):
         options = Options(
-            **options,
-            model=self,
+            **(options | {'model': self}),
         )
 
         self._model = model_init(options)

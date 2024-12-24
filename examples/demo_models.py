@@ -91,6 +91,12 @@ demo_models = {
         hf_file='moondream2-text-model-f16.gguf',
         mmproj_hf_file='moondream2-mmproj-f16.gguf',
     ),
+    'qnguyen3/nanoLLaVA-1.5': Model( # 1.05B
+        creator_hf_repo='qnguyen3/nanoLLaVA-1.5',
+        hf_repo='bee-kake/nanollava-1.5-gguf',
+        hf_file='nanollava-text-model-f16.gguf',
+        mmproj_hf_file='nanollava-mmproj-f16.gguf',
+    ),
     # 'liuhaotian/llava-v1.6-mistral-7b': Model( # 7.57B
     #     creator_hf_repo='liuhaotian/llava-v1.6-mistral-7b',
     #     hf_repo='cjpais/llava-1.6-mistral-7b-gguf',
@@ -98,16 +104,10 @@ demo_models = {
     #     mmproj_hf_file='mmproj-model-f16.gguf',
     #     tokenizer_hf_repo='mistralai/Mistral-7B-Instruct-v0.2',
     # ),
-    # 'BAAI/Bunny-v1_0-4B': Model(
-    #     creator_hf_repo='BAAI/Bunny-v1_0-4B',
-    #     hf_repo='BAAI/Bunny-v1_0-4B-gguf',
-    #     hf_file='ggml-model-Q4_K_M.gguf',
-    #     mmproj_hf_file='mmproj-model-f16.gguf',
-    # ),
-    # 'meta-llama/Llama-3.2-11B-Vision-Instruct': Model(
-    #     creator_hf_repo='meta-llama/Llama-3.2-11B-Vision-Instruct',
-    #     hf_repo='leafspark/Llama-3.2-11B-Vision-Instruct-GGUF',
-    #     hf_file='Llama-3.2-11B-Vision-Instruct.Q4_K_M.gguf',
-    #     mmproj_hf_file='Llama-3.2-11B-Vision-Instruct-mmproj.f16.gguf',
-    # )
+    'BAAI/Bunny-v1_0-4B': Model(
+        creator_hf_repo='BAAI/Bunny-v1_0-4B',
+        hf_repo='BAAI/Bunny-v1_0-4B-gguf',
+        hf_file='ggml-model-Q4_K_M.gguf',
+        mmproj_hf_file='mmproj-model-f16.gguf',
+    ),
 }

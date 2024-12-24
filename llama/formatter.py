@@ -246,8 +246,8 @@ def get_tokenizer(model_id: str) -> AutoTokenizer:
     return tokenizer
 
 
-def format_messages(tokenizer: AutoTokenizer, messages: list[dict], options: Options) -> str:
-    if options.chat_template:
+def format_messages(tokenizer: AutoTokenizer, messages: list[dict], options: Options | None) -> str:
+    if options and options.chat_template:
         tokenizer.chat_template = options.chat_template
         text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
     else:

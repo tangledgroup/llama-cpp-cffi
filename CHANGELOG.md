@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.2.7
+
+Changed:
+  - In `format_messages`, optional `options` argument
+  - `llama.cpp` revision `081b29bd2a3d91e7772e3910ce223dd63b8d7d26`
+
 ## v0.2.6
 
 Changed:

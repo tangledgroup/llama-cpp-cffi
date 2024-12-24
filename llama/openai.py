@@ -1,26 +1,16 @@
 __all__ = ['openai_routes', 'v1_chat_completions', 'build_app']
 
 import json
-import asyncio
 from pprint import pprint
-from typing import AsyncIterator
 
 from aiohttp import web
 
-from .formatter import get_config, AutoConfig
-from .llama_cli import llama_generate
+# from .formatter import get_config, AutoConfig
 from .model import Model
 from .options import Options
-from .util import is_cuda_available
 
 
 openai_routes = web.RouteTableDef()
-
-
-async def generate_response(options: Options) -> AsyncIterator[str]:
-    for chunk in llama_generate(options):
-        yield chunk
-        await asyncio.sleep(0.0)
 
 
 async def v1_chat_completions(request):
@@ -128,7 +118,7 @@ async def v1_chat_completions(request):
         return response
     else:
         full_response = ''.join([chunk async for chunk in generate_response(options)])
-        
+
         return web.json_response({
             'choices': [{
                 'message': {'content': full_response},

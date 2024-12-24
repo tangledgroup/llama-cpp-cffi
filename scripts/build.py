@@ -12,7 +12,7 @@ from cffi import FFI
 from clean import clean_llama_cpp, clean
 
 
-LLAMA_CPP_GIT_REF = '5437d4aaf5132c879acda0bb67f2f8f71da4c9fe'
+LLAMA_CPP_GIT_REF = '30caac3a68a54de8396b21e20ba972554c587230'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -333,11 +333,11 @@ def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['git', 'reset', '--hard', LLAMA_CPP_GIT_REF], cwd='llama.cpp', check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
+    # subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
+    # subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
+    # subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):
@@ -449,6 +449,7 @@ def build_cpu(*args, **kwargs):
         'libllava.a',
         'libcommon.a',
         'LLAMA_MAKEFILE=1',
+        # 'LLAMA_DEBUG=0', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
         'GGML_NO_OPENMP=1',
         *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
     ], check=True, env=env)
@@ -488,6 +489,7 @@ def build_cpu(*args, **kwargs):
             '-g',
             '-fPIC',
             '-DLLAMA_SHARED',
+            # '-DNDEBUG', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -577,6 +579,7 @@ def build_vulkan_1_x(*args, **kwargs):
         'libllava.a',
         'libcommon.a',
         'LLAMA_MAKEFILE=1',
+        # 'LLAMA_DEBUG=0', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
         'GGML_NO_OPENMP=1',
         'GGML_VULKAN=1',
         *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
@@ -618,6 +621,7 @@ def build_vulkan_1_x(*args, **kwargs):
             '-g',
             '-fPIC',
             '-DLLAMA_SHARED',
+            # '-DNDEBUG', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -730,6 +734,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         'libllava.a',
         'libcommon.a',
         'LLAMA_MAKEFILE=1',
+        # 'LLAMA_DEBUG=0', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
         'GGML_NO_OPENMP=1',
         'GGML_CUDA=1',
         *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
@@ -780,6 +785,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             '-g',
             '-fPIC',
             '-DLLAMA_SHARED',
+            # '-DNDEBUG', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -830,10 +836,10 @@ def build(*args, **kwargs):
         build_vulkan_1_x(*args, **kwargs)
 
     # cuda 12.6.3
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':

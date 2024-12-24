@@ -48,7 +48,8 @@ def demo_low_level():
 
 def demo_high_level_gpt():
     models_ids = [
-        'vikhyatk/moondream2',
+        # 'vikhyatk/moondream2',
+        'openbmb/MiniCPM-V-2_6',
         'openbmb/MiniCPM-V-2_6',
     ]
 
@@ -56,7 +57,7 @@ def demo_high_level_gpt():
 
     for model in models:
         model.init(
-            ctx_size=1 * 1024,
+            ctx_size=4 * 1024,
             predict=512,
             temp=0.7,
             top_p=0.8,
@@ -86,8 +87,8 @@ def demo_high_level_gpt():
             target=gen,
             args=[i, model],
             kwargs=dict(
-                # prompt='Describe this image.',
-                prompt='What is in the image?',
+                prompt='Describe this image.',
+                # prompt='What is in the image?',
                 image='examples/llama-1.png',
                 # image='examples/llama-3.png',
                 # image='examples/llama-4.png',
@@ -107,6 +108,7 @@ def demo_high_level_gpt():
 
 def demo_high_level():
     # model_id = 'vikhyatk/moondream2'
+    # model_id = 'qnguyen3/nanoLLaVA-1.5'
     model_id = 'openbmb/MiniCPM-V-2_6'
 
     model = demo_models[model_id]
@@ -125,6 +127,7 @@ def demo_high_level():
 
     prompt = 'What is in the image? Output in JSON format.\n'
     image = 'examples/llama-1.png'
+    # image = 'examples/llama-4.png'
 
     for token in model.completions(prompt=prompt, image=image):
         print(token, end='', flush=True)
@@ -138,8 +141,8 @@ def demo_high_level():
 
 
 def demo_high_level_json():
-    model_id = 'vikhyatk/moondream2'
-    # model_id = 'openbmb/MiniCPM-V-2_6'
+    # model_id = 'vikhyatk/moondream2'
+    model_id = 'openbmb/MiniCPM-V-2_6'
 
     model = demo_models[model_id]
 

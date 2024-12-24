@@ -129,7 +129,7 @@ def numa_init(numa: ggml_numa_strategy):
 
 def model_init(options: Options) -> llama_model_p:
     model_path = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.hf_file)
-    # print(f'{model_path=}')
+    print(f'{model_path=}')
 
     model_params: llama_model_params = lib.llama_model_default_params()
     model_params.n_gpu_layers = options.gpu_layers
@@ -263,10 +263,12 @@ def sampler_free(sampler: llama_sampler_p):
 
 
 def clip_init_context(options: Options) -> clip_ctx_p:
+    assert options.ctx_size >= 2048
     mmproj_path: str = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.mmproj_hf_file)
+    print(f'{mmproj_path=}')
 
     with lock:
-        clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), 0) # path, verbosity
+        clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), 1) # path, verbosity
 
     return clip_context
 
@@ -530,7 +532,11 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 #
 def _llava_image_embed_make_with_filename(ctx_clip: clip_ctx_p, n_threads: int, image_path: bytes) -> llava_image_embed_p:
     with lock:
-        return lib.llava_image_embed_make_with_filename(ctx_clip, n_threads, image_path)
+        # return lib.llava_image_embed_make_with_filename(ctx_clip, n_threads, image_path)
+        embed: llava_image_embed_p = lib.llava_image_embed_make_with_filename(ctx_clip, n_threads, image_path)
+
+    print(f'{embed=}')
+    return embed
 
 
 def _llava_image_embed_free(embed: llava_image_embed_p):
@@ -604,6 +610,12 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     else:
         tokenizer = get_tokenizer(options.model.creator_hf_repo)
 
+    # image embeddings
+    embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
+    assert embeds != ffi.NULL
+    # print(f'{embeds=}')
+    # return
+
     # create a llama_batch, we use this object to submit token data for decoding
     n_batch: int = lib.llama_n_batch(context)
     batch: llama_batch = lib.llama_batch_init(n_batch, 0, 1)
@@ -612,9 +624,6 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     idx: int = 0
     prompt: str
     prompt_tokens: list[int]
-
-    # image embeddings
-    embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
 
     # pre-embeds prompt
     messages = [{'role': 'user', 'content': '<image>'}]
