@@ -1,27 +1,35 @@
 import gc
 from threading import Thread
-from llama import Model, Options, model_init, model_free, text_completions
+from llama import Model, ModelOptions, model_init, model_free, text_completions
 
 from demo_models import demo_models
+from llama.options import CompletionsOptions
 
 
 def demo_low_level():
     model_id: str = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     model: Model = demo_models[model_id]
+    assert model.options
 
-    options = Options(
-        model=model,
-        predict=512,
+    model_options = ModelOptions(
+        creator_hf_repo=model.options.creator_hf_repo,
+        hf_repo=model.options.hf_repo,
+        hf_file=model.options.hf_file,
+        mmproj_hf_file=model.options.mmproj_hf_file,
+        tokenizer_hf_repo=model.options.tokenizer_hf_repo,
         gpu_layers=99,
+    )
+
+    completions_options = CompletionsOptions(
         prompt='Meaning of life is',
     )
 
-    _model = model_init(options)
+    _model = model_init(model_options)
     print(f'{_model=}')
 
     # input('Press any key to generate')
 
-    for token in text_completions(_model, options):
+    for token in text_completions(_model, model_options, completions_options):
         print(token, end='', flush=True)
 
     print()
@@ -32,16 +40,16 @@ def demo_low_level():
 
 def demo_high_level():
     # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
-    # model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
+    model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
     # model_id = 'arcee-ai/arcee-lite'
     # model_id = 'arcee-ai/Llama-3.1-SuperNova-Lite'
     # model_id = 'microsoft/Phi-3.5-mini-instruct'
-    model_id = 'numind/NuExtract-1.5'
+    # model_id = 'numind/NuExtract-1.5'
 
     model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, predict=1024, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -49,16 +57,16 @@ def demo_high_level():
     prompt = 'Explain the meaning of life. '
     prompt += 'Meaning of life is'
 
-    for token in model.completions(prompt=prompt):
+    for token in model.completions(prompt=prompt, predict=1024):
         print(token, end='', flush=True)
 
-    # for token in model.completions(prompt=prompt):
+    # for token in model.completions(prompt=prompt, predict=1024):
     #     print(token, end='', flush=True)
 
-    # for token in model.completions(prompt=prompt):
+    # for token in model.completions(prompt=prompt, predict=1024):
     #     print(token, end='', flush=True)
 
-    # for token in model.completions(prompt=prompt):
+    # for token in model.completions(prompt=prompt, predict=1024):
     #     print(token, end='', flush=True)
 
     print()
@@ -74,7 +82,7 @@ def demo_high_level_chat():
     # model_id = 'arcee-ai/arcee-lite'
 
     model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -85,7 +93,7 @@ def demo_high_level_chat():
         {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
     ]
 
-    for token in model.completions(messages=messages):
+    for token in model.completions(messages=messages, predict=512):
         print(token, end='', flush=True)
 
     print()
@@ -105,7 +113,7 @@ def demo_high_level_gpt():
     models = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
+        model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -124,7 +132,7 @@ def demo_high_level_gpt():
     threads = []
 
     for i, model in enumerate(models):
-        t = Thread(target=gen, args=[i, model], kwargs=dict(prompt='Meaning of life is'))
+        t = Thread(target=gen, args=[i, model], kwargs=dict(prompt='Meaning of life is', predict=512))
         threads.append(t)
 
     for t in threads:
@@ -145,7 +153,7 @@ def demo_high_level_rwkv():
     models = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
+        model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -163,7 +171,7 @@ def demo_high_level_rwkv():
     threads = []
 
     for i, model in enumerate(models):
-        t = Thread(target=gen, args=[i, model], kwargs=dict(prompt='Meaning of life is'))
+        t = Thread(target=gen, args=[i, model], kwargs=dict(prompt='Meaning of life is', predict=512))
         threads.append(t)
 
     for t in threads:
@@ -177,16 +185,16 @@ def demo_high_level_rwkv():
 
 def demo_high_level_json():
     # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
-    # model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
+    model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-360M-Instruct'
     # model_id = 'HuggingFaceTB/SmolLM2-1.7B-Instruct'
     # model_id = 'arcee-ai/arcee-lite'
-    model_id = 'numind/NuExtract-1.5'
+    # model_id = 'numind/NuExtract-1.5'
     # model_id = 'RWKV/v6-Finch-1B6-HF'
     # model_id = 'RWKV/v6-Finch-3B-HF'
 
     model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, predict=512, gpu_layers=99)
+    model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -210,7 +218,7 @@ def demo_high_level_json():
       "additionalProperties": false
     }'''
 
-    for token in model.completions(prompt=prompt, json_schema=json_schema):
+    for token in model.completions(prompt=prompt, predict=512, json_schema=json_schema):
         print(token, end='', flush=True)
 
     print()
@@ -219,20 +227,20 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    # demo_low_level()
-    # gc.collect()
+    demo_low_level()
+    gc.collect()
 
     demo_high_level()
     gc.collect()
 
-    # demo_high_level_chat()
-    # gc.collect()
+    demo_high_level_chat()
+    gc.collect()
 
-    # demo_high_level_gpt()
-    # gc.collect()
+    demo_high_level_gpt()
+    gc.collect()
 
-    # demo_high_level_rwkv()
-    # gc.collect()
+    demo_high_level_rwkv()
+    gc.collect()
 
-    # demo_high_level_json()
-    # gc.collect()
+    demo_high_level_json()
+    gc.collect()

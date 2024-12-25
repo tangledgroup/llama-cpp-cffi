@@ -21,6 +21,7 @@ __all__ = [
 ]
 
 import os
+import json
 import atexit
 from typing import Iterator, TypeAlias
 from threading import Lock
@@ -29,7 +30,7 @@ from weakref import WeakKeyDictionary
 from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 
-from .options import Options
+from .options import ModelOptions, CompletionsOptions
 from .util import is_cuda_available, is_vulkan_available
 from .formatter import get_tokenizer, format_messages
 
@@ -127,17 +128,17 @@ def numa_init(numa: ggml_numa_strategy):
         lib.llama_numa_init(numa)
 
 
-def model_init(options: Options) -> llama_model_p:
-    model_path = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.hf_file)
+def model_init(model_options: ModelOptions) -> llama_model_p:
+    model_path = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.hf_file)
     print(f'{model_path=}')
 
     model_params: llama_model_params = lib.llama_model_default_params()
-    model_params.n_gpu_layers = options.gpu_layers
-    # model_params.split_mode = options.split_mode # FIXME: check Options
-    model_params.main_gpu = options.main_gpu
-    model_params.use_mmap = not options.no_mmap
-    model_params.use_mlock = options.mlock
-    model_params.check_tensors = options.check_tensors
+    model_params.n_gpu_layers = model_options.gpu_layers
+    # model_params.split_mode = model_options.split_mode # FIXME: check Options
+    model_params.main_gpu = model_options.main_gpu
+    model_params.use_mmap = not model_options.no_mmap # TODO: use exact field names like in structs/API
+    model_params.use_mlock = model_options.mlock
+    model_params.check_tensors = model_options.check_tensors
 
     with lock:
         model: llama_model_p = lib.llama_load_model_from_file(model_path.encode(), model_params)
@@ -150,17 +151,18 @@ def model_free(model: llama_model_p):
         lib.llama_free_model(model)
 
 
-def context_init(model: llama_model_p, options: Options) -> llama_context_p:
+def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_context_p:
     ctx_params: llama_context_params = lib.llama_context_default_params()
-    ctx_params.n_ctx = options.ctx_size
-    ctx_params.n_batch = options.batch_size
-    ctx_params.n_ubatch = options.ubatch_size
-    ctx_params.n_threads = options.threads
+    ctx_params.n_ctx = model_options.ctx_size # TODO: use exact field names like in structs/API
+    ctx_params.n_batch = model_options.batch_size
+    ctx_params.n_ubatch = model_options.ubatch_size
+    ctx_params.n_threads = model_options.threads
 
-    if options.threads_batch is None:
-        ctx_params.n_threads_batch = options.threads
+    # TODO: use exact field names like in structs/API
+    if model_options.threads_batch is None:
+        ctx_params.n_threads_batch = model_options.threads
     else:
-        ctx_params.n_threads_batch = options.threads_batch
+        ctx_params.n_threads_batch = model_options.threads_batch
 
     with lock:
         context: llama_context_p = lib.llama_new_context_with_model(model, ctx_params)
@@ -173,7 +175,7 @@ def context_free(context: llama_context_p):
         lib.llama_free(context)
 
 
-def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
+def sampler_init(model: llama_model_p, completions_options: CompletionsOptions) -> llama_sampler_p:
     sampler_params: llama_sampler_chain_params = lib.llama_sampler_chain_default_params()
     sampler: llama_sampler_p = lib.llama_sampler_chain_init(sampler_params)
 
@@ -185,44 +187,52 @@ def sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
     ))
 
     # dry
-    seq_breakers: char_p = ffi.new('char*[]', options.dry_sequence_breaker)
-    num_breakers: int = len(options.dry_sequence_breaker)
+    seq_breakers: char_p = ffi.new('char*[]', completions_options.dry_sequence_breaker)
+    num_breakers: int = len(completions_options.dry_sequence_breaker)
 
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dry(
         model,
-        options.dry_multiplier,
-        options.dry_base,
-        options.dry_allowed_length,
-        options.dry_penalty_last_n,
+        completions_options.dry_multiplier,
+        completions_options.dry_base,
+        completions_options.dry_allowed_length,
+        completions_options.dry_penalty_last_n,
         seq_breakers,
         num_breakers,
     ))
 
     # common
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_k(options.top_k))
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_p(options.top_p, 1))
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_min_p(options.min_p, 1))
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_temp(options.temp))
-    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dist(options.seed))
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_k(completions_options.top_k))
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_top_p(completions_options.top_p, 1))
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_min_p(completions_options.min_p, 1))
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_temp(completions_options.temp))
+    lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dist(completions_options.seed))
 
     # penalties
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_penalties(
-        options.repeat_last_n,      # last n tokens to penalize (0 = disable penalty, -1 = context size)
-        options.repeat_penalty,     # 1.0 = disabled
-        options.frequency_penalty,  # 0.0 = disabled
-        options.presence_penalty,   # 0.0 = disabled
+        completions_options.repeat_last_n,      # last n tokens to penalize (0 = disable penalty, -1 = context size)
+        completions_options.repeat_penalty,     # 1.0 = disabled
+        completions_options.frequency_penalty,  # 0.0 = disabled
+        completions_options.presence_penalty,   # 0.0 = disabled
     ))
 
     return sampler
 
 
-def grammar_sampler_init(model: llama_model_p, options: Options) -> llama_sampler_p:
+def grammar_sampler_init(model: llama_model_p, completions_options: CompletionsOptions) -> llama_sampler_p:
     # grammar
-    if options.grammar:
-        grammar_str: char_p = ffi.new('char[]', options.grammar.encode())
-        grammar_root: char_p = ffi.new('char[]', b'root')
-    elif options.json_schema:
-        if options.json_schema == '{}':
+    grammar: bytes
+    grammar_str: char_p
+    grammar_root: char_p
+
+    if completions_options.grammar:
+        if isinstance(completions_options.grammar, str):
+            grammar = completions_options.grammar.encode()
+        elif isinstance(completions_options.grammar, str):
+            grammar = completions_options.grammar
+        else:
+            raise ValueError(f'unsupported value grammar={completions_options.grammar}')
+    elif completions_options.json_schema:
+        if completions_options.json_schema in ('{}', b'{}', {}):
             grammar = r'''
                 array ::= "[" space ( value ("," space value)* )? "]" space
                 boolean ::= ("true" | "false") space
@@ -236,18 +246,29 @@ def grammar_sampler_init(model: llama_model_p, options: Options) -> llama_sample
                 string ::= "\"" char* "\"" space
                 value ::= object | array | string | number | boolean | null
                 root ::= object
-            '''
+            '''.encode()
         else:
-            _c_value: char_p = ffi.new('char[]', options.json_schema.encode())
+            json_schema: bytes
+
+            if isinstance(completions_options.json_schema, str):
+                json_schema = completions_options.json_schema.encode()
+            elif isinstance(completions_options.json_schema, bytes):
+                json_schema = completions_options.json_schema
+            elif isinstance(completions_options.json_schema, dict):
+                json_schema = json.dumps(completions_options.json_schema).encode()
+            else:
+                raise ValueError(f'unsupported value json_schema={completions_options.json_schema}')
+
+            _c_value: char_p = ffi.new('char[]', json_schema)
             _grammar: char_p = lib.llama_json_schema_to_grammar(_c_value)
-            grammar: str = ffi.string(_grammar).decode()
+            grammar = ffi.string(_grammar)
             lib.free(_grammar)
             ffi.release(_c_value)
-            # print('grammar:')
-            # print(grammar)
+    else:
+        raise ValueError('either grammar or json_schema is required')
 
-        grammar_str: char_p = ffi.new('char[]', grammar.encode())
-        grammar_root: char_p = ffi.new('char[]', b'root')
+    grammar_str = ffi.new('char[]', grammar)
+    grammar_root = ffi.new('char[]', b'root')
 
     grmr: llama_sampler_p = lib.llama_sampler_init_grammar(
         model,
@@ -262,13 +283,15 @@ def sampler_free(sampler: llama_sampler_p):
     lib.llama_sampler_free(sampler)
 
 
-def clip_init_context(options: Options) -> clip_ctx_p:
-    assert options.ctx_size >= 2048
-    mmproj_path: str = hf_hub_download(repo_id=options.model.hf_repo, filename=options.model.mmproj_hf_file)
+def clip_init_context(model_options: ModelOptions) -> clip_ctx_p:
+    assert model_options.ctx_size >= 2048
+    assert model_options.mmproj_hf_file
+    mmproj_path: str | bytes = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.mmproj_hf_file)
     print(f'{mmproj_path=}')
 
     with lock:
-        clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), 1) # path, verbosity
+        # clip_model_load(path, verbosity)
+        clip_context: clip_ctx_p = lib.clip_model_load(mmproj_path.encode(), model_options.verbose)
 
     return clip_context
 
@@ -384,8 +407,10 @@ def _common_token_to_piece(ctx: llama_context_p, token: llama_token, special: bo
     _piece_size: int = 128
     _piece: char_p = ffi.new('char[]', _piece_size)
     n_chars: int = lib.llama_token_to_piece(model, token, _piece, _piece_size, 0, special)
-    piece: bytes = ffi.string(_piece)
+    piece: bytes | str = ffi.string(_piece)
+    assert isinstance(piece, bytes)
     piece = piece.decode()
+    assert isinstance(piece, str)
     piece = piece[:n_chars]
     ffi.release(_piece)
     return piece
@@ -425,20 +450,21 @@ def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: 
 #
 # llm
 #
-def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str) or isinstance(options.messages, list)
+def text_completions(model: llama_model_p, model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
+    assert isinstance(completions_options.prompt, str) or isinstance(completions_options.messages, list)
 
-    if options.verbose:
+    if completions_options.verbose:
+        # default llama.cpp logger
         lib.llama_log_set(ffi.NULL, ffi.NULL)
     else:
         lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
 
-    context = context_init(model, options)
-    sampler = sampler_init(model, options)
+    context = context_init(model, model_options)
+    sampler = sampler_init(model, completions_options)
     # print(f'{sampler=}')
 
-    if options.grammar or options.json_schema:
-        grammar_sampler = grammar_sampler_init(model, options)
+    if completions_options.grammar or completions_options.json_schema:
+        grammar_sampler = grammar_sampler_init(model, completions_options)
     else:
         grammar_sampler = None
 
@@ -447,17 +473,21 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     # tokenizer
     tokenizer: AutoTokenizer
 
-    if options.model.tokenizer_hf_repo:
-        tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
+    if model_options.tokenizer_hf_repo:
+        tokenizer = get_tokenizer(model_options.tokenizer_hf_repo)
     else:
-        tokenizer = get_tokenizer(options.model.creator_hf_repo)
+        tokenizer = get_tokenizer(model_options.creator_hf_repo)
 
     # format messages if present into prompt
-    if options.messages:
-        options.prompt = format_messages(tokenizer, options.messages, options)
+    if completions_options.messages:
+        completions_options.prompt = format_messages(
+            tokenizer,
+            completions_options.messages,
+            completions_options,
+        )
 
     # tokenize prompt
-    prompt_tokens: list[int] = tokenizer.encode(options.prompt)
+    prompt_tokens: list[int] = tokenizer.encode(completions_options.prompt) # type: ignore
     # print('!', tokenizer.decode(prompt_tokens))
     n_prompt_tokens: int = len(prompt_tokens)
     # print(f'{n_prompt_tokens=}')
@@ -477,7 +507,7 @@ def text_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     n_decode: int = 0
     output_tokens: list[int] = []
 
-    while n_cur < n_ctx and n_decode < options.predict:
+    while n_cur < n_ctx and n_decode < completions_options.predict:
         if grammar_sampler:
             new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
             _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
@@ -580,23 +610,24 @@ def _clip_uhd_num_image_embeds_col(ctx_clip: clip_ctx_p) -> int:
         return lib.clip_uhd_num_image_embeds_col(ctx_clip)
 
 
-def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
-    assert isinstance(options.prompt, str)
-    assert isinstance(options.image, str)
-    assert options.messages is None
+def clip_completions(model: llama_model_p, model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
+    assert isinstance(completions_options.prompt, str)
+    assert completions_options.messages is None, 'messages are not currently supported'
+    assert isinstance(completions_options.image, str)
 
-    if options.verbose:
+    if completions_options.verbose:
+        # default llama.cpp logger
         lib.llama_log_set(ffi.NULL, ffi.NULL)
     else:
         lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
 
-    context = context_init(model, options)
-    clip_context = clip_init_context(options)
-    sampler = sampler_init(model, options)
+    context = context_init(model, model_options)
+    clip_context = clip_init_context(model_options)
+    sampler = sampler_init(model, completions_options)
     print(f'{sampler=}')
 
-    if options.grammar or options.json_schema:
-        grammar_sampler = grammar_sampler_init(model, options)
+    if completions_options.grammar or completions_options.json_schema:
+        grammar_sampler = grammar_sampler_init(model, completions_options)
     else:
         grammar_sampler = None
 
@@ -605,16 +636,20 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     # tokenizer
     tokenizer: AutoTokenizer
 
-    if options.model.tokenizer_hf_repo:
-        tokenizer = get_tokenizer(options.model.tokenizer_hf_repo)
+    if model_options.tokenizer_hf_repo:
+        tokenizer = get_tokenizer(model_options.tokenizer_hf_repo)
     else:
-        tokenizer = get_tokenizer(options.model.creator_hf_repo)
+        tokenizer = get_tokenizer(model_options.creator_hf_repo)
 
     # image embeddings
-    embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(clip_context, options.threads, options.image.encode())
+    embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(
+        clip_context,
+        model_options.threads,
+        completions_options.image.encode(),
+    )
+
     assert embeds != ffi.NULL
     # print(f'{embeds=}')
-    # return
 
     # create a llama_batch, we use this object to submit token data for decoding
     n_batch: int = lib.llama_n_batch(context)
@@ -627,9 +662,9 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
     # pre-embeds prompt
     messages = [{'role': 'user', 'content': '<image>'}]
-    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False) # type: ignore
     prompt = prompt[:prompt.index('<image>') + len('<image>')]
-    prompt_tokens = tokenizer.encode(prompt)
+    prompt_tokens = tokenizer.encode(prompt) # type: ignore
     n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
     # embeds
@@ -639,7 +674,7 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
     # evaluate the post-embeds prompt
     prompt = '</image>'
-    prompt_tokens = tokenizer.encode(prompt)
+    prompt_tokens = tokenizer.encode(prompt) # type: ignore
     n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
     has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
@@ -652,7 +687,7 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
             num_image_embeds_col = _clip_uhd_num_image_embeds_col(clip_context)
 
             prompt = '<slice>'
-            prompt_tokens = tokenizer.encode(prompt)
+            prompt_tokens = tokenizer.encode(prompt) # type: ignore
             n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
             i = 0
 
@@ -661,33 +696,33 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
 
                 while j < num_image_embeds_col:
                     prompt = '<image>'
-                    prompt_tokens = tokenizer.encode(prompt)
+                    prompt_tokens = tokenizer.encode(prompt) # type: ignore
                     n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
                     n_past = _clip_process_eval_image_embed(context, clip_context, embeds, n_past, idx)
 
                     idx += 1
 
                     prompt = '</image>'
-                    prompt_tokens = tokenizer.encode(prompt)
+                    prompt_tokens = tokenizer.encode(prompt) # type: ignore
                     n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
                     j += 1
 
                 prompt = '\n'
-                prompt_tokens = tokenizer.encode(prompt)
+                prompt_tokens = tokenizer.encode(prompt) # type: ignore
                 n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
                 i += 1
 
             prompt = '</slice>'
-            prompt_tokens = tokenizer.encode(prompt)
+            prompt_tokens = tokenizer.encode(prompt) # type: ignore
             n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
         _llava_image_embed_free(embeds)
 
         # user prompt after image ebeds
-        messages = [{'role': 'user', 'content': f'\n{options.prompt}'}]
-        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        prompt = prompt[prompt.index(f'\n{options.prompt}'):]
-        prompt_tokens = tokenizer.encode(prompt)
+        messages = [{'role': 'user', 'content': f'\n{completions_options.prompt}'}]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
+        prompt = prompt[prompt.index(f'\n{completions_options.prompt}'):]
+        prompt_tokens = tokenizer.encode(prompt) # type: ignore
         n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
     # generate output
@@ -696,7 +731,7 @@ def clip_completions(model: llama_model_p, options: Options) -> Iterator[str]:
     n_decode: int = 0
     # print(f'{n_cur=} {n_ctx=} {n_decode=} {options.predict=}')
 
-    while n_cur < n_ctx and n_decode < options.predict:
+    while n_cur < n_ctx and n_decode < completions_options.predict:
         if grammar_sampler:
             new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
             _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)

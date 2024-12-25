@@ -1,10 +1,11 @@
 __all__ = ['Model']
 
-from typing import Any, Optional, Unpack, Iterator
+from typing import Optional, Unpack, Iterator
 
-from attrs import asdict
+from attrs import define, asdict
+from transformers import AutoConfig
 
-from .options import Options
+from .options import ModelOptions, CompletionsOptions
 
 from .llama import (
     llama_model_p,
@@ -20,13 +21,9 @@ from .llama import (
 from .formatter import get_config
 
 
+@define
 class Model:
-    creator_hf_repo: str
-    hf_repo: str
-    hf_file: str
-    mmproj_hf_file: Optional[str] = None
-    tokenizer_hf_repo: Optional[str] = None
-    _options: Optional[Options] = None
+    options: Optional[ModelOptions] = None
     _model: Optional[llama_model_p] = None
 
 
@@ -35,54 +32,53 @@ class Model:
                  hf_repo: str,
                  hf_file: str,
                  mmproj_hf_file: Optional[str]=None,
-                 tokenizer_hf_repo: Optional[str]=None,
-                 model_options: Optional[Options]=None):
-        self.creator_hf_repo = creator_hf_repo
-        self.hf_repo = hf_repo
-        self.hf_file = hf_file
-        self.mmproj_hf_file = mmproj_hf_file
-        self.tokenizer_hf_repo = tokenizer_hf_repo
-        self.model_options = model_options if model_options else Options()
+                 tokenizer_hf_repo: Optional[str]=None):
+        options = ModelOptions(
+            creator_hf_repo=creator_hf_repo,
+            hf_repo=hf_repo,
+            hf_file=hf_file,
+            mmproj_hf_file=mmproj_hf_file,
+            tokenizer_hf_repo=tokenizer_hf_repo,
+        )
 
-
-    def __str__(self):
-        return f'{self.creator_hf_repo}:{self.hf_repo}:{self.hf_file}:{self.mmproj_hf_file or ""}:{self.tokenizer_hf_repo or ""}'
+        self.__attrs_init__(options) # type: ignore
 
 
     def __del__(self):
+        self.options = None
+
         if self._model:
             model_free(self._model)
             self._model = None
 
 
-    def init(self, **options: Unpack[Options]):
-        options = Options(
-            **(options | {'model': self}),
-        )
-
-        self._model = model_init(options)
-        self._options = options
+    def init(self, **kwargs):
+        self.options = ModelOptions(**(asdict(self.options) | kwargs))
+        self._model = model_init(self.options)
 
 
     def free(self):
+        self.options = None
+
         if self._model:
             model_free(self._model)
             self._model = None
 
 
-    def completions(self, **options: Unpack[Options]) -> Iterator[str]:
-        options = Options(
-            **(asdict(self._options, recurse=False) | options),
-        )
+    def completions(self, **kwargs) -> Iterator[str]:
+        assert self.options
+        assert self._model
 
-        _model = self._model
-        config = get_config(self.creator_hf_repo)
-        model_type = config.model_type
+        config: AutoConfig = get_config(self.options.creator_hf_repo)
+        model_type: str = config.model_type # type: ignore
 
         if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type:
             completions_func = clip_completions
         else:
             completions_func = text_completions
 
-        for token in completions_func(_model, options):
+        model_options: ModelOptions = self.options
+        completions_options = CompletionsOptions(**kwargs)
+
+        for token in completions_func(self._model, model_options, completions_options):
             yield token

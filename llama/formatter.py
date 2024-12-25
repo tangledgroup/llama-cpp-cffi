@@ -14,13 +14,14 @@ __all__ = [
 
 import json
 from copy import deepcopy
+from typing import Optional
 from collections import namedtuple
 
 # import jinja2
 from huggingface_hub import hf_hub_download
 from transformers import AutoConfig, AutoTokenizer
 
-from .options import Options
+from .options import CompletionsOptions
 
 
 FALLBACK_MODEL_ID = 'TinyLlama/TinyLlama-1.1B-Chat-v1.0'
@@ -131,7 +132,7 @@ def get_config(model_id: str) -> AutoConfig:
 
 
 def get_special_tokens(tokenizer: AutoTokenizer, force_standard_special_tokens: bool=False) -> list[str]:
-    special_tokens: list[str] = []
+    special_tokens: set[str] | list[str] = []
 
     if force_standard_special_tokens:
         special_tokens += [
@@ -169,7 +170,8 @@ def get_special_tokens(tokenizer: AutoTokenizer, force_standard_special_tokens: 
             '<|eot_id|>',
         ]
     else:
-        special_tokens += tokenizer.all_special_tokens + tokenizer.additional_special_tokens
+        special_tokens += tokenizer.all_special_tokens + tokenizer.additional_special_tokens # type: ignore
+        assert isinstance(special_tokens, list)
 
         if '<s>' in special_tokens and '</s>' not in special_tokens:
             special_tokens.append('</s>')
@@ -246,16 +248,16 @@ def get_tokenizer(model_id: str) -> AutoTokenizer:
     return tokenizer
 
 
-def format_messages(tokenizer: AutoTokenizer, messages: list[dict], options: Options | None) -> str:
-    if options and options.chat_template:
-        tokenizer.chat_template = options.chat_template
-        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+def format_messages(tokenizer: AutoTokenizer, messages: list[dict], completions_options: Optional[CompletionsOptions]=None) -> str:
+    if completions_options and completions_options.chat_template:
+        tokenizer.chat_template = completions_options.chat_template # type: ignore
+        text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
     else:
         try:
-            text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
         except Exception:
             messages = create_alternate_messages(messages, convert_system_to_user=True)
-            text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
 
     # print(f'{text = }')
     return text

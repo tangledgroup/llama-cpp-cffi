@@ -58,7 +58,7 @@ model = Model(
     hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
 )
 
-model.init(ctx_size=8192, predict=1024, gpu_layers=99)
+model.init(ctx_size=8192, gpu_layers=99)
 
 #
 # messages
@@ -70,13 +70,15 @@ messages = [
     {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
 ]
 
-for chunk in model.completions(messages=messages, temp=0.7, top_p=0.8, top_k=100):
+for chunk in model.completions(messages=messages, predict=1024, temp=0.7, top_p=0.8, top_k=100):
     print(chunk, flush=True, end='')
 
 #
 # prompt
 #
-for chunk in model.completions(prompt='Evaluate 1 + 2 in Python. Result in Python is', temp=0.7, top_p=0.8, top_k=100):
+prompt='Evaluate 1 + 2 in Python. Result in Python is'
+
+for chunk in model.completions(prompt=prompt, predict=1024, temp=0.7, top_p=0.8, top_k=100):
     print(chunk, flush=True, end='')
 ```
 
@@ -96,12 +98,12 @@ model = Model( # 1.87B
     mmproj_hf_file='moondream2-mmproj-f16.gguf',
 )
 
-model.init(ctx_size=8192, predict=1024, gpu_layers=99)
+model.init(ctx_size=8192, gpu_layers=99)
 
 #
 # prompt
 #
-for chunk in model.completions(prompt='Describe this image.', image='examples/llama-1.png'):
+for chunk in model.completions(prompt='Describe this image.', image='examples/llama-1.png', predict=1024):
     print(chunk, flush=True, end='')
 ```
 
