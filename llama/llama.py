@@ -22,7 +22,7 @@ __all__ = [
 
 import os
 import atexit
-from typing import Iterator, NewType
+from typing import Iterator, TypeAlias
 from threading import Lock
 from weakref import WeakKeyDictionary
 
@@ -68,33 +68,33 @@ global_weakkeydict = WeakKeyDictionary()
 #
 # low-level API
 #
-void_p = NewType('void*', ffi.typeof('void*'))
-char_p = NewType('char*', ffi.typeof('char*'))
-int_p = NewType('int*', ffi.typeof('int*'))
-float_p = NewType('float*', ffi.typeof('float*'))
-ggml_log_level = NewType('ggml_log_level', ffi.typeof('enum ggml_log_level'))
-ggml_numa_strategy = NewType('ggml_numa_strategy', ffi.typeof('enum ggml_numa_strategy'))
-llama_model_params = NewType('llama_model_params', ffi.typeof('struct llama_model_params'))
-llama_model = NewType('llama_model', ffi.typeof('struct llama_model'))
-llama_model_p = NewType('llama_model*', ffi.typeof('struct llama_model*'))
-llama_context = NewType('llama_context', ffi.typeof('struct llama_context'))
-llama_context_p = NewType('llama_context*', ffi.typeof('struct llama_context*'))
-llama_context_params = NewType('llama_context_params', ffi.typeof('struct llama_context_params'))
-llama_sampler = NewType('llama_sampler', ffi.typeof('struct llama_sampler'))
-llama_sampler_p = NewType('llama_sampler*', ffi.typeof('struct llama_sampler*'))
-llama_sampler_chain_params = NewType('llama_sampler_chain_params', ffi.typeof('struct llama_sampler_chain_params'))
-llama_batch = NewType('llama_batch', ffi.typeof('struct llama_batch'))
-llama_pos = NewType('llama_pos', ffi.typeof('int32_t'))
-llama_token = NewType('llama_token', ffi.typeof('int32_t'))
-llama_seq_id = NewType('llama_seq_id', ffi.typeof('int32_t'))
-llama_token_data = NewType('llama_token_data', ffi.typeof('struct llama_token_data'))
-llama_token_data_p = NewType('llama_token_data*', ffi.typeof('struct llama_token_data*'))
-llama_token_data_array = NewType('llama_token_data_array', ffi.typeof('struct llama_token_data_array'))
-llama_token_data_array_p = NewType('llama_token_data_array*', ffi.typeof('struct llama_token_data_array*'))
-clip_ctx = NewType('clip_ctx', ffi.typeof('struct clip_ctx'))
-clip_ctx_p = NewType('clip_ctx*', ffi.typeof('struct clip_ctx*'))
-llava_image_embed = NewType('llava_image_embed', ffi.typeof('struct llava_image_embed'))
-llava_image_embed_p = NewType('llava_image_embed*', ffi.typeof('struct llava_image_embed*'))
+void_p: TypeAlias = ffi.typeof('void*') # type: ignore
+char_p: TypeAlias = ffi.typeof('char*') # type: ignore
+int_p: TypeAlias = ffi.typeof('int*') # type: ignore
+float_p: TypeAlias = ffi.typeof('float*') # type: ignore
+ggml_log_level: TypeAlias = ffi.typeof('enum ggml_log_level') # type: ignore
+ggml_numa_strategy: TypeAlias = ffi.typeof('enum ggml_numa_strategy') # type: ignore
+llama_model_params: TypeAlias = ffi.typeof('struct llama_model_params') # type: ignore
+llama_model: TypeAlias = ffi.typeof('struct llama_model') # type: ignore
+llama_model_p: TypeAlias = ffi.typeof('struct llama_model*') # type: ignore
+llama_context: TypeAlias = ffi.typeof('struct llama_context') # type: ignore
+llama_context_p: TypeAlias = ffi.typeof('struct llama_context*') # type: ignore
+llama_context_params: TypeAlias = ffi.typeof('struct llama_context_params') # type: ignore
+llama_sampler: TypeAlias = ffi.typeof('struct llama_sampler') # type: ignore
+llama_sampler_p: TypeAlias = ffi.typeof('struct llama_sampler*') # type: ignore
+llama_sampler_chain_params: TypeAlias = ffi.typeof('struct llama_sampler_chain_params') # type: ignore
+llama_batch: TypeAlias = ffi.typeof('struct llama_batch') # type: ignore
+llama_pos: TypeAlias = ffi.typeof('int32_t') # type: ignore
+llama_token: TypeAlias = ffi.typeof('int32_t') # type: ignore
+llama_seq_id: TypeAlias = ffi.typeof('int32_t') # type: ignore
+llama_token_data: TypeAlias = ffi.typeof('struct llama_token_data') # type: ignore
+llama_token_data_p: TypeAlias = ffi.typeof('struct llama_token_data*') # type: ignore
+llama_token_data_array: TypeAlias = ffi.typeof('struct llama_token_data_array') # type: ignore
+llama_token_data_array_p: TypeAlias = ffi.typeof('struct llama_token_data_array*') # type: ignore
+clip_ctx: TypeAlias = ffi.typeof('struct clip_ctx') # type: ignore
+clip_ctx_p: TypeAlias = ffi.typeof('struct clip_ctx*') # type: ignore
+llava_image_embed: TypeAlias = ffi.typeof('struct llava_image_embed') # type: ignore
+llava_image_embed_p: TypeAlias = ffi.typeof('struct llava_image_embed*') # type: ignore
 
 lock = Lock()
 

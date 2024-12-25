@@ -58,7 +58,7 @@ async def api_1_0_completions(request: web.Request) -> web.Response:
             current_model_def.free()
 
             model = Model(*model_def.split(':'))
-            model.init(**asdict(model_options))
+            model.init(**asdict(model_options, recurse=False))
 
             current_model = model
             current_model_def = model_def
@@ -72,7 +72,7 @@ async def api_1_0_completions(request: web.Request) -> web.Response:
         await response.prepare(request)
         chunk_bytes: bytes
 
-        for token in model.completions(**asdict(options)):
+        for token in model.completions(**asdict(options, recurse=False)):
             event_data = {
                 'choices': [{
                     'delta': {'content': chunk},
