@@ -56,22 +56,25 @@ def demo_low_level():
 def demo_high_level():
     # model_id = 'vikhyatk/moondream2'
     # model_id = 'qnguyen3/nanoLLaVA-1.5'
-    model_id = 'openbmb/MiniCPM-V-2_6'
+    # model_id = 'openbmb/MiniCPM-V-2_6'
+    model_id = 'Qwen/Qwen2-VL-7B-Instruct'
 
     model = demo_models[model_id]
     model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
-    prompt = 'What is in the image? Output in JSON format.\n'
+    # prompt = 'What is in the image? Output in JSON format.\n'
+    prompt = 'Describe this image.'
     image = 'examples/llama-1.png'
     # image = 'examples/llama-4.png'
 
-    for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
+    # for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
+    for token in model.completions(prompt=prompt, image=image, predict=1024):
         print(token, end='', flush=True)
 
-    for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
-        print(token, end='', flush=True)
+    # for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
+    #     print(token, end='', flush=True)
 
     print()
 
@@ -174,14 +177,14 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    demo_low_level()
-    gc.collect()
+    # demo_low_level()
+    # gc.collect()
 
     demo_high_level()
     gc.collect()
 
-    demo_high_level_gpt()
-    gc.collect()
+    # demo_high_level_gpt()
+    # gc.collect()
 
-    demo_high_level_json()
-    gc.collect()
+    # demo_high_level_json()
+    # gc.collect()

@@ -71,8 +71,9 @@ class Model:
 
         config: AutoConfig = get_config(self.options.creator_hf_repo)
         model_type: str = config.model_type # type: ignore
+        # print(f'{model_type=}')
 
-        if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type:
+        if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type or 'qwen2_vl' in model_type:
             completions_func = clip_completions
         else:
             completions_func = text_completions

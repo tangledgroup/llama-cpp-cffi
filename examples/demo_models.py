@@ -72,12 +72,12 @@ demo_models = {
     #
     # vlm
     #
-    # 'openbmb/MiniCPM-Llama3-V-2_5': Model(
-    #     creator_hf_repo='openbmb/MiniCPM-Llama3-V-2_5',
-    #     hf_repo='openbmb/MiniCPM-Llama3-V-2_5-gguf',
-    #     hf_file='ggml-model-Q4_K_M.gguf',
-    #     mmproj_hf_file='mmproj-model-f16.gguf',
-    # ),
+    'Qwen/Qwen2-VL-7B-Instruct': Model( # 8.29B
+        creator_hf_repo='Qwen/Qwen2-VL-7B-Instruct',
+        hf_repo='bartowski/Qwen2-VL-7B-Instruct-GGUF',
+        hf_file='Qwen2-VL-7B-Instruct-Q4_K_M.gguf',
+        mmproj_hf_file='mmproj-Qwen2-VL-7B-Instruct-f16.gguf',
+    ),
     'openbmb/MiniCPM-V-2_6': Model( # 8.1B
         creator_hf_repo='openbmb/MiniCPM-V-2_6',
         hf_repo='bartowski/MiniCPM-V-2_6-GGUF',

@@ -12,7 +12,7 @@ from cffi import FFI
 from clean import clean_llama_cpp, clean
 
 
-LLAMA_CPP_GIT_REF = '30caac3a68a54de8396b21e20ba972554c587230'
+LLAMA_CPP_GIT_REF = '9ba399dfa7f115effc63d48e6860a94c9faa31b2'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -449,7 +449,6 @@ def build_cpu(*args, **kwargs):
         'libllava.a',
         'libcommon.a',
         'LLAMA_MAKEFILE=1',
-        # 'LLAMA_DEBUG=0', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
         'GGML_NO_OPENMP=1',
         *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
     ], check=True, env=env)
@@ -488,8 +487,8 @@ def build_cpu(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
+            '-DGGML_SHARED',
             '-DLLAMA_SHARED',
-            # '-DNDEBUG', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -579,7 +578,6 @@ def build_vulkan_1_x(*args, **kwargs):
         'libllava.a',
         'libcommon.a',
         'LLAMA_MAKEFILE=1',
-        # 'LLAMA_DEBUG=0', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
         'GGML_NO_OPENMP=1',
         'GGML_VULKAN=1',
         *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
@@ -620,8 +618,8 @@ def build_vulkan_1_x(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
+            '-DGGML_SHARED',
             '-DLLAMA_SHARED',
-            # '-DNDEBUG', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -734,7 +732,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         'libllava.a',
         'libcommon.a',
         'LLAMA_MAKEFILE=1',
-        # 'LLAMA_DEBUG=0', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
         'GGML_NO_OPENMP=1',
         'GGML_CUDA=1',
         *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
@@ -784,8 +781,8 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             '-O3',
             '-g',
             '-fPIC',
+            '-DGGML_SHARED',
             '-DLLAMA_SHARED',
-            # '-DNDEBUG', # NOTE: LLAMA_DEBUG=1 fails with `ggml/src/ggml-cpu/ggml-cpu.c:8456: GGML_ASSERT(i01 >= 0 && i01 < ne01) failed`
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',

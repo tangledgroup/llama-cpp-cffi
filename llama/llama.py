@@ -23,7 +23,8 @@ __all__ = [
 import os
 import json
 import atexit
-from typing import Iterator, TypeAlias
+from pprint import pprint
+from typing import Any, Iterator, TypeAlias
 from threading import Lock
 from weakref import WeakKeyDictionary
 
@@ -85,6 +86,7 @@ llama_sampler: TypeAlias = ffi.typeof('struct llama_sampler') # type: ignore
 llama_sampler_p: TypeAlias = ffi.typeof('struct llama_sampler*') # type: ignore
 llama_sampler_chain_params: TypeAlias = ffi.typeof('struct llama_sampler_chain_params') # type: ignore
 llama_batch: TypeAlias = ffi.typeof('struct llama_batch') # type: ignore
+llama_batch_p: TypeAlias = ffi.typeof('struct llama_batch*') # type: ignore
 llama_pos: TypeAlias = ffi.typeof('int32_t') # type: ignore
 llama_token: TypeAlias = ffi.typeof('int32_t') # type: ignore
 llama_seq_id: TypeAlias = ffi.typeof('int32_t') # type: ignore
@@ -94,6 +96,8 @@ llama_token_data_array: TypeAlias = ffi.typeof('struct llama_token_data_array') 
 llama_token_data_array_p: TypeAlias = ffi.typeof('struct llama_token_data_array*') # type: ignore
 clip_ctx: TypeAlias = ffi.typeof('struct clip_ctx') # type: ignore
 clip_ctx_p: TypeAlias = ffi.typeof('struct clip_ctx*') # type: ignore
+clip_image_size: TypeAlias = ffi.typeof('struct clip_image_size') # type: ignore
+clip_image_size_p: TypeAlias = ffi.typeof('struct clip_image_size*') # type: ignore
 llava_image_embed: TypeAlias = ffi.typeof('struct llava_image_embed') # type: ignore
 llava_image_embed_p: TypeAlias = ffi.typeof('struct llava_image_embed*') # type: ignore
 
@@ -304,7 +308,7 @@ def clip_free_context(clip_context: clip_ctx_p):
 #
 # util
 #
-def _llama_decode(ctx: llama_context_p, batch : llama_batch) -> int:
+def _llama_decode(ctx: llama_context_p, batch: llama_batch) -> int:
     with lock:
         return lib.llama_decode(ctx, batch)
 
@@ -409,7 +413,12 @@ def _common_token_to_piece(ctx: llama_context_p, token: llama_token, special: bo
     n_chars: int = lib.llama_token_to_piece(model, token, _piece, _piece_size, 0, special)
     piece: bytes | str = ffi.string(_piece)
     assert isinstance(piece, bytes)
-    piece = piece.decode()
+
+    try:
+        piece = piece.decode()
+    except Exception:
+        piece = ''
+
     assert isinstance(piece, str)
     piece = piece[:n_chars]
     ffi.release(_piece)
@@ -445,6 +454,52 @@ def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: 
         # lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
 
     return n_past
+
+
+def _qwen2vl_decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: list[int], seq_ids: list[llama_seq_id], n_begin: int, n_past: int, st_pos_id: int) -> tuple[int, int]:
+    n_batch: int = lib.llama_n_batch(context)
+    n_prompt_tokens: int = len(prompt_tokens)
+
+
+    for i in range(n_begin, n_prompt_tokens, n_batch):
+        _common_batch_clear(batch)
+
+        j = 0
+
+        while j < n_batch and i + j < n_prompt_tokens:
+            _common_batch_add(batch, prompt_tokens[i + j], n_past, seq_ids, False)
+            n_past += 1
+            st_pos_id += 1
+            j += 1
+
+        if i + n_batch >= n_prompt_tokens:
+            batch.logits[batch.n_tokens - 1] = True
+
+        j = 0
+
+        print(f'!!! {batch.n_tokens=}, {batch.n_tokens * 4=}')
+
+        pos: Any = ffi.new('llama_pos[]', [
+            int(st_pos_id + (j % batch.n_tokens))
+            for j in range(batch.n_tokens * 4)
+        ])
+
+        print(f'{pos=}')
+        batch.pos = pos
+
+        r = _llama_decode(context, batch)
+
+        if r < 0:
+            raise Exception('llama_decode failed')
+        elif r > 0:
+            break
+
+        if i + n_batch >= n_prompt_tokens:
+            break
+
+        ffi.release(pos)
+
+    return n_past, st_pos_id
 
 
 #
@@ -610,6 +665,85 @@ def _clip_uhd_num_image_embeds_col(ctx_clip: clip_ctx_p) -> int:
         return lib.clip_uhd_num_image_embeds_col(ctx_clip)
 
 
+def _qwen2vl_eval_image_embed(ctx_llama: llama_context_p, ctx_clip: clip_ctx_p, image_embed: llava_image_embed_p, n_batch: int, n_past: int, st_pos_id: int) -> tuple[bool, int, int]:
+    print('!!! [0]:', n_past, st_pos_id)
+    image_size: Any = lib.clip_get_load_image_size(ctx_clip)
+    n_embd: int = lib.llama_n_embd(lib.llama_get_model(ctx_llama))
+    patch_size: int = 14 * 2
+    ph: int = int(image_size.height / patch_size + (image_size.height % patch_size > 0))
+    pw: int = int(image_size.width / patch_size + (image_size.width % patch_size > 0))
+    img_tokens: Any = image_embed.n_image_pos
+    mrope_pos: Any = ffi.new('llama_pos[]', img_tokens * 4)
+    pprint(locals())
+
+    for y in range(ph):
+        for x in range(pw):
+            i: int = y * pw + x
+            mrope_pos[i + img_tokens * 0] = st_pos_id
+            mrope_pos[i + img_tokens * 1] = st_pos_id + y
+            mrope_pos[i + img_tokens * 2] = st_pos_id + x
+            mrope_pos[i + img_tokens * 3] = 0
+
+    st_pos_id += max(pw, ph)
+    processed: int = 0
+    batch_mrope_pos: Any = ffi.new('llama_pos[]', img_tokens * 4)
+    pprint(locals())
+    print('!!! [*]:', n_past, st_pos_id)
+
+    for i in range(0, img_tokens, n_batch):
+        n_eval: int = img_tokens - i
+
+        if n_eval > n_batch:
+            n_eval = n_batch
+
+        # for i in range(img_tokens * 4):
+        #     batch_mrope_pos[i] = 0
+
+        lib.memcpy(ffi.addressof(batch_mrope_pos, n_eval * 0), ffi.addressof(mrope_pos, img_tokens * 0 + processed), n_eval * ffi.sizeof('llama_pos'))
+        lib.memcpy(ffi.addressof(batch_mrope_pos, n_eval * 1), ffi.addressof(mrope_pos, img_tokens * 1 + processed), n_eval * ffi.sizeof('llama_pos'))
+        lib.memcpy(ffi.addressof(batch_mrope_pos, n_eval * 2), ffi.addressof(mrope_pos, img_tokens * 2 + processed), n_eval * ffi.sizeof('llama_pos'))
+        lib.memcpy(ffi.addressof(batch_mrope_pos, n_eval * 3), ffi.addressof(mrope_pos, img_tokens * 3 + processed), n_eval * ffi.sizeof('llama_pos'))
+
+        # ffi.memmove(ffi.addressof(batch_mrope_pos, n_eval * 0), ffi.addressof(mrope_pos, img_tokens * 0 + processed), n_eval * ffi.sizeof('llama_pos'))
+        # ffi.memmove(ffi.addressof(batch_mrope_pos, n_eval * 1), ffi.addressof(mrope_pos, img_tokens * 1 + processed), n_eval * ffi.sizeof('llama_pos'))
+        # ffi.memmove(ffi.addressof(batch_mrope_pos, n_eval * 2), ffi.addressof(mrope_pos, img_tokens * 2 + processed), n_eval * ffi.sizeof('llama_pos'))
+        # ffi.memmove(ffi.addressof(batch_mrope_pos, n_eval * 3), ffi.addressof(mrope_pos, img_tokens * 3 + processed), n_eval * ffi.sizeof('llama_pos'))
+
+        embd: Any = image_embed.embed + i * n_embd
+        # embd[0] = embd[0]
+        # batch_mrope_pos[0] = batch_mrope_pos[0]
+        # global_weakkeydict[image_embed] = embd
+        print(f'{n_eval=}')
+        print(f'{embd=}')
+        print(f'{batch_mrope_pos=}')
+
+        batch_p: llama_batch_p = ffi.new('llama_batch[]', [(
+            n_eval, # n_tokens
+            ffi.NULL, # token
+            embd, # embd
+            batch_mrope_pos, # pos
+            ffi.NULL, # n_seq_id
+            ffi.NULL, # seq_id
+            ffi.NULL, # logits
+        )])
+
+        # global_weakkeydict[batch_p] = (embd, batch_mrope_pos)
+
+        batch: llama_batch = batch_p[0]
+        # global_weakkeydict[batch_p] = batch
+
+        if _llama_decode(ctx_llama, batch):
+            return False, n_past, st_pos_id
+
+        n_past += n_eval
+        processed += n_eval
+        # ffi.release(batch_p)
+        print(f'!!! {i=}')
+
+    print('!!! [1]:', n_past, st_pos_id)
+    return True, n_past, st_pos_id
+
+
 def clip_completions(model: llama_model_p, model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
     assert isinstance(completions_options.prompt, str)
     assert completions_options.messages is None, 'messages are not currently supported'
@@ -632,6 +766,19 @@ def clip_completions(model: llama_model_p, model_options: ModelOptions, completi
         grammar_sampler = None
 
     print(f'{grammar_sampler=}')
+
+    has_minicpmv_projector: int = lib.clip_is_minicpmv(clip_context)
+    is_qwen2vl: bool = lib.clip_is_qwen2vl(clip_context)
+
+    begin_vision_token: str = '<image>'
+    end_vision_token: str = '</image>'
+
+    if is_qwen2vl:
+        begin_vision_token = '<|vision_start|>'
+        end_vision_token = '<|vision_end|>'
+
+    print(f'{has_minicpmv_projector=}')
+    print(f'{is_qwen2vl=}')
 
     # tokenizer
     tokenizer: AutoTokenizer
@@ -656,28 +803,54 @@ def clip_completions(model: llama_model_p, model_options: ModelOptions, completi
     batch: llama_batch = lib.llama_batch_init(n_batch, 0, 1)
     seq_ids: list[llama_seq_id] = [0]
     n_past: int = 0
+    cur_pos_id: int = n_past # used by qwen2vl
     idx: int = 0
     prompt: str
     prompt_tokens: list[int]
 
     # pre-embeds prompt
-    messages = [{'role': 'user', 'content': '<image>'}]
+    messages = [{'role': 'user', 'content': begin_vision_token}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False) # type: ignore
-    prompt = prompt[:prompt.index('<image>') + len('<image>')]
+    prompt = prompt[:prompt.index(begin_vision_token) + len(begin_vision_token)]
+    print(1, f'{prompt=}')
     prompt_tokens = tokenizer.encode(prompt) # type: ignore
-    n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+
+    if is_qwen2vl:
+        # n_past, cur_pos_id = _qwen2vl_decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past, cur_pos_id)
+        prev_n_past = n_past
+        n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+        cur_pos_id += n_past - prev_n_past
+    else:
+        n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
     # embeds
-    n_past = _clip_process_eval_image_embed(context, clip_context, embeds, n_past, idx)
+    if is_qwen2vl:
+        s, n_past, cur_pos_id = _qwen2vl_eval_image_embed(context, clip_context, embeds, n_batch, n_past, cur_pos_id)
+        assert s
+    else:
+        n_past = _clip_process_eval_image_embed(context, clip_context, embeds, n_past, idx)
 
     idx += 1
 
     # evaluate the post-embeds prompt
-    prompt = '</image>'
-    prompt_tokens = tokenizer.encode(prompt) # type: ignore
-    n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+    if is_qwen2vl:
+        # n_past, cur_pos_id = _qwen2vl_decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past, cur_pos_id)
+        # prev_n_past = n_past
+        # n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+        # cur_pos_id += n_past - prev_n_past
+        pass
+    else:
+        prompt = end_vision_token
+        print(2, f'{prompt=}')
+        prompt_tokens = tokenizer.encode(prompt) # type: ignore
+        print(2, f'{prompt_tokens=}')
 
-    has_minicpmv_projector = lib.clip_is_minicpmv(clip_context)
+        prev_n_past = n_past
+        n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+        cur_pos_id += n_past - prev_n_past
+
+    print('!!! [2.0]:', n_past, cur_pos_id)
+
     # print(f'{has_minicpmv_projector=}')
 
     if has_minicpmv_projector >= 2:
@@ -716,14 +889,25 @@ def clip_completions(model: llama_model_p, model_options: ModelOptions, completi
             prompt_tokens = tokenizer.encode(prompt) # type: ignore
             n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
 
-        _llava_image_embed_free(embeds)
+        # _llava_image_embed_free(embeds)
 
         # user prompt after image ebeds
         messages = [{'role': 'user', 'content': f'\n{completions_options.prompt}'}]
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
         prompt = prompt[prompt.index(f'\n{completions_options.prompt}'):]
+        print(3, f'{prompt=}')
         prompt_tokens = tokenizer.encode(prompt) # type: ignore
         n_past = _decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past)
+    elif is_qwen2vl:
+        # user prompt after image ebeds
+        messages = [{'role': 'user', 'content': f'{completions_options.prompt}'}]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
+        prompt = end_vision_token + prompt[prompt.index(f'{completions_options.prompt}'):]
+        print(3, f'{prompt=}')
+        prompt_tokens = tokenizer.encode(prompt) # type: ignore
+
+        n_past, cur_pos_id = _qwen2vl_decode_tokens(context, batch, prompt_tokens, seq_ids, 0, n_past, cur_pos_id)
+        print('!!! [2.1]:', n_past, cur_pos_id)
 
     # generate output
     n_cur: int = n_past
@@ -768,6 +952,7 @@ def clip_completions(model: llama_model_p, model_options: ModelOptions, completi
     # lib.llama_perf_sampler_print(sampler)
     # lib.llama_perf_context_print(context)
 
+    _llava_image_embed_free(embeds)
     lib.llama_batch_free(batch)
 
     if grammar_sampler:
