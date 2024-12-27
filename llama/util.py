@@ -95,10 +95,10 @@ def _llama_sampler_sample(smpl: llama_sampler_p, ctx: llama_context_p, idx: int)
     return token
 
 
-def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: llama_context_p, idx: int, grammar_first: bool=False) -> int:
+def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: llama_context_p, idx: int, grammar_first: bool=False) -> llama_token:
     cur, cur_p = _set_logits(ctx, idx)
 
-    if grammar_first:
+    if grammar_first and grmr:
         lib.llama_sampler_apply(grmr, cur_p)
 
     lib.llama_sampler_apply(chain, cur_p)
@@ -122,7 +122,9 @@ def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: l
     )
 
     global_weakkeydict[single_token_data_array] = single_token_data
-    lib.llama_sampler_apply(grmr, single_token_data_array)
+
+    if grmr:
+        lib.llama_sampler_apply(grmr, single_token_data_array)
 
     # print(f'{single_token_data_array.data[0].logit=}')
     is_valid: bool = single_token_data_array.data[0].logit != float('-inf')
@@ -133,7 +135,10 @@ def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: l
 
     # resampling
     cur, cur_p = _set_logits(ctx, idx)
-    lib.llama_sampler_apply(grmr,  cur_p)
+
+    if grmr:
+        lib.llama_sampler_apply(grmr,  cur_p)
+
     lib.llama_sampler_apply(chain, cur_p)
     assert cur_p.selected != -1, "no selected token during re-sampling - check your sampling configuration"
 
@@ -142,7 +147,7 @@ def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: l
 
 
 def _common_sampler_accept(grmr: llama_sampler_p, chain: llama_sampler_p, token: llama_token, accept_grammar: bool):
-    if accept_grammar:
+    if accept_grammar and grmr:
         lib.llama_sampler_accept(grmr, token)
 
     lib.llama_sampler_accept(chain, token)

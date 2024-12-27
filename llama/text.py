@@ -42,7 +42,7 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
     if completions_options.grammar or completions_options.json_schema:
         grammar_sampler = grammar_sampler_init(_model, completions_options)
     else:
-        grammar_sampler = None
+        grammar_sampler = ffi.NULL
 
     # print(f'{grammar_sampler=}')
 

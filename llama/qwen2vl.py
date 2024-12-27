@@ -181,13 +181,13 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
     context = context_init(_model, model_options)
     clip_context = clip_init_context(model_options)
     sampler = sampler_init(_model, completions_options)
-    # print(f'{sampler=}')
+    print(f'{sampler=}')
 
     if completions_options.grammar or completions_options.json_schema:
         grammar_sampler = grammar_sampler_init(_model, completions_options)
     else:
         grammar_sampler = ffi.NULL
-    # print(f'{grammar_sampler=}')
+    print(f'{grammar_sampler=}')
 
     is_qwen2vl: bool = lib.clip_is_qwen2vl(clip_context)
     assert is_qwen2vl
@@ -226,17 +226,19 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
     s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past, cur_pos_id)
     print('!!! [2]:', n_past, cur_pos_id)
 
-    # yield '[END]'
-
     for i in range(max_tgt_len):
+        # break
         new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
         _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
 
-        if lib.llama_token_is_eog(_model, id):
+        if lib.llama_token_is_eog(_model, new_token_id):
             break
 
         piece = _common_token_to_piece(context, new_token_id, True)
         yield piece
+
+        prompt_tokens: list[int] = tokenizer.encode(piece) # type: ignore
+        s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past, cur_pos_id)
 
     _llava_image_embed_free(embeds)
     # lib.llama_batch_free(batch)
