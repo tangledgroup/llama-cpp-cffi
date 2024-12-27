@@ -1,15 +1,22 @@
-def _llava_image_embed_make_with_filename(ctx_clip: clip_ctx_p, n_threads: int, image_path: bytes) -> llava_image_embed_p:
-    with lock:
-        # return lib.llava_image_embed_make_with_filename(ctx_clip, n_threads, image_path)
-        embed: llava_image_embed_p = lib.llava_image_embed_make_with_filename(ctx_clip, n_threads, image_path)
+__all__ = [
+    '_clip_process_eval_image_embed',
+    '_clip_uhd_num_image_embeds_col',
+    'clip_init_context',
+    'clip_free_context',
+    'clip_completions',
+]
 
-    print(f'{embed=}')
-    return embed
+from typing import Iterator
 
+from huggingface_hub import hf_hub_download
 
-def _llava_image_embed_free(embed: llava_image_embed_p):
-    with lock:
-        lib.llava_image_embed_free(embed)
+from .llama_cpp import lib, ffi, lock, llama_context_p, clip_ctx_p, llava_image_embed_p, void_p, llama_model_p, llama_token, llama_batch, llama_seq_id
+from .options import ModelOptions, CompletionsOptions
+from .context import context_init, context_free
+from .sampler import sampler_init, grammar_sampler_init, sampler_free
+from .formatter import get_tokenizer
+from .llava import _llava_image_embed_make_with_filename, _llava_image_embed_free
+from .util import _llama_decode, _decode_tokens, _common_sampler_sample, _common_sampler_accept, _common_token_to_piece, _common_batch_clear, _common_batch_add
 
 
 def _clip_process_eval_image_embed(context: llama_context_p,
@@ -66,10 +73,12 @@ def clip_free_context(clip_context: clip_ctx_p):
         lib.clip_free(clip_context)
 
 
-def clip_completions(model: llama_model_p, model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
+def clip_completions(model: 'Model', model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
     assert isinstance(completions_options.prompt, str)
     assert completions_options.messages is None, 'messages are not currently supported'
     assert isinstance(completions_options.image, str)
+
+    _model: llama_model_p = model._model
 
     if completions_options.verbose:
         # default llama.cpp logger

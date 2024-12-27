@@ -11,7 +11,7 @@ from .options import ModelOptions, CompletionsOptions
 from .llama_cpp import lib, ffi, lock, llama_model_p, llama_model_params
 from .text import text_completions
 # from .clip import clip_completions
-# from .qwen2vl import qwen2vl_completions
+from .qwen2vl import qwen2vl_completions
 
 
 def model_init(model_options: ModelOptions) -> llama_model_p:

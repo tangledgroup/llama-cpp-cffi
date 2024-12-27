@@ -1,6 +1,7 @@
 __all__ = [
     '_numa_init',
     '_llama_decode',
+    '_decode_tokens',
     '_set_logits',
     '_llama_sampler_sample',
     '_common_sampler_sample',
@@ -8,7 +9,6 @@ __all__ = [
     '_common_batch_clear',
     '_common_batch_add',
     '_common_token_to_piece',
-    '_decode_tokens',
 ]
 
 from .llama_cpp import (
@@ -41,6 +41,37 @@ def _llama_decode(ctx: llama_context_p, batch: llama_batch) -> int:
         return lib.llama_decode(ctx, batch)
 
 
+def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: list[int], seq_ids: list[llama_seq_id], n_begin: int, n_past: int) -> int:
+    n_batch: int = lib.llama_n_batch(context)
+    n_prompt_tokens: int = len(prompt_tokens)
+
+    for i in range(n_begin, n_prompt_tokens, n_batch):
+        _common_batch_clear(batch)
+        j = 0
+
+        while j < n_batch and i + j < n_prompt_tokens:
+            _common_batch_add(batch, prompt_tokens[i + j], n_past, seq_ids, False)
+            n_past += 1
+            j += 1
+
+        if i + n_batch >= n_prompt_tokens:
+            batch.logits[batch.n_tokens - 1] = True
+
+        r = _llama_decode(context, batch)
+
+        if r < 0:
+            raise Exception('llama_decode failed')
+        elif r > 0:
+            break
+
+        if i + n_batch >= n_prompt_tokens:
+            break
+
+        # lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
+
+    return n_past
+
+
 def _set_logits(ctx: llama_context_p, idx: int):
     logits: float_p = lib.llama_get_logits_ith(ctx, idx)
     n_vocab: int = lib.llama_n_vocab(lib.llama_get_model(ctx))
@@ -64,7 +95,7 @@ def _llama_sampler_sample(smpl: llama_sampler_p, ctx: llama_context_p, idx: int)
     return token
 
 
-def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: llama_context_p, idx: int, grammar_first):
+def _common_sampler_sample(grmr: llama_sampler_p, chain: llama_sampler_p, ctx: llama_context_p, idx: int, grammar_first: bool=False) -> int:
     cur, cur_p = _set_logits(ctx, idx)
 
     if grammar_first:
@@ -151,34 +182,3 @@ def _common_token_to_piece(ctx: llama_context_p, token: llama_token, special: bo
     piece = piece[:n_chars]
     ffi.release(_piece)
     return piece
-
-
-def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: list[int], seq_ids: list[llama_seq_id], n_begin: int, n_past: int) -> int:
-    n_batch: int = lib.llama_n_batch(context)
-    n_prompt_tokens: int = len(prompt_tokens)
-
-    for i in range(n_begin, n_prompt_tokens, n_batch):
-        _common_batch_clear(batch)
-        j = 0
-
-        while j < n_batch and i + j < n_prompt_tokens:
-            _common_batch_add(batch, prompt_tokens[i + j], n_past, seq_ids, False)
-            n_past += 1
-            j += 1
-
-        if i + n_batch >= n_prompt_tokens:
-            batch.logits[batch.n_tokens - 1] = True
-
-        r = _llama_decode(context, batch)
-
-        if r < 0:
-            raise Exception('llama_decode failed')
-        elif r > 0:
-            break
-
-        if i + n_batch >= n_prompt_tokens:
-            break
-
-        # lib.llama_kv_cache_seq_cp(context, 0, i, 0, batch.n_tokens)
-
-    return n_past

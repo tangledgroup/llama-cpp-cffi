@@ -26,6 +26,7 @@ from .util import (
 #
 def text_completions(model: 'Model', model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
     assert isinstance(completions_options.prompt, str) or isinstance(completions_options.messages, list)
+
     _model: llama_model_p = model._model
 
     if completions_options.verbose:
