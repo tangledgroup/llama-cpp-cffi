@@ -164,4 +164,7 @@ cython_debug/
 #.idea/
 
 wheelhouse/
+backup/
+cuda-*/
 llama.cpp/
+llama.cpp-master/
