@@ -1,35 +1,28 @@
 __all__ = [
-    # high-level API
-    # 'completions',
-
-    # low-level API
     'lib',
     'ffi',
+    'lock',
+    'global_weakkeydict',
+    'llama_cpp_cffi_ggml_log_callback',
     'backend_init',
     'backend_free',
 ]
 
 import os
+os.environ['GGML_VK_DISABLE_COOPMAT'] = os.getenv('GGML_VK_DISABLE_COOPMAT', '1')
+os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true')
+os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = os.getenv('TRANSFORMERS_NO_ADVISORY_WARNINGS', '1')
+
 import atexit
-from typing import TypeAlias
 from threading import Lock
+from typing import TypeAlias
 from weakref import WeakKeyDictionary
 
-from transformers import AutoTokenizer
-from huggingface_hub import hf_hub_download
+from .gpu import is_cuda_available, is_vulkan_available
 
-from .options import ModelOptions, CompletionsOptions
-from .util import is_cuda_available, is_vulkan_available
-from .formatter import get_tokenizer, format_messages
-
-
-os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true')
-os.environ['GGML_VK_DISABLE_COOPMAT'] = os.getenv('GGML_VK_DISABLE_COOPMAT', '1')
 
 LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
-LLAMA_SPLIT_MODE_NONE = 0 # single GPU
-LLAMA_SPLIT_MODE_LAYER = 1 # split layers and KV across GPUs
-LLAMA_SPLIT_MODE_ROW = 2 # split layers and KV across GPUs, use tensor parallelism if supported
+
 
 try:
     if LLAMA_CPP_BACKEND:
@@ -91,6 +84,7 @@ llava_image_embed_p: TypeAlias = ffi.typeof('struct llava_image_embed*') # type:
 
 lock = Lock()
 
+
 # Set callback for all future logging events.
 # If this is not called, or NULL is supplied, everything is output on stderr.
 #
@@ -100,6 +94,7 @@ lock = Lock()
 @ffi.def_extern()
 def llama_cpp_cffi_ggml_log_callback(level: ggml_log_level, text: char_p, user_data: void_p):
     pass
+
 
 # disable logs by default
 lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)

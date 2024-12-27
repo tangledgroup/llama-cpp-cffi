@@ -10,6 +10,9 @@ from attrs import define, field
 Model = ForwardRef('Model')
 
 LLAMA_DEFAULT_SEED = 0xFFFFFFFF
+LLAMA_SPLIT_MODE_NONE = 0 # single GPU
+LLAMA_SPLIT_MODE_LAYER = 1 # split layers and KV across GPUs
+LLAMA_SPLIT_MODE_ROW = 2 # split layers and KV across GPUs, use tensor parallelism if supported
 
 
 @define

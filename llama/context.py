@@ -1,3 +1,11 @@
+__all__ = [
+    'context_init',
+    'context_free',
+]
+
+from .llama_cpp import lib, ffi, lock, llama_model_p, llama_context_p, llama_context_params
+from .options import ModelOptions
+
 
 def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_context_p:
     ctx_params: llama_context_params = lib.llama_context_default_params()

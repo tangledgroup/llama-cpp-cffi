@@ -1,25 +1,17 @@
 __all__ = ['Model']
 
-from typing import Optional, Unpack, Iterator
+from typing import Optional, Iterator
 
 from attrs import define, asdict
 from transformers import AutoConfig
-
-from .options import ModelOptions, CompletionsOptions
-
-from .llama import (
-    llama_model_p,
-    model_init,
-    model_free,
-    # context_init,
-    # context_free,
-    text_completions,
-    clip_completions,
-    # mllama_completions,
-)
-# from .llama.qwen2vl import qwen2vl_completions
+from huggingface_hub import hf_hub_download
 
 from .formatter import get_config
+from .options import ModelOptions, CompletionsOptions
+from .llama_cpp import lib, ffi, lock, llama_model_p, llama_model_params
+from .text import text_completions
+# from .clip import clip_completions
+# from .qwen2vl import qwen2vl_completions
 
 
 def model_init(model_options: ModelOptions) -> llama_model_p:
