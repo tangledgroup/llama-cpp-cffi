@@ -6,38 +6,6 @@ from demo_models import demo_models
 from llama.options import CompletionsOptions
 
 
-def demo_low_level():
-    model_id: str = 'HuggingFaceTB/SmolLM2-360M-Instruct'
-    model: Model = demo_models[model_id]
-    assert model.options
-
-    model_options = ModelOptions(
-        creator_hf_repo=model.options.creator_hf_repo,
-        hf_repo=model.options.hf_repo,
-        hf_file=model.options.hf_file,
-        mmproj_hf_file=model.options.mmproj_hf_file,
-        tokenizer_hf_repo=model.options.tokenizer_hf_repo,
-        gpu_layers=99,
-    )
-
-    completions_options = CompletionsOptions(
-        prompt='Meaning of life is',
-    )
-
-    _model = model_init(model_options)
-    print(f'{_model=}')
-
-    # input('Press any key to generate')
-
-    for token in text_completions(_model, model_options, completions_options):
-        print(token, end='', flush=True)
-
-    print()
-    # input('Press any key to exit')
-
-    model_free(_model)
-
-
 def demo_high_level():
     # model_id = 'Qwen/Qwen2.5-0.5B-Instruct'
     model_id = 'Qwen/Qwen2.5-1.5B-Instruct'
@@ -53,21 +21,10 @@ def demo_high_level():
 
     # input('Press any key to generate')
 
-    # prompt = 'Explain the meaning of life. ' * 400
-    prompt = 'Explain the meaning of life. '
-    prompt += 'Meaning of life is'
+    prompt = 'Explain the meaning of life. Meaning of life is'
 
     for token in model.completions(prompt=prompt, predict=1024):
         print(token, end='', flush=True)
-
-    # for token in model.completions(prompt=prompt, predict=1024):
-    #     print(token, end='', flush=True)
-
-    # for token in model.completions(prompt=prompt, predict=1024):
-    #     print(token, end='', flush=True)
-
-    # for token in model.completions(prompt=prompt, predict=1024):
-    #     print(token, end='', flush=True)
 
     print()
 
@@ -227,9 +184,6 @@ def demo_high_level_json():
 
 
 if __name__ == '__main__':
-    demo_low_level()
-    gc.collect()
-
     demo_high_level()
     gc.collect()
 

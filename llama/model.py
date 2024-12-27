@@ -17,8 +17,32 @@ from .llama import (
     clip_completions,
     # mllama_completions,
 )
+# from .llama.qwen2vl import qwen2vl_completions
 
 from .formatter import get_config
+
+
+def model_init(model_options: ModelOptions) -> llama_model_p:
+    model_path = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.hf_file)
+    print(f'{model_path=}')
+
+    model_params: llama_model_params = lib.llama_model_default_params()
+    model_params.n_gpu_layers = model_options.gpu_layers
+    # model_params.split_mode = model_options.split_mode # FIXME: check Options
+    model_params.main_gpu = model_options.main_gpu
+    model_params.use_mmap = not model_options.no_mmap # TODO: use exact field names like in structs/API
+    model_params.use_mlock = model_options.mlock
+    model_params.check_tensors = model_options.check_tensors
+
+    with lock:
+        model: llama_model_p = lib.llama_load_model_from_file(model_path.encode(), model_params)
+
+    return model
+
+
+def model_free(model: llama_model_p):
+    with lock:
+        lib.llama_free_model(model)
 
 
 @define
@@ -73,13 +97,15 @@ class Model:
         model_type: str = config.model_type # type: ignore
         # print(f'{model_type=}')
 
-        if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type or 'qwen2_vl' in model_type:
+        if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type:
             completions_func = clip_completions
+        elif 'qwen2_vl' in model_type:
+            completions_func = qwen2vl_completions
         else:
             completions_func = text_completions
 
         model_options: ModelOptions = self.options
         completions_options = CompletionsOptions(**kwargs)
 
-        for token in completions_func(self._model, model_options, completions_options):
+        for token in completions_func(self, model_options, completions_options):
             yield token
