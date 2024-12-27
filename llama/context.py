@@ -1,3 +1,4 @@
+
 def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_context_p:
     ctx_params: llama_context_params = lib.llama_context_default_params()
     ctx_params.n_ctx = model_options.ctx_size # TODO: use exact field names like in structs/API
