@@ -66,21 +66,25 @@ def _qwen2vl_eval_image_embed(ctx_llama: llama_context_p, ctx_clip: clip_ctx_p, 
         batch: llama_batch = batch_p[0]
 
         if _llama_decode(ctx_llama, batch):
+            ffi.release(batch_p)
+            ffi.release(batch_mrope_pos)
+            ffi.release(mrope_pos)
             return False, n_past, st_pos_id
 
         n_past += n_eval
         processed += n_eval
         ffi.release(batch_p)
 
+    ffi.release(batch_mrope_pos)
+    ffi.release(mrope_pos)
     return True, n_past, st_pos_id
 
 
 def _eval_tokens(ctx_llama: llama_context_p, tokens: list[llama_token], n_batch: int, n_past, st_pos_id: int) -> tuple[bool, int, int]:
-    N: int = len(tokens)
     _tokens = ffi.new('llama_token[]', tokens)
 
-    for i in range(0, N, n_batch):
-        n_eval = N - i
+    for i in range(0, len(tokens), n_batch):
+        n_eval = len(tokens) - i
 
         if n_eval > n_batch:
             n_eval = n_batch
@@ -94,11 +98,12 @@ def _eval_tokens(ctx_llama: llama_context_p, tokens: list[llama_token], n_batch:
         batch.pos = pos
 
         if lib.llama_decode(ctx_llama, batch):
+            ffi.release(pos)
             return False, n_past, st_pos_id
 
-        ffi.release(pos)
         n_past += n_eval
         st_pos_id += n_eval
+        ffi.release(pos)
 
     return True, n_past, st_pos_id
 
