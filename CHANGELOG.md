@@ -6,7 +6,7 @@ Added:
   - llama-cpp-cffi server - compatible with llama.cpp cli options instead of OpenAI
 
 Changed:
-  - `llama.cpp` revision `d79d8f39b4da6deca4aea8bf130c6034c482b320`
+  - `llama.cpp` revision `a813badbbdf0d38705f249df7a0c99af5cdee678`
   - Refactored `Options` class into two separate classes: `ModelOptions`, `CompletionsOptions`
 
 Removed:

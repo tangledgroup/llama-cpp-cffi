@@ -16,7 +16,7 @@ from .qwen2vl import qwen2vl_completions
 
 def model_init(model_options: ModelOptions) -> llama_model_p:
     model_path = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.hf_file)
-    print(f'{model_path=}')
+    # print(f'{model_path=}')
 
     model_params: llama_model_params = lib.llama_model_default_params()
     model_params.n_gpu_layers = model_options.gpu_layers
@@ -89,8 +89,10 @@ class Model:
         model_type: str = config.model_type # type: ignore
         # print(f'{model_type=}')
 
-        if 'llava' in model_type or 'moondream' in model_type or 'minicpmv' in model_type:
-            completions_func = clip_completions
+        if 'llava' in model_type or 'moondream' in model_type:
+            completions_func = llava_completions
+        elif 'minicpmv' in model_type:
+            completions_func = minicpmv_completions
         elif 'qwen2_vl' in model_type:
             completions_func = qwen2vl_completions
         else:

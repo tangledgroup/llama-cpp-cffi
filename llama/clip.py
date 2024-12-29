@@ -3,20 +3,21 @@ __all__ = [
     '_clip_uhd_num_image_embeds_col',
     'clip_init_context',
     'clip_free_context',
-    'clip_completions',
 ]
 
-from typing import Iterator
+# from typing import Iterator
 
 from huggingface_hub import hf_hub_download
 
-from .llama_cpp import lib, ffi, lock, llama_context_p, clip_ctx_p, llava_image_embed_p, void_p, llama_model_p, llama_token, llama_batch, llama_seq_id
-from .options import ModelOptions, CompletionsOptions
-from .context import context_init, context_free
-from .sampler import sampler_init, grammar_sampler_init, sampler_free
-from .formatter import get_tokenizer
-from .llava import _llava_image_embed_make_with_filename, _llava_image_embed_free
-from .util import _llama_decode, _decode_tokens, _common_sampler_sample, _common_sampler_accept, _common_token_to_piece, _common_batch_clear, _common_batch_add
+from .llama_cpp import lib, ffi, lock, llama_context_p, clip_ctx_p, llava_image_embed_p, void_p, float_p
+from .options import ModelOptions
+# from .llama_cpp import lib, ffi, lock, llama_context_p, clip_ctx_p, llava_image_embed_p, void_p, llama_model_p, llama_token, llama_batch, llama_seq_id
+# from .options import ModelOptions, CompletionsOptions
+# from .context import context_init, context_free
+# from .sampler import sampler_init, grammar_sampler_init, sampler_free
+# from .formatter import get_tokenizer
+# from .llava import _llava_image_embed_make_with_filename, _llava_image_embed_free
+# from .util import _llama_decode, _decode_tokens, _common_sampler_sample, _common_sampler_accept, _common_token_to_piece, _common_batch_clear, _common_batch_add
 
 
 def _clip_process_eval_image_embed(context: llama_context_p,
@@ -59,7 +60,7 @@ def clip_init_context(model_options: ModelOptions) -> clip_ctx_p:
     assert model_options.ctx_size >= 2048
     assert model_options.mmproj_hf_file
     mmproj_path: str | bytes = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.mmproj_hf_file)
-    print(f'{mmproj_path=}')
+    # print(f'{mmproj_path=}')
 
     with lock:
         # clip_model_load(path, verbosity)
@@ -73,6 +74,7 @@ def clip_free_context(clip_context: clip_ctx_p):
         lib.clip_free(clip_context)
 
 
+"""
 def clip_completions(model: 'Model', model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
     assert isinstance(completions_options.prompt, str)
     assert completions_options.messages is None, 'messages are not currently supported'
@@ -292,3 +294,4 @@ def clip_completions(model: 'Model', model_options: ModelOptions, completions_op
     sampler_free(sampler)
     clip_free_context(clip_context)
     context_free(context)
+"""

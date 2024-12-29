@@ -9,7 +9,10 @@ __all__ = [
     '_common_batch_clear',
     '_common_batch_add',
     '_common_token_to_piece',
+    '_zero_array',
 ]
+
+from typing import Any
 
 from .llama_cpp import (
     lib,
@@ -187,3 +190,8 @@ def _common_token_to_piece(ctx: llama_context_p, token: llama_token, special: bo
     piece = piece[:n_chars]
     ffi.release(_piece)
     return piece
+
+
+def _zero_array(arr: Any):
+    for i in range(len(arr)):
+        arr[i] = 0
