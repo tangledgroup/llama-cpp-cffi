@@ -65,6 +65,12 @@ demo_models = {
     #
     # vlm
     #
+    'Qwen/Qwen2-VL-2B-Instruct': Model( # 8.29B
+        creator_hf_repo='Qwen/Qwen2-VL-2B-Instruct',
+        hf_repo='bartowski/Qwen2-VL-2B-Instruct-GGUF',
+        hf_file='Qwen2-VL-2B-Instruct-Q4_K_M.gguf',
+        mmproj_hf_file='mmproj-Qwen2-VL-2B-Instruct-f16.gguf',
+    ),
     'Qwen/Qwen2-VL-7B-Instruct': Model( # 8.29B
         creator_hf_repo='Qwen/Qwen2-VL-7B-Instruct',
         hf_repo='bartowski/Qwen2-VL-7B-Instruct-GGUF',
@@ -83,12 +89,6 @@ demo_models = {
         hf_file='llava-v1.6-mistral-7b.Q4_K_M.gguf',
         mmproj_hf_file='mmproj-model-f16.gguf',
         tokenizer_hf_repo='mistralai/Mistral-7B-Instruct-v0.2',
-    ),
-    'BAAI/Bunny-v1_0-4B': Model( # 4.26B
-        creator_hf_repo='BAAI/Bunny-v1_0-4B',
-        hf_repo='BAAI/Bunny-v1_0-4B-gguf',
-        hf_file='ggml-model-Q4_K_M.gguf',
-        mmproj_hf_file='mmproj-model-f16.gguf',
     ),
     'vikhyatk/moondream2': Model( # 1.87B
         creator_hf_repo='vikhyatk/moondream2',

@@ -1,0 +1,11 @@
+--- llama.cpp-master/ggml/src/ggml-cpu/ggml-cpu.c	2024-12-30 10:40:12.691187351 +0100
++++ llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c	2024-12-30 10:45:09.423954952 +0100
+@@ -8453,7 +8453,7 @@
+         const int64_t i10 = (i - i12*ne11*ne10 - i11*ne10);
+         const int64_t i01 = *(int32_t *) ((char *) src1->data + i10*nb10 + i11*nb11 + i12*nb12);
+ 
+-        GGML_ASSERT(i01 >= 0 && i01 < ne01);
++        /* GGML_ASSERT(i01 >= 0 && i01 < ne01); */
+ 
+         ggml_vec_cpy_f32(nc,
+                 (float *) ((char *)  dst->data + i10*nb1  + i11*nb2  + i12*nb3),

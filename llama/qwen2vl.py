@@ -5,7 +5,7 @@ from typing import Any, Iterator
 from transformers import AutoTokenizer
 
 from .options import ModelOptions, CompletionsOptions
-from .llama_cpp import lib, ffi, llama_context_p, llama_batch, llama_batch_p, llava_image_embed_p, llama_model_p, clip_ctx_p, llama_token
+from .llama_cpp import lib, ffi, lock, llama_context_p, llama_batch, llama_batch_p, llava_image_embed_p, llama_model_p, clip_ctx_p, llama_token
 from .context import context_init, context_free
 from .clip import clip_init_context, clip_free_context
 from .llava import _llava_image_embed_free, _llava_image_embed_make_with_filename
@@ -89,17 +89,18 @@ def _eval_tokens(ctx_llama: llama_context_p, tokens: list[llama_token], n_batch:
         if n_eval > n_batch:
             n_eval = n_batch
 
-        batch: llama_batch = lib.llama_batch_get_one(ffi.addressof(_tokens, i), n_eval)
-        pos: Any = ffi.new('llama_pos[]', batch.n_tokens * 4)
+        with lock:
+            batch: llama_batch = lib.llama_batch_get_one(ffi.addressof(_tokens, i), n_eval)
+            pos: Any = ffi.new('llama_pos[]', batch.n_tokens * 4)
 
-        for j in range(batch.n_tokens * 3):
-            pos[j] = st_pos_id + (j % batch.n_tokens)
+            for j in range(batch.n_tokens * 3):
+                pos[j] = st_pos_id + (j % batch.n_tokens)
 
-        batch.pos = pos
+            batch.pos = pos
 
-        if lib.llama_decode(ctx_llama, batch):
-            ffi.release(pos)
-            return False, n_past, st_pos_id
+            if lib.llama_decode(ctx_llama, batch):
+                ffi.release(pos)
+                return False, n_past, st_pos_id
 
         n_past += n_eval
         st_pos_id += n_eval

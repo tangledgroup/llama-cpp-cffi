@@ -1,25 +1,31 @@
 import gc
 from threading import Thread
-
 from llama import Model
 
 from demo_models import demo_models
 
 
 def demo_high_level():
-    model_id = 'Qwen/Qwen2-VL-7B-Instruct'
+    model_id: str = 'vikhyatk/moondream2'
+    # model_id: str = 'qnguyen3/nanoLLaVA-1.5'
+    # model_id: str = 'liuhaotian/llava-v1.6-mistral-7b'
 
     model: Model = demo_models[model_id]
     model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
+    # prompt = 'What is in the image? Output in JSON format.\n'
     prompt = 'Describe this image.'
     image = 'examples/llama-1.png'
     # image = 'examples/llama-4.png'
 
-    for token in model.completions(prompt=prompt, image=image, predict=512):
+    for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
+    # for token in model.completions(prompt=prompt, image=image, predict=1024):
         print(token, end='', flush=True)
+
+    # for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
+    #     print(token, end='', flush=True)
 
     print()
 
@@ -28,8 +34,8 @@ def demo_high_level():
 
 def demo_high_level_gpt():
     models_ids = [
-        'Qwen/Qwen2-VL-2B-Instruct',
-        'Qwen/Qwen2-VL-7B-Instruct',
+        'vikhyatk/moondream2',
+        'qnguyen3/nanoLLaVA-1.5',
     ]
 
     models: list[Model] = [demo_models[models_id] for models_id in models_ids]
@@ -83,7 +89,10 @@ def demo_high_level_gpt():
 
 
 def demo_high_level_json():
-    model_id = 'Qwen/Qwen2-VL-7B-Instruct'
+    model_id: str = 'vikhyatk/moondream2'
+    # model_id: str = 'qnguyen3/nanoLLaVA-1.5'
+    # model_id: str = 'liuhaotian/llava-v1.6-mistral-7b'
+
     model: Model = demo_models[model_id]
     model.init(ctx_size=4 * 1024, gpu_layers=99)
 

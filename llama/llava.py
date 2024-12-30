@@ -43,10 +43,11 @@ def _eval_tokens(ctx_llama: llama_context_p, tokens: list[llama_token], n_batch:
         if n_eval > n_batch:
             n_eval = n_batch
 
-        batch: llama_batch = lib.llama_batch_get_one(ffi.addressof(_tokens, i), n_eval)
+        with lock:
+            batch: llama_batch = lib.llama_batch_get_one(ffi.addressof(_tokens, i), n_eval)
 
-        if lib.llama_decode(ctx_llama, batch):
-            return False, n_past
+            if lib.llama_decode(ctx_llama, batch):
+                return False, n_past
 
         n_past += n_eval
 
@@ -113,41 +114,22 @@ def llava_completions(model: 'Model', model_options: ModelOptions, completions_o
         messages = [{'role': 'user', 'content': vision_token}]
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False) # type: ignore
         prompt = prompt[:prompt.index(vision_token)]
-    elif model_type == 'bunny-phi3':
-        # messages = [
-        #     {'role': 'system', 'content': "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."},
-        #     {'role': 'user', 'content': vision_token},
-        # ]
-        # prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False) # type: ignore
-        # prompt = prompt[:prompt.index(vision_token)]
-
-        # prompt = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions."
-        # prompt += " USER: "
-
-        prompt = "USER: "
-        # prompt = f"USER: {completions_options.prompt}"
     else:
         messages = [{'role': 'user', 'content': completions_options.prompt}]
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False) # type: ignore
         prompt = prompt[:prompt.index(completions_options.prompt) + len(completions_options.prompt)]
 
-    print(prompt)
-
-    if model_type == 'bunny-phi3':
-        # do not generate double BOS
-        prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
-        prompt_tokens += [-200]
-    else:
-        prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=True) # type: ignore
-
-    print(f'{prompt_tokens=}')
+    # print(prompt)
+    prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
+    # print(f'{prompt_tokens=}')
     s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
 
     # eval user image
-    n_past_p: int_p = ffi.new('int[]', [n_past])
-    lib.llava_eval_image_embed(context, embeds, model_options.batch_size, n_past_p)
-    n_past = n_past_p[0]
-    ffi.release(n_past_p)
+    with lock:
+        n_past_p: int_p = ffi.new('int[]', [n_past])
+        lib.llava_eval_image_embed(context, embeds, model_options.batch_size, n_past_p)
+        n_past = n_past_p[0]
+        ffi.release(n_past_p)
 
     # eval generation prompt for assitent
     if model_type == 'moondream1':
@@ -156,22 +138,14 @@ def llava_completions(model: 'Model', model_options: ModelOptions, completions_o
         messages = [{'role': 'user', 'content': completions_options.prompt}]
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
         prompt = prompt[prompt.index(completions_options.prompt):]
-    elif model_type == 'bunny-phi3':
-        # messages = [{'role': 'user', 'content': vision_token + completions_options.prompt}]
-        # prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
-        # prompt = prompt[prompt.index(vision_token) + len(vision_token):]
-
-        prompt = f'\n{completions_options.prompt}\nASSISTANT:'
-
-        # prompt = '\nASSISTANT:'
     else:
         messages = [{'role': 'user', 'content': completions_options.prompt}]
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
         prompt = prompt[prompt.index(completions_options.prompt) + len(completions_options.prompt):]
 
-    print(prompt)
+    # print(prompt)
     prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
-    print(f'{prompt_tokens=}')
+    # print(f'{prompt_tokens=}')
     s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
 
     # generate tokens
@@ -182,8 +156,7 @@ def llava_completions(model: 'Model', model_options: ModelOptions, completions_o
         if lib.llama_token_is_eog(_model, new_token_id):
             break
 
-        # piece = _common_token_to_piece(context, new_token_id, True)
-        piece = _common_token_to_piece(context, new_token_id, False)
+        piece = _common_token_to_piece(context, new_token_id, True)
         yield piece
 
         prompt_tokens: list[int] = tokenizer.encode(piece, add_special_tokens=False) # type: ignore

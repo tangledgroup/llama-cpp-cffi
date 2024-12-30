@@ -90,12 +90,9 @@ class Model:
         print(f'{model_type=}')
 
         if (
-            'llava' in model_type or
-            'llava_mistral' in model_type or
-            'bunny-phi3' in model_type or
-            'llava-qwen2' in model_type or
-            'moondream' in model_type or
-            'moondream1' in model_type
+            model_type.startswith('llava') or
+            model_type.startswith('bunny') or
+            model_type.startswith('moondream')
         ):
             completions_func = llava_completions
         elif 'minicpmv' in model_type:
