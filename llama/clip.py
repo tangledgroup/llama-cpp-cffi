@@ -60,7 +60,7 @@ def clip_init_context(model_options: ModelOptions) -> clip_ctx_p:
     assert model_options.ctx_size >= 2048
     assert model_options.mmproj_hf_file
     mmproj_path: str | bytes = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.mmproj_hf_file)
-    # print(f'{mmproj_path=}')
+    print(f'{mmproj_path=}')
 
     with lock:
         # clip_model_load(path, verbosity)

@@ -8,12 +8,10 @@ from .options import ModelOptions, CompletionsOptions
 from .formatter import get_tokenizer, format_messages
 from .llama_cpp import lib, ffi, llama_model_p, llama_batch, llama_seq_id, llama_token
 from .context import context_init, context_free
-from .sampler import sampler_init, grammar_sampler_init, sampler_free
+from .sampler import sampler_init, grammar_sampler_init, sampler_free, _common_sampler_sample, _common_sampler_accept
 
 from .util import (
     _decode_tokens,
-    _common_sampler_sample,
-    _common_sampler_accept,
     _common_token_to_piece,
     _common_batch_clear,
     _common_batch_add,

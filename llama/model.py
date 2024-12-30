@@ -9,14 +9,14 @@ from huggingface_hub import hf_hub_download
 from .formatter import get_config
 from .options import ModelOptions, CompletionsOptions
 from .llama_cpp import lib, ffi, lock, llama_model_p, llama_model_params
-from .text import text_completions
-# from .clip import clip_completions
+from .llava import llava_completions
 from .qwen2vl import qwen2vl_completions
+from .text import text_completions
 
 
 def model_init(model_options: ModelOptions) -> llama_model_p:
     model_path = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.hf_file)
-    # print(f'{model_path=}')
+    print(f'{model_path=}')
 
     model_params: llama_model_params = lib.llama_model_default_params()
     model_params.n_gpu_layers = model_options.gpu_layers
@@ -87,9 +87,16 @@ class Model:
 
         config: AutoConfig = get_config(self.options.creator_hf_repo)
         model_type: str = config.model_type # type: ignore
-        # print(f'{model_type=}')
+        print(f'{model_type=}')
 
-        if 'llava' in model_type or 'moondream' in model_type:
+        if (
+            'llava' in model_type or
+            'llava_mistral' in model_type or
+            'bunny-phi3' in model_type or
+            'llava-qwen2' in model_type or
+            'moondream' in model_type or
+            'moondream1' in model_type
+        ):
             completions_func = llava_completions
         elif 'minicpmv' in model_type:
             completions_func = minicpmv_completions

@@ -9,16 +9,16 @@ from .llama_cpp import lib, ffi, llama_context_p, llama_batch, llama_batch_p, ll
 from .context import context_init, context_free
 from .clip import clip_init_context, clip_free_context
 from .llava import _llava_image_embed_free, _llava_image_embed_make_with_filename
-from .sampler import sampler_init, grammar_sampler_init, sampler_free
-from .util import _llama_decode, _common_sampler_sample, _common_sampler_accept, _common_token_to_piece, _zero_array
+from .sampler import sampler_init, grammar_sampler_init, sampler_free, _common_sampler_sample, _common_sampler_accept
+from .util import _llama_decode, _common_token_to_piece, _zero_array
 from .formatter import get_tokenizer
 
 
-begin_vision_token = '<|vision_start|>'
-end_vision_token = '<|vision_end|>'
+begin_vision_token: str = '<|vision_start|>'
+end_vision_token: str = '<|vision_end|>'
 
 
-def _qwen2vl_eval_image_embed(ctx_llama: llama_context_p, ctx_clip: clip_ctx_p, image_embed: llava_image_embed_p, n_batch: int, n_past: int, st_pos_id: int) -> tuple[bool, int, int]:
+def _eval_image_embed(ctx_llama: llama_context_p, ctx_clip: clip_ctx_p, image_embed: llava_image_embed_p, n_batch: int, n_past: int, st_pos_id: int) -> tuple[bool, int, int]:
     image_size: Any = lib.clip_get_load_image_size(ctx_clip)
     n_embd: int = lib.llama_n_embd(lib.llama_get_model(ctx_llama))
     patch_size: int = 14 * 2
@@ -132,7 +132,9 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
         grammar_sampler = ffi.NULL
     # print(f'{grammar_sampler=}')
 
+    minicpmv_projector: int = lib.clip_is_minicpmv(clip_context)
     is_qwen2vl: bool = lib.clip_is_qwen2vl(clip_context)
+    assert not minicpmv_projector
     assert is_qwen2vl
 
     # tokenizer
@@ -157,23 +159,25 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
     cur_pos_id: int = 0
     max_tgt_len: int = 256 if completions_options.predict < 0 else completions_options.predict
 
+    # eval user prompt
     messages = [{'role': 'user', 'content': begin_vision_token}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False) # type: ignore
     prompt = prompt[:prompt.index(begin_vision_token) + len(begin_vision_token)]
-    prompt_tokens: list[int] = tokenizer.encode(prompt) # type: ignore
+    prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=True) # type: ignore
     s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past, cur_pos_id)
 
-    if embeds is not ffi.NULL:
-        s, n_past, cur_pos_id = _qwen2vl_eval_image_embed(context, clip_context, embeds, model_options.batch_size, n_past, cur_pos_id)
+    # eval user image
+    s, n_past, cur_pos_id = _eval_image_embed(context, clip_context, embeds, model_options.batch_size, n_past, cur_pos_id)
 
+    # eval generation prompt for assitent
     messages = [{'role': 'user', 'content': f'{end_vision_token}{completions_options.prompt}'}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
     prompt = prompt[prompt.index(f'{end_vision_token}{completions_options.prompt}'):]
-    prompt_tokens: list[int] = tokenizer.encode(prompt) # type: ignore
+    prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
     s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past, cur_pos_id)
 
+    # generate tokens
     for i in range(max_tgt_len):
-        # break
         new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
         _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
 

@@ -338,6 +338,7 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
     # subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
 
 
 def cuda_12_6_3_setup(*args, **kwargs):
