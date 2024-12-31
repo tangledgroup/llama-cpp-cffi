@@ -1,22 +1,14 @@
 import gc
 from threading import Thread
-
-from llama import Model, ggml_type
+from llama import Model
 
 from demo_models import demo_models
 
 
 def demo_high_level():
-    model_id = 'Qwen/Qwen2-VL-7B-Instruct'
-
+    model_id = 'openbmb/MiniCPM-V-2_6'
     model: Model = demo_models[model_id]
-    model.init(
-        ctx_size=4 * 1024,
-        gpu_layers=99,
-        flash_attn=True,
-        cache_type_k=ggml_type.F16,
-        cache_type_v=ggml_type.F16,
-    )
+    model.init(ctx_size=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -33,8 +25,8 @@ def demo_high_level():
 
 def demo_high_level_gpt():
     models_ids = [
-        'Qwen/Qwen2-VL-2B-Instruct',
-        'Qwen/Qwen2-VL-7B-Instruct',
+        'openbmb/MiniCPM-V-2_6',
+        'openbmb/MiniCPM-V-2_6',
     ]
 
     models: list[Model] = [demo_models[models_id] for models_id in models_ids]
@@ -84,7 +76,7 @@ def demo_high_level_gpt():
 
 
 def demo_high_level_json():
-    model_id = 'Qwen/Qwen2-VL-7B-Instruct'
+    model_id = 'openbmb/MiniCPM-V-2_6'
     model: Model = demo_models[model_id]
     model.init(ctx_size=4 * 1024, gpu_layers=99)
 

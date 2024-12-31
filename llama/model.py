@@ -10,6 +10,7 @@ from .formatter import get_config
 from .options import ModelOptions, CompletionsOptions
 from .llama_cpp import lib, ffi, lock, llama_model_p, llama_model_params
 from .llava import llava_completions
+from .minicpmv import minicpmv_completions
 from .qwen2vl import qwen2vl_completions
 from .text import text_completions
 

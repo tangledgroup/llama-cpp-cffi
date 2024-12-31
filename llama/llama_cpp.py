@@ -6,6 +6,37 @@ __all__ = [
     'llama_cpp_cffi_ggml_log_callback',
     'backend_init',
     'backend_free',
+    'void_p',
+    'char_p',
+    'int_p',
+    'float_p',
+    'ggml_log_level',
+    'ggml_numa_strategy',
+    'llama_model_params',
+    'llama_model',
+    'llama_model_p',
+    'llama_context',
+    'llama_context_p',
+    'llama_context_params',
+    'llama_sampler',
+    'llama_sampler_p',
+    'llama_sampler_chain_params',
+    'llama_batch',
+    'llama_batch_p',
+    'llama_pos',
+    'llama_token',
+    'llama_seq_id',
+    'llama_token_data',
+    'llama_token_data_p',
+    'llama_token_data_array',
+    'llama_token_data_array_p',
+    'clip_ctx',
+    'clip_ctx_p',
+    'clip_image_size',
+    'clip_image_size_p',
+    'llava_image_embed',
+    'llava_image_embed_p',
+    'ggml_type',
 ]
 
 import os
@@ -14,6 +45,7 @@ os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = os.getenv('TRANSFORMERS_NO_ADVISORY_WARNINGS', '1')
 
 import atexit
+from enum import Enum
 from threading import Lock
 from typing import TypeAlias
 from weakref import WeakKeyDictionary
@@ -81,6 +113,48 @@ clip_image_size: TypeAlias = ffi.typeof('struct clip_image_size') # type: ignore
 clip_image_size_p: TypeAlias = ffi.typeof('struct clip_image_size*') # type: ignore
 llava_image_embed: TypeAlias = ffi.typeof('struct llava_image_embed') # type: ignore
 llava_image_embed_p: TypeAlias = ffi.typeof('struct llava_image_embed*') # type: ignore
+
+class ggml_type(Enum):
+    F32     = 0
+    F16     = 1
+    Q4_0    = 2
+    Q4_1    = 3
+    # Q4_2 = 4 support has been removed
+    # Q4_3 = 5 support has been removed
+    Q5_0    = 6
+    Q5_1    = 7
+    Q8_0    = 8
+    Q8_1    = 9
+    Q2_K    = 10
+    Q3_K    = 11
+    Q4_K    = 12
+    Q5_K    = 13
+    Q6_K    = 14
+    Q8_K    = 15
+    IQ2_XXS = 16
+    IQ2_XS  = 17
+    IQ3_XXS = 18
+    IQ1_S   = 19
+    IQ4_NL  = 20
+    IQ3_S   = 21
+    IQ2_S   = 22
+    IQ4_XS  = 23
+    I8      = 24
+    I16     = 25
+    I32     = 26
+    I64     = 27
+    F64     = 28
+    IQ1_M   = 29
+    BF16    = 30
+    # Q4_0_4_4 = 31 support has been removed from gguf files
+    # Q4_0_4_8 = 32
+    # Q4_0_8_8 = 33
+    TQ1_0   = 34
+    TQ2_0   = 35
+    # IQ4_NL_4_4 = 36
+    # IQ4_NL_4_8 = 37
+    # IQ4_NL_8_8 = 38
+    # COUNT   = 39
 
 lock = Lock()
 

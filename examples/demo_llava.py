@@ -20,15 +20,10 @@ def demo_high_level():
     image = 'examples/llama-1.png'
     # image = 'examples/llama-4.png'
 
-    for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
-    # for token in model.completions(prompt=prompt, image=image, predict=1024):
+    for token in model.completions(prompt=prompt, image=image, predict=1024):
         print(token, end='', flush=True)
 
-    # for token in model.completions(prompt=prompt, image=image, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
-    #     print(token, end='', flush=True)
-
     print()
-
     # input('Press any key to exit')
 
 
@@ -65,10 +60,6 @@ def demo_high_level_gpt():
             args=[i, model],
             kwargs=dict(
                 predict=512,
-                # temp=0.7,
-                # top_p=0.8,
-                # top_k=100,
-                # repeat_penalty=1.05,
                 prompt='Describe this image.',
                 # prompt='What is in the image?',
                 image='examples/llama-1.png',
@@ -119,12 +110,10 @@ def demo_high_level_json():
       "additionalProperties": false
     }'''
 
-    # for token in model.completions(prompt=prompt, image=image, json_schema=json_schema, predict=1024, temp=0.7, top_p=0.8, top_k=100, repeat_penalty=1.05):
     for token in model.completions(prompt=prompt, image=image, json_schema=json_schema, predict=1024):
         print(token, end='', flush=True)
 
     print()
-
     # input('Press any key to exit')
 
 

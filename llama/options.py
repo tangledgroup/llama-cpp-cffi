@@ -1,10 +1,11 @@
 __all__ = ['ModelOptions', 'CompletionsOptions']
 
-
 from typing import Optional, ForwardRef
 
 import psutil
 from attrs import define, field
+
+from .llama_cpp import ggml_type
 
 
 Model = ForwardRef('Model')
@@ -40,7 +41,7 @@ class ModelOptions:
     batch_size: int = 2048 # logical maximum batch size (default: 2048)
     ubatch_size: int = 512 # physical maximum batch size (default: 512)
     # keep: int = field(default=0) # number of tokens to keep from initial prompt (default: 0, -1 = all)
-    # flash_attn: Optional[bool] = field(default=None) # enable Flash Attention (default: disabled)
+    flash_attn: bool = False # enable Flash Attention (default: disabled)
     # no_perf: bool = field(default=False) # disable internal libllama performance timings (default: false)
     # rope_scaling: Optional[str] = field(default=None) # RoPE frequency scaling method (default: linear unless specified by model)
     # rope_scale: Optional[float] = field(default=None) # RoPE context scaling factor, expands context by factor of N
@@ -53,8 +54,8 @@ class ModelOptions:
     # yarn_beta_fast: float = field(default=32.0) # YaRN: low correction dim or beta (default: 32.0)
     # dump_kv_cache: bool = field(default=False) # verbose print of the KV cache
     # no_kv_offload: bool = field(default=False) # disable KV offload
-    # cache_type_k: str = field(default="f16") # KV cache data type for K (default: f16)
-    # cache_type_v: str = field(default="f16") # KV cache data type for V (default: f16)
+    cache_type_k: ggml_type = ggml_type.F16 # KV cache data type for K (default: f16)
+    cache_type_v: ggml_type = ggml_type.F16 # KV cache data type for V (default: f16)
     # defrag_thold: float = field(default=0.1) # KV cache defragmentation threshold (default: 0.1, < 0 - disabled)
     # parallel: int = field(default=1) # number of parallel sequences to decode (default: 1)
     mlock: bool = False # force system to keep model in RAM rather than swapping or compressing

@@ -20,6 +20,10 @@ def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_con
     else:
         ctx_params.n_threads_batch = model_options.threads_batch
 
+    ctx_params.type_k = model_options.cache_type_k.value
+    ctx_params.type_v = model_options.cache_type_v.value
+    ctx_params.flash_attn = model_options.flash_attn
+
     with lock:
         context: llama_context_p = lib.llama_new_context_with_model(model, ctx_params)
 
