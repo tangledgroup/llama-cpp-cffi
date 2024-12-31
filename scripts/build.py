@@ -12,7 +12,7 @@ from cffi import FFI
 from clean import clean_llama_cpp, clean
 
 
-LLAMA_CPP_GIT_REF = 'a813badbbdf0d38705f249df7a0c99af5cdee678'
+LLAMA_CPP_GIT_REF = '5896c65232c7dc87d78426956b16f63fbf58dcf6'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',

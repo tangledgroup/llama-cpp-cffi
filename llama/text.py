@@ -114,14 +114,6 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
         elif r > 0:
             break
 
-    # print()
-    # print('!!', tokenizer.decode(output_tokens))
-    # print('!!', output_tokens)
-    # print('!!', [(n, tokenizer.decode(n)) for n in output_tokens])
-
-    # lib.llama_perf_sampler_print(sampler)
-    # lib.llama_perf_context_print(context)
-
     lib.llama_batch_free(batch)
 
     if grammar_sampler:

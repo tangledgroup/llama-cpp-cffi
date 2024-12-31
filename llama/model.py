@@ -17,7 +17,7 @@ from .text import text_completions
 
 def model_init(model_options: ModelOptions) -> llama_model_p:
     model_path = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.hf_file)
-    print(f'{model_path=}')
+    # print(f'{model_path=}')
 
     model_params: llama_model_params = lib.llama_model_default_params()
     model_params.n_gpu_layers = model_options.gpu_layers
@@ -88,7 +88,7 @@ class Model:
 
         config: AutoConfig = get_config(self.options.creator_hf_repo)
         model_type: str = config.model_type # type: ignore
-        print(f'{model_type=}')
+        # print(f'{model_type=}')
 
         if (
             model_type.startswith('llava') or

@@ -3,11 +3,16 @@
 ## v0.3.0
 
 Added:
-  - llama-cpp-cffi server - compatible with llama.cpp cli options instead of OpenAI
+  - Qwen 2 VL 2B / 7B vision models support
+  - WIP llama-cpp-cffi server - compatible with llama.cpp cli options instead of OpenAI
 
 Changed:
-  - `llama.cpp` revision `a813badbbdf0d38705f249df7a0c99af5cdee678`
+  - `llama.cpp` revision `5896c65232c7dc87d78426956b16f63fbf58dcf6`
   - Refactored `Options` class into two separate classes: `ModelOptions`, `CompletionsOptions`
+
+Fixed:
+  - Llava (moondream2, nanoLLaVA-1.5, llava-v1.6-mistral-7b) vision models support
+  - MiniCPM-V 2.5 / 2.6 vision models support
 
 Removed:
   - Removed ambiguous `Options` class

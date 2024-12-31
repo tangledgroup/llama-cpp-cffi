@@ -2,9 +2,9 @@ __all__ = [
     'minicpmv_completions',
 ]
 
-from typing import Any, Iterator
+from typing import Iterator
 
-from transformers import AutoConfig, AutoTokenizer
+from transformers import AutoTokenizer
 
 from .options import ModelOptions, CompletionsOptions
 from .llama_cpp import lib, ffi, lock, llama_context_p, llama_batch, llava_image_embed_p, llama_model_p, clip_ctx_p, llama_token, int_p, void_p, float_p
@@ -12,7 +12,7 @@ from .context import context_init, context_free
 from .clip import clip_init_context, clip_free_context
 from .sampler import sampler_init, grammar_sampler_init, sampler_free, _common_sampler_sample, _common_sampler_accept
 from .util import _common_token_to_piece
-from .formatter import get_config, get_tokenizer
+from .formatter import get_tokenizer
 from .llava import _llava_image_embed_make_with_filename, _llava_image_embed_free
 from .clip import _clip_uhd_num_image_embeds_col, _clip_process_eval_image_embed
 

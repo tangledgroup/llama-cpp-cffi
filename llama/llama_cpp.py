@@ -114,6 +114,7 @@ clip_image_size_p: TypeAlias = ffi.typeof('struct clip_image_size*') # type: ign
 llava_image_embed: TypeAlias = ffi.typeof('struct llava_image_embed') # type: ignore
 llava_image_embed_p: TypeAlias = ffi.typeof('struct llava_image_embed*') # type: ignore
 
+
 class ggml_type(Enum):
     F32     = 0
     F16     = 1
