@@ -4,7 +4,8 @@ __all__ = [
     'llava_completions',
 ]
 
-from typing import Iterator
+import os
+from typing import Any, Optional, Iterator
 
 from transformers import AutoConfig, AutoTokenizer
 
@@ -13,7 +14,7 @@ from .llama_cpp import lib, ffi, lock, llama_context_p, llama_batch, llava_image
 from .context import context_init, context_free
 from .clip import clip_init_context, clip_free_context
 from .sampler import sampler_init, grammar_sampler_init, sampler_free, _common_sampler_sample, _common_sampler_accept
-from .util import _common_token_to_piece
+from .util import _common_token_to_piece, messages_to_prompt_image
 from .formatter import get_config, get_tokenizer
 
 
@@ -55,9 +56,26 @@ def _eval_tokens(ctx_llama: llama_context_p, tokens: list[llama_token], n_batch:
 
 
 def llava_completions(model: 'Model', model_options: ModelOptions, completions_options: CompletionsOptions) -> Iterator[str]:
-    assert isinstance(completions_options.prompt, str)
-    assert completions_options.messages is None, 'messages are not currently supported'
-    assert isinstance(completions_options.image, str)
+    # either prompt/image or messages, but not both
+    assert (
+        (
+            isinstance(completions_options.prompt, str) and
+            isinstance(completions_options.image, str)
+        ) and not completions_options.messages
+    ) or (
+        not (
+            isinstance(completions_options.prompt, str) and
+            isinstance(completions_options.image, str)
+        ) and completions_options.messages
+    )
+
+    image_file: Optional[Any] = None
+
+    # allow only single message
+    if completions_options.messages:
+        prompt, image_file = messages_to_prompt_image(completions_options.messages)
+        completions_options.prompt = prompt
+        completions_options.image = image_file.name # type: ignore
 
     _model: llama_model_p = model._model
 
@@ -103,6 +121,9 @@ def llava_completions(model: 'Model', model_options: ModelOptions, completions_o
 
     assert embeds != ffi.NULL
     # print(f'{embeds=}')
+
+    if image_file:
+        os.unlink(image_file.name)
 
     n_past: int = 0
     max_tgt_len: int = 256 if completions_options.predict < 0 else completions_options.predict

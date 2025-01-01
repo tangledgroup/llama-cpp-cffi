@@ -11,7 +11,7 @@ model = Model( # 1.71B
     hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
 )
 
-model.init(ctx_size=8192, gpu_layers=99)
+model.init(ctx_size=8 * 1024, gpu_layers=99)
 
 #
 # messages
@@ -25,7 +25,7 @@ messages = [
 
 completions = model.completions(
     messages=messages,
-    predict=1024,
+    predict=1 * 1024,
     temp=0.7,
     top_p=0.8,
     top_k=100,
@@ -43,7 +43,7 @@ prompt='Evaluate 1 + 2 in Python. Result in Python is'
 
 completions = model.completions(
     prompt=prompt,
-    predict=1024,
+    predict=1 * 1024,
     temp=0.7,
     top_p=0.8,
     top_k=100,

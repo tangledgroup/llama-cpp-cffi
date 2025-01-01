@@ -2,7 +2,7 @@ __all__ = ['Model']
 
 from typing import Optional, Iterator
 
-from attrs import define, asdict
+from attrs import define, field, asdict
 from transformers import AutoConfig
 from huggingface_hub import hf_hub_download
 
@@ -41,24 +41,40 @@ def model_free(model: llama_model_p):
 @define
 class Model:
     options: Optional[ModelOptions] = None
-    _model: Optional[llama_model_p] = None
+    _model: Optional[llama_model_p] = field(default=None, eq=False) # C object
 
 
     def __init__(self,
-                 creator_hf_repo: str,
-                 hf_repo: str,
-                 hf_file: str,
+                 creator_hf_repo: Optional[str]=None,
+                 hf_repo: Optional[str]=None,
+                 hf_file: Optional[str]=None,
                  mmproj_hf_file: Optional[str]=None,
-                 tokenizer_hf_repo: Optional[str]=None):
-        options = ModelOptions(
-            creator_hf_repo=creator_hf_repo,
-            hf_repo=hf_repo,
-            hf_file=hf_file,
-            mmproj_hf_file=mmproj_hf_file,
-            tokenizer_hf_repo=tokenizer_hf_repo,
-        )
+                 tokenizer_hf_repo: Optional[str]=None,
+                 options: Optional[ModelOptions]=None):
+        if not options:
+            options = ModelOptions()
+
+        if creator_hf_repo:
+            options.creator_hf_repo = creator_hf_repo
+            options.hf_repo = hf_repo
+            options.hf_file = hf_file
+            options.mmproj_hf_file = mmproj_hf_file
+            options.tokenizer_hf_repo = tokenizer_hf_repo
 
         self.__attrs_init__(options) # type: ignore
+
+
+    def __str__(self) -> str:
+        if not self.options:
+            return ''
+
+        return ':'.join([
+            self.options.creator_hf_repo or '',
+            self.options.hf_repo or '',
+            self.options.hf_file or '',
+            self.options.mmproj_hf_file or '',
+            self.options.tokenizer_hf_repo or '',
+        ])
 
 
     def __del__(self):
@@ -67,6 +83,25 @@ class Model:
         if self._model:
             model_free(self._model)
             self._model = None
+
+
+    @classmethod
+    def from_str(cls, s: str) -> 'Model':
+        model: Model = Model(*s.split(':'))
+        return model
+
+
+    # def are_models_defs_equal(self, other: 'Model') -> bool:
+    #     if not self.options or not other.options:
+    #         return False
+
+    #     return all([
+    #         self.options.creator_hf_repo == other.options.creator_hf_repo,
+    #         self.options.hf_repo == other.options.hf_repo,
+    #         self.options.hf_file == other.options.hf_file,
+    #         self.options.mmproj_hf_file == other.options.mmproj_hf_file,
+    #         self.options.tokenizer_hf_repo == other.options.tokenizer_hf_repo,
+    #     ])
 
 
     def init(self, **kwargs):

@@ -20,7 +20,8 @@ NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musll
 
 ## News
 
-- **Dec 9 2024, v0.2.0**: Support for low-level and high-level APIs: llama, llava, clip and ggml API
+- **Jan 1 2025, v0.3.1**: OpenAI compatible API, **text** and **vision** models. Added support for **Qwen2-VL** models.
+- **Dec 9 2024, v0.2.0**: Low-level and high-level APIs: llama, llava, clip and ggml API
 - **Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.
 
 ## Install
@@ -31,13 +32,11 @@ Basic library install:
 pip install llama-cpp-cffi
 ```
 
-<!--
 In case you want [OpenAI © Chat Completions API](https://platform.openai.com/docs/overview) compatible API:
 
 ```bash
 pip install llama-cpp-cffi[openai]
 ```
--->
 
 **IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12**. If you don't have CUDA 12.X installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
 
@@ -57,7 +56,7 @@ model = Model(
     hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
 )
 
-model.init(ctx_size=8192, gpu_layers=99)
+model.init(ctx_size=8 * 1024, gpu_layers=99)
 
 #
 # messages
@@ -71,7 +70,7 @@ messages = [
 
 completions = model.completions(
     messages=messages,
-    predict=1024,
+    predict=1 * 1024,
     temp=0.7,
     top_p=0.8,
     top_k=100,
@@ -85,9 +84,21 @@ for chunk in completions:
 #
 prompt='Evaluate 1 + 2 in Python. Result in Python is'
 
-for chunk in model.completions(prompt=prompt, predict=1024, temp=0.7, top_p=0.8, top_k=100):
+completions = model.completions(
+    prompt=prompt,
+    predict=1 * 1024,
+    temp=0.7,
+    top_p=0.8,
+    top_k=100,
+)
+
+for chunk in completions:
     print(chunk, flush=True, end='')
 ```
+
+### References
+- `examples/llm.py`
+- `examples/demo_text.py`
 
 ## VLM Example
 
@@ -104,7 +115,7 @@ model = Model( # 1.87B
     mmproj_hf_file='moondream2-mmproj-f16.gguf',
 )
 
-model.init(ctx_size=8192, gpu_layers=99)
+model.init(ctx_size=8 * 1024, gpu_layers=99)
 
 #
 # prompt
@@ -115,97 +126,181 @@ image = 'examples/llama-1.png'
 completions = model.completions(
     prompt=prompt,
     image=image,
-    predict=1024,
+    predict=1 * 1024,
 )
 
 for chunk in completions:
     print(chunk, flush=True, end='')
 ```
 
-## References
-- `examples/llm.py`
+### References
 - `examples/vlm.py`
+- `examples/demo_llava.py`
+- `examples/demo_minicpmv.py`
+- `examples/demo_qwen2vl.py`
 
-<!--
-### OpenAI © compatible Chat Completions API - Server and Client
+## API
 
-Run OpenAI compatible server:
+### Server - llama-cpp-cffi + OpenAI API
+
+Run server first:
 
 ```bash
-python -m llama.openai
+python -m llama.server
 # or
-python -B -u -m gunicorn --bind '0.0.0.0:11434' --timeout 300 --workers 1 --worker-class aiohttp.GunicornWebWorker 'llama.openai:build_app()'
+python -B -u -m gunicorn --bind '0.0.0.0:11434' --timeout 300 --workers 1 --worker-class aiohttp.GunicornWebWorker 'llama.server:build_app()'
 ```
 
-Run OpenAI compatible client `examples/demo_openai_0.py`:
+### Client - llama-cpp-cffi API / curl
 
 ```bash
-python -B examples/demo_openai_0.py
+#
+# llm
+#
+curl -XPOST 'http://localhost:11434/api/1.0/completions' \
+-H "Content-Type: application/json" \
+-d '{
+    "gpu_layers": 99,
+    "prompt": "Evaluate 1 + 2 in Python."
+}'
+
+curl -XPOST 'http://localhost:11434/api/1.0/completions' \
+-H "Content-Type: application/json" \
+-d '{
+    "creator_hf_repo": "HuggingFaceTB/SmolLM2-1.7B-Instruct",
+    "hf_repo": "bartowski/SmolLM2-1.7B-Instruct-GGUF",
+    "hf_file": "SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+    "gpu_layers": 99,
+    "prompt": "Evaluate 1 + 2 in Python."
+}'
+
+curl -XPOST 'http://localhost:11434/api/1.0/completions' \
+-H "Content-Type: application/json" \
+-d '{
+    "creator_hf_repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "hf_repo": "Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+    "hf_file": "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "gpu_layers": 99,
+    "prompt": "Evaluate 1 + 2 in Python."
+}'
+
+curl -XPOST 'http://localhost:11434/api/1.0/completions' \
+-H "Content-Type: application/json" \
+-d '{
+    "creator_hf_repo": "Qwen/Qwen2.5-7B-Instruct",
+    "hf_repo": "bartowski/Qwen2.5-7B-Instruct-GGUF",
+    "hf_file": "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
+    "gpu_layers": 99,
+    "prompt": "Evaluate 1 + 2 in Python."
+}'
+
+#
+# vlm - example 1
+#
+image_path="examples/llama-1.jpg"
+mime_type=$(file -b --mime-type "$image_path")
+base64_data=$(base64 -w 0 "$image_path")
+
+cat << EOF > /tmp/temp.json
+{
+    "creator_hf_repo": "Qwen/Qwen2-VL-2B-Instruct",
+    "hf_repo": "bartowski/Qwen2-VL-2B-Instruct-GGUF",
+    "hf_file": "Qwen2-VL-2B-Instruct-Q4_K_M.gguf",
+    "mmproj_hf_file": "mmproj-Qwen2-VL-2B-Instruct-f16.gguf",
+    "gpu_layers": 99,
+    "prompt": "Describe this image.",
+    "image": "data:$mime_type;base64,$base64_data"
+}
+EOF
+
+curl -XPOST 'http://localhost:11434/api/1.0/completions' \
+-H "Content-Type: application/json" \
+--data-binary "@/tmp/temp.json"
+
+#
+# vlm - example 2
+#
+image_path="examples/llama-1.jpg"
+mime_type=$(file -b --mime-type "$image_path")
+base64_data=$(base64 -w 0 "$image_path")
+
+cat << EOF > /tmp/temp.json
+{
+    "creator_hf_repo": "Qwen/Qwen2-VL-2B-Instruct",
+    "hf_repo": "bartowski/Qwen2-VL-2B-Instruct-GGUF",
+    "hf_file": "Qwen2-VL-2B-Instruct-Q4_K_M.gguf",
+    "mmproj_hf_file": "mmproj-Qwen2-VL-2B-Instruct-f16.gguf",
+    "gpu_layers": 99,
+    "messages": [
+        {"role": "user", "content": [
+            {"type": "text", "text": "Describe this image."},
+            {
+                "type": "image_url",
+                "image_url": {"url": "data:$mime_type;base64,$base64_data"}
+            }
+        ]}
+    ]
+}
+EOF
+
+curl -XPOST 'http://localhost:11434/api/1.0/completions' \
+-H "Content-Type: application/json" \
+--data-binary "@/tmp/temp.json"
 ```
 
-```python
-from openai import OpenAI
-from llama import Model
-
-
-client = OpenAI(
-    base_url = 'http://localhost:11434/v1',
-    api_key='llama-cpp-cffi',
-)
-
-model = Model(
-    creator_hf_repo='TinyLlama/TinyLlama-1.1B-Chat-v1.0',
-    hf_repo='TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF',
-    hf_file='tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf',
-)
-
-messages = [
-    {'role': 'system', 'content': 'You are a helpful assistant.'},
-    {'role': 'user', 'content': '1 + 1 = ?'},
-    {'role': 'assistant', 'content': '2'},
-    {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'}
-]
-
-
-def demo_chat_completions():
-    print('demo_chat_completions:')
-
-    response = client.chat.completions.create(
-        model=str(model),
-        messages=messages,
-        temperature=0.0,
-    )
-
-    print(response.choices[0].message.content)
-
-
-def demo_chat_completions_stream():
-    print('demo_chat_completions_stream:')
-
-    response = client.chat.completions.create(
-        model=str(model),
-        messages=messages,
-        temperature=0.0,
-        stream=True,
-    )
-
-    for chunk in response:
-        print(chunk.choices[0].delta.content, flush=True, end='')
-
-    print()
-
-
-if __name__ == '__main__':
-    demo_chat_completions()
-    demo_chat_completions_stream()
-```
-
-## Demos
+### Client - OpenAI © compatible Chat Completions API
 
 ```bash
-python -B examples/demo_smollm_chat.py
-python -B examples/demo_smollm_tool.py
-python -B examples/demo_rwkv_chat.py
-python -B examples/demo_rwkv_tool.py
+#
+# text
+#
+curl -XPOST 'http://localhost:11434/v1/chat/completions' \
+-H "Content-Type: application/json" \
+-d '{
+    "model": "HuggingFaceTB/SmolLM2-1.7B-Instruct:bartowski/SmolLM2-1.7B-Instruct-GGUF:SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Evaluate 1 + 2 in Python."
+        }
+    ],
+    "ctx_size": 8192,
+    "gpu_layers": 99
+}'
+
+#
+# image
+#
+image_path="examples/llama-1.jpg"
+mime_type=$(file -b --mime-type "$image_path")
+base64_data=$(base64 -w 0 "$image_path")
+
+cat << EOF > /tmp/temp.json
+{
+    "model": "Qwen/Qwen2-VL-2B-Instruct:bartowski/Qwen2-VL-2B-Instruct-GGUF:Qwen2-VL-2B-Instruct-Q4_K_M.gguf:mmproj-Qwen2-VL-2B-Instruct-f16.gguf",
+    "messages": [
+        {"role": "user", "content": [
+            {"type": "text", "text": "Describe this image."},
+            {
+                "type": "image_url",
+                "image_url": {"url": "data:$mime_type;base64,$base64_data"}
+            }
+        ]}
+    ],
+    "ctx_size": 8192,
+    "gpu_layers": 99
+}
+EOF
+
+curl -XPOST 'http://localhost:11434/v1/chat/completions' \
+-H "Content-Type: application/json" \
+--data-binary "@/tmp/temp.json"
+
+#
+# Client Python API for OpenAI
+#
+python -B examples/demo_openai.py
 ```
--->
+
+### References
+- `examples/demo_openai.py`

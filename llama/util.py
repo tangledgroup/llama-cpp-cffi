@@ -7,8 +7,15 @@ __all__ = [
     '_common_batch_add',
     '_common_token_to_piece',
     '_zero_array',
+    'base64_image_to_tempfile',
+    'messages_to_prompt_image',
+    'file_to_data_uri',
 ]
 
+import re
+import base64
+import mimetypes
+import tempfile
 from typing import Any
 
 from .llama_cpp import (
@@ -124,3 +131,85 @@ def _common_token_to_piece(ctx: llama_context_p, token: llama_token, special: bo
 def _zero_array(arr: Any):
     for i in range(len(arr)):
         arr[i] = 0
+
+
+def base64_image_to_tempfile(image: str) -> Any:
+    extension_map = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+    }
+
+    match = re.match(r'data:(image/[^;]+);base64,(.+)$', image)
+
+    if not match:
+        raise ValueError("Invalid base64 encoded image string")
+
+    mime_type, base64_image = match.groups()
+    # print(f'{mime_type=}')
+    # print(f'{base64_image=}')
+    extension: str = extension_map[mime_type]
+
+    image_file = tempfile.NamedTemporaryFile(suffix=f'.{extension}', delete=False)
+    raw_image = base64.b64decode(base64_image)
+    assert isinstance(raw_image, bytes)
+    # print(f'{len(raw_image)=}')
+    image_file.write(raw_image) # Decode base64 data and write to file
+    image_file.seek(0, 0) # go back to beginning
+    return image_file
+
+
+def messages_to_prompt_image(messages: list[dict]) -> tuple[str, Any]:
+    # allow only single message
+    assert isinstance(messages, list) and len(messages) == 1
+    message: dict = messages[0]
+    assert isinstance(message, dict)
+
+    assert 'role' in message
+    role = message['role']
+    assert role == 'user'
+
+    assert 'content' in message
+
+    content: dict = message['content']
+    assert isinstance(content, list)
+    assert len(content) == 2
+
+    text_content: dict = content[0]
+    assert isinstance(text_content, dict)
+    assert 'type' in text_content and text_content['type'] == 'text'
+    assert 'text' in text_content
+    prompt: str = text_content['text']
+
+    image_url_content: dict = content[1]
+    assert isinstance(image_url_content, dict)
+    assert 'type' in image_url_content and image_url_content['type'] == 'image_url'
+    assert 'image_url' in image_url_content
+
+    image_url: dict = image_url_content['image_url']
+    assert isinstance(image_url, dict)
+    assert 'url' in image_url
+    url = image_url['url']
+
+    image_file = base64_image_to_tempfile(url)
+    return prompt, image_file
+
+
+def file_to_data_uri(file_path: str) -> str:
+    # Guess the MIME type based on the file extension
+    mime_type, _ = mimetypes.guess_type(file_path)
+
+    if mime_type is None:
+        mime_type = 'application/octet-stream'  # Default MIME type if not guessed
+
+    # Read the file in binary mode
+    with open(file_path, 'rb') as file:
+        file_data = file.read()
+
+    # Encode to Base64
+    base64_data = base64.b64encode(file_data).decode()
+
+    # Format as data URI
+    data_uri = f"data:{mime_type};base64,{base64_data}"
+    return data_uri

@@ -12,7 +12,7 @@ model = Model( # 1.87B
     mmproj_hf_file='moondream2-mmproj-f16.gguf',
 )
 
-model.init(ctx_size=8192, gpu_layers=99)
+model.init(ctx_size=8 * 1024, gpu_layers=99)
 
 #
 # prompt
@@ -23,7 +23,7 @@ image = 'examples/llama-1.png'
 completions = model.completions(
     prompt=prompt,
     image=image,
-    predict=1024,
+    predict=1 * 1024,
 )
 
 for chunk in completions:

@@ -2,6 +2,10 @@
 
 ## v0.3.1
 
+Added:
+  - llama-cpp-cffi server - compatible with llama.cpp cli options
+  - Support for `CompletionsOptions.messages` for VLM prompts with a single message containing just a pair of `text` and `image_url` in `content`.
+
 Changed:
   - `llama.cpp` revision `0827b2c1da299805288abbd556d869318f2b121e`
 

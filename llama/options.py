@@ -18,9 +18,9 @@ LLAMA_SPLIT_MODE_ROW = 2 # split layers and KV across GPUs, use tensor paralleli
 
 @define
 class ModelOptions:
-    creator_hf_repo: str
-    hf_repo: str
-    hf_file: str
+    creator_hf_repo: Optional[str] = None
+    hf_repo: Optional[str] = None
+    hf_file: Optional[str] = None
     mmproj_hf_file: Optional[str] = None
     tokenizer_hf_repo: Optional[str] = None
 
@@ -86,6 +86,16 @@ class ModelOptions:
     # no_warmup: bool = field(default=False) # skip warming up the model with an empty run
     # grp_attn_n: int = field(default=1) # group-attention factor (default: 1)
     # grp_attn_w: int = field(default=512) # group-attention width (default: 512)
+
+
+    # def is_model_def_none(self) -> bool:
+    #     return all([
+    #         self.creator_hf_repo is None,
+    #         self.hf_repo is None,
+    #         self.hf_file is None,
+    #         self.mmproj_hf_file is None,
+    #         self.tokenizer_hf_repo is None,
+    #     ])
 
 
 @define

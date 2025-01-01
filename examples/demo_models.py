@@ -17,12 +17,22 @@ demo_models = {
         hf_repo='Qwen/Qwen2.5-1.5B-Instruct-GGUF',
         hf_file='qwen2.5-1.5b-instruct-q4_k_m.gguf',
     ),
+    'Qwen/Qwen2.5-3B-Instruct': Model(
+        creator_hf_repo='Qwen/Qwen2.5-3B-Instruct',
+        hf_repo='Qwen/Qwen2.5-3B-Instruct-GGUF',
+        hf_file='qwen2.5-3b-instruct-q4_k_m.gguf',
+    ),
+    'Qwen/Qwen2.5-7B-Instruct': Model(
+        creator_hf_repo='Qwen/Qwen2.5-7B-Instruct',
+        hf_repo='bartowski/Qwen2.5-7B-Instruct-GGUF',
+        hf_file='Qwen2.5-7B-Instruct-Q4_K_M.gguf',
+    ),
     'arcee-ai/arcee-lite': Model( # 1.5B Qwen2
         creator_hf_repo='arcee-ai/arcee-lite',
         hf_repo='arcee-ai/arcee-lite-GGUF',
         hf_file='arcee-lite-Q4_K_M.gguf',
     ),
-    'arcee-ai/Llama-3.1-SuperNova-Lite': Model(
+    'arcee-ai/Llama-3.1-SuperNova-Lite': Model( # 8B
         creator_hf_repo='arcee-ai/Llama-3.1-SuperNova-Lite',
         hf_repo='arcee-ai/Llama-3.1-SuperNova-Lite-GGUF',
         hf_file='supernova-lite-v1.Q5_K_M.gguf',
@@ -37,19 +47,10 @@ demo_models = {
         hf_repo='bartowski/SmolLM2-1.7B-Instruct-GGUF',
         hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
     ),
-    'microsoft/Phi-3.5-mini-instruct': Model(
+    'microsoft/Phi-3.5-mini-instruct': Model( # 3.82B
         creator_hf_repo='microsoft/Phi-3.5-mini-instruct',
         hf_repo='bartowski/Phi-3.5-mini-instruct-GGUF',
         hf_file='Phi-3.5-mini-instruct-Q4_K_M.gguf',
-        # hf_file='Phi-3.5-mini-instruct-Q6_K.gguf',
-        # hf_file='Phi-3.5-mini-instruct-Q8_0.gguf',
-    ),
-    'numind/NuExtract-1.5': Model(
-        creator_hf_repo='numind/NuExtract-1.5',
-        hf_repo='bartowski/NuExtract-v1.5-GGUF',
-        # hf_file='NuExtract-v1.5-Q4_K_M.gguf',
-        # hf_file='NuExtract-v1.5-Q6_K.gguf',
-        hf_file='NuExtract-v1.5-Q8_0.gguf',
     ),
     'RWKV/v6-Finch-1B6-HF': Model(
         creator_hf_repo='RWKV/v6-Finch-1B6-HF',
@@ -65,7 +66,7 @@ demo_models = {
     #
     # vlm
     #
-    'Qwen/Qwen2-VL-2B-Instruct': Model( # 8.29B
+    'Qwen/Qwen2-VL-2B-Instruct': Model( # 2.21B
         creator_hf_repo='Qwen/Qwen2-VL-2B-Instruct',
         hf_repo='bartowski/Qwen2-VL-2B-Instruct-GGUF',
         hf_file='Qwen2-VL-2B-Instruct-Q4_K_M.gguf',
