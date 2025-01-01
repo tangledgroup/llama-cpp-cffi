@@ -109,12 +109,13 @@ model.init(ctx_size=8192, gpu_layers=99)
 #
 # prompt
 #
+prompt = 'Describe this image.'
+image = 'examples/llama-1.png'
+
 completions = model.completions(
     prompt=prompt,
+    image=image,
     predict=1024,
-    temp=0.7,
-    top_p=0.8,
-    top_k=100,
 )
 
 for chunk in completions:
