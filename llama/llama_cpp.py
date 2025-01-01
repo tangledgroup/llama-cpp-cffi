@@ -59,22 +59,22 @@ LLAMA_CPP_BACKEND = os.getenv('LLAMA_CPP_BACKEND', None)
 try:
     if LLAMA_CPP_BACKEND:
         if LLAMA_CPP_BACKEND in ('cuda', 'CUDA'):
-            from ._llama_cpp_cuda_12_6_3 import lib, ffi
+            from ._llama_cpp_cuda_12_6_3 import lib, ffi # type: ignore
         elif LLAMA_CPP_BACKEND in ('vulkan', 'VULKAN'):
-            from ._llama_cpp_vulkan_1_x import lib, ffi
+            from ._llama_cpp_vulkan_1_x import lib, ffi # type: ignore
         elif LLAMA_CPP_BACKEND in ('cpu', 'CPU'):
-            from ._llama_cpp_cpu import lib, ffi
+            from ._llama_cpp_cpu import lib, ffi # type: ignore
         else:
             raise ValueError(f'{LLAMA_CPP_BACKEND = }')
     else:
         if is_cuda_available():
-            from ._llama_cpp_cuda_12_6_3 import lib, ffi
+            from ._llama_cpp_cuda_12_6_3 import lib, ffi # type: ignore
         elif is_vulkan_available():
-            from ._llama_cpp_vulkan_1_x import lib, ffi
+            from ._llama_cpp_vulkan_1_x import lib, ffi # type: ignore
         else:
-            from ._llama_cpp_cpu import lib, ffi
+            from ._llama_cpp_cpu import lib, ffi # type: ignore
 except ImportError:
-    from ._llama_cpp_cpu import lib, ffi
+    from ._llama_cpp_cpu import lib, ffi # type: ignore
 
 
 global_weakkeydict = WeakKeyDictionary()

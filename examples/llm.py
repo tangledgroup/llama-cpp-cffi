@@ -23,7 +23,15 @@ messages = [
     {'role': 'user', 'content': 'Evaluate 1 + 2 in Python.'},
 ]
 
-for chunk in model.completions(messages=messages, predict=1024, temp=0.7, top_p=0.8, top_k=100):
+completions = model.completions(
+    messages=messages,
+    predict=1024,
+    temp=0.7,
+    top_p=0.8,
+    top_k=100,
+)
+
+for chunk in completions:
     print(chunk, flush=True, end='')
 
 print()
@@ -33,7 +41,15 @@ print()
 #
 prompt='Evaluate 1 + 2 in Python. Result in Python is'
 
-for chunk in model.completions(prompt=prompt, predict=1024, temp=0.7, top_p=0.8, top_k=100):
+completions = model.completions(
+    prompt=prompt,
+    predict=1024,
+    temp=0.7,
+    top_p=0.8,
+    top_k=100,
+)
+
+for chunk in completions:
     print(chunk, flush=True, end='')
 
 print()

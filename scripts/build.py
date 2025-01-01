@@ -831,10 +831,10 @@ def build(*args, **kwargs):
         build_vulkan_1_x(*args, **kwargs)
 
     # cuda 12.6.3
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':
