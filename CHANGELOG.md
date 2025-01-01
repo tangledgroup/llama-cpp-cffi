@@ -3,7 +3,9 @@
 ## v0.3.1
 
 Added:
+  - llama-cpp-cffi server - support for dynamic load/unload of model - hot-swap of models on demand
   - llama-cpp-cffi server - compatible with llama.cpp cli options
+  - llama-cpp-cffi server - limited compatibility for OpenAI API `/v1/chat/completions` for text and vision models
   - Support for `CompletionsOptions.messages` for VLM prompts with a single message containing just a pair of `text` and `image_url` in `content`.
 
 Changed:
