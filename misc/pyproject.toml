@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llama-cpp-cffi"
-version = "0.3.1"
+version = "0.3.0"
 description = "Python binding for llama.cpp using cffi"
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
@@ -87,8 +87,7 @@ else
     fi
 fi
 """
-build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
-# skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
+skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686", "*manylinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686"]

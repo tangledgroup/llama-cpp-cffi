@@ -12,7 +12,7 @@ from cffi import FFI
 from clean import clean_llama_cpp, clean
 
 
-LLAMA_CPP_GIT_REF = '5896c65232c7dc87d78426956b16f63fbf58dcf6'
+LLAMA_CPP_GIT_REF = '0827b2c1da299805288abbd556d869318f2b121e'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -333,11 +333,8 @@ def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['git', 'reset', '--hard', LLAMA_CPP_GIT_REF], cwd='llama.cpp', check=True)
     subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
-    # subprocess.run(['patch', 'llama.cpp/examples/llava/clip.cpp', 'clip_cpp_6.patch'], check=True)
-    # subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
-    # subprocess.run(['patch', 'llama.cpp/examples/llava/llava.cpp', 'llava_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
 
 
@@ -834,10 +831,10 @@ def build(*args, **kwargs):
         build_vulkan_1_x(*args, **kwargs)
 
     # cuda 12.6.3
-    # if env.get('GGML_CUDA', '1') != '0':
-    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #         clean_llama_cpp()
-    #         build_linux_cuda_12_6_3(*args, **kwargs)
+    if env.get('GGML_CUDA', '1') != '0':
+        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+            clean_llama_cpp()
+            build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':
