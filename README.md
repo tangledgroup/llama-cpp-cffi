@@ -14,9 +14,9 @@
 [![Github Downloads](https://img.shields.io/github/downloads/tangledgroup/llama-cpp-cffi/total.svg?label=Github%20Downloads)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU**, **Vulkan 1.x** and **CUDA 12.6** runtimes, **x86_64** and **aarch64** platforms.
+**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU**, **Vulkan 1.x** (AMD, Intel and Nvidia GPUs) and **CUDA 12.6** (Nvidia GPUs) runtimes, **x86_64** and **aarch64** platforms.
 
-NOTE: Currently supported operating system is Linux (`manylinux_2_28` and `musllinux_1_2`), but we are working on both Windows and MacOS versions.
+NOTE: Currently supported operating system is **Linux** (`manylinux_2_28` and `musllinux_1_2`), but we are working on both **Windows** and **macOS** versions.
 
 ## News
 
