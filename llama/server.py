@@ -192,6 +192,10 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
     llama_cpp_cffi_data['temp'] = temperature
     llama_cpp_cffi_data['top_p'] = top_p
 
+    llama_cpp_cffi_data['grammar'] = data.get('grammar', None)
+    llama_cpp_cffi_data['json_schema'] = data.get('json_schema', None)
+    llama_cpp_cffi_data['chat_template'] = data.get('chat_template', None)
+
     async with lock:
         if stream:
             response = web.StreamResponse()

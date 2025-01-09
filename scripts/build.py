@@ -24,6 +24,7 @@ REPLACE_CODE_ITEMS = {
     'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
     'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
     'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
+    'size_t llama_state_get_data(\nstruct llama_context * ctx,\nuint8_t * dst,\nsize_t size);\n': '/* llama_state_get_data */',
 }
 
 
@@ -418,8 +419,8 @@ def build_cpu(*args, **kwargs):
     # filter relevant header code
     _source = filter_library_code(_source)
 
-    # patch of source
-    _source = replace_code(_source, REPLACE_CODE_ITEMS)
+    # # patch of source
+    # _source = replace_code(_source, REPLACE_CODE_ITEMS)
 
     # filter our attribute code
     _source = remove_attribute_code(_source)
@@ -429,6 +430,9 @@ def build_cpu(*args, **kwargs):
 
     # filter our static inline code
     _source = replace_inline_code(_source)
+
+    # patch of source
+    _source = replace_code(_source, REPLACE_CODE_ITEMS)
 
     # strip empty lines
     _source = cleanup_code(_source)
@@ -826,15 +830,15 @@ def build(*args, **kwargs):
         build_cpu(*args, **kwargs)
 
     # vulkan 1.x
-    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-        clean_llama_cpp()
-        build_vulkan_1_x(*args, **kwargs)
+    # if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #     clean_llama_cpp()
+    #     build_vulkan_1_x(*args, **kwargs)
 
     # cuda 12.6.3
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            clean_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         clean_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':

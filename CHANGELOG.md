@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.3.2
+
+Added:
+ - `server` support for OpenAI extra fields: `grammar`, `json_schema`, `chat_template`
+
+Changed:
+  - `llama.cpp` revision `0827b2c1da299805288abbd556d869318f2b121e`
+
 ## v0.3.1
 
 Added:
