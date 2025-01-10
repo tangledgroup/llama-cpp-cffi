@@ -514,13 +514,13 @@ def build_cpu(*args, **kwargs):
     # copy compiled modules
     #
     for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
     for file in glob.glob('build/*.dll') + glob.glob('llama.cpp/*.dll'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
     for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
 
 def build_vulkan_1_x(*args, **kwargs):
@@ -645,13 +645,13 @@ def build_vulkan_1_x(*args, **kwargs):
     # copy compiled modules
     #
     for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
     for file in glob.glob('build/*.dll') + glob.glob('llama.cpp/*.dll'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
     for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
 
 def build_linux_cuda_12_6_3(*args, **kwargs):
@@ -808,13 +808,13 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     # copy compiled modules
     #
     for file in glob.glob('build/*.so') + glob.glob('llama.cpp/*.so'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
     for file in glob.glob('build/*.dll') + glob.glob('llama.cpp/*.dll'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
     for file in glob.glob('build/*.dylib') + glob.glob('llama.cpp/*.dylib'):
-        shutil.move(file, 'llama/')
+        shutil.copy(file, 'llama/')
 
 
 def build(*args, **kwargs):
@@ -830,15 +830,15 @@ def build(*args, **kwargs):
         build_cpu(*args, **kwargs)
 
     # vulkan 1.x
-    # if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #     clean_llama_cpp()
-    #     build_vulkan_1_x(*args, **kwargs)
+    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+        clean_llama_cpp()
+        build_vulkan_1_x(*args, **kwargs)
 
     # cuda 12.6.3
-    # if env.get('GGML_CUDA', '1') != '0':
-    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #         clean_llama_cpp()
-    #         build_linux_cuda_12_6_3(*args, **kwargs)
+    if env.get('GGML_CUDA', '1') != '0':
+        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+            clean_llama_cpp()
+            build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':
