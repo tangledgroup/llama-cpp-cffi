@@ -80,17 +80,18 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf update -y
     dnf group install -y "Development Tools"
     # dnf install -y unzip p7zip p7zip-plugins upx clang-tools-extra libcurl-devel
-    dnf install -y clang-tools-extra libcurl-devel ninja-build
+    # dnf install -y clang-tools-extra libcurl-devel ninja-build
+    dnf install -y clang clang-tools-extra ninja-build
 
-    git clone https://github.com/google/shaderc
-    cd shaderc
-    ./utils/git-sync-deps
-    mkdir build
-    cd build
-    cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_TESTS=ON ../
-    ninja
-    ninja install
-    cd ../..
+    # git clone https://github.com/google/shaderc
+    # cd shaderc
+    # ./utils/git-sync-deps
+    # mkdir build
+    # cd build
+    # cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_TESTS=ON ../
+    # ninja
+    # ninja install
+    # cd ../..
 
     # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then
@@ -100,7 +101,8 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     fi
 else
     # apk -U add unzip 7zip upx clang-extra-tools
-    apk -U add clang-extra-tools curl-dev ninja-build
+    # apk -U add clang-extra-tools curl-dev ninja-build
+    apk -U add clang clang-extra-tools ninja-build
 
     # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then
