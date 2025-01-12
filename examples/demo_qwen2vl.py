@@ -11,11 +11,11 @@ def demo_high_level():
 
     model: Model = demo_models[model_id]
     model.init(
-        ctx_size=4 * 1024,
+        n_ctx=4 * 1024,
         gpu_layers=99,
         flash_attn=True,
-        cache_type_k=ggml_type.F16,
-        cache_type_v=ggml_type.F16,
+        type_k=ggml_type.F16,
+        type_v=ggml_type.F16,
     )
 
     # input('Press any key to generate')
@@ -34,13 +34,13 @@ def demo_high_level():
 def demo_high_level_gpt():
     models_ids = [
         'Qwen/Qwen2-VL-2B-Instruct',
-        'Qwen/Qwen2-VL-7B-Instruct',
+        'Qwen/Qwen2-VL-2B-Instruct',
     ]
 
     models: list[Model] = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=4 * 1024, gpu_layers=2)
+        model.init(n_ctx=4 * 1024, gpu_layers=2)
 
     # input('Press any key to generate')
 
@@ -84,9 +84,9 @@ def demo_high_level_gpt():
 
 
 def demo_high_level_json():
-    model_id = 'Qwen/Qwen2-VL-7B-Instruct'
+    model_id = 'Qwen/Qwen2-VL-2B-Instruct'
     model: Model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, gpu_layers=99)
+    model.init(n_ctx=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 

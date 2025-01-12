@@ -17,7 +17,7 @@ def demo_high_level():
     # model_id = 'numind/NuExtract-1.5'
 
     model: Model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, gpu_layers=99)
+    model.init(n_ctx=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -39,7 +39,7 @@ def demo_high_level_chat():
     # model_id = 'arcee-ai/arcee-lite'
 
     model: Model = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, gpu_layers=99)
+    model.init(n_ctx=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -68,7 +68,7 @@ def demo_high_level_gpt():
     models: list[Model] = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=4 * 1024, gpu_layers=99)
+        model.init(n_ctx=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -108,7 +108,7 @@ def demo_high_level_rwkv():
     models: list[Model] = [demo_models[models_id] for models_id in models_ids]
 
     for model in models:
-        model.init(ctx_size=4 * 1024, gpu_layers=99)
+        model.init(n_ctx=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 
@@ -149,7 +149,7 @@ def demo_high_level_json():
     # model_id = 'RWKV/v6-Finch-3B-HF'
 
     model: list[Model] = demo_models[model_id]
-    model.init(ctx_size=4 * 1024, gpu_layers=99)
+    model.init(n_ctx=4 * 1024, gpu_layers=99)
 
     # input('Press any key to generate')
 

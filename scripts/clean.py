@@ -1,5 +1,6 @@
 import os
 import glob
+import shutil
 import subprocess
 
 
@@ -12,13 +13,10 @@ def clean_llama_cpp():
     if not os.path.exists('./llama.cpp'):
         return
 
-    subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
-        'clean',
-        'LLAMA_MAKEFILE=1',
-    ], check=True)
+    if not os.path.exists('llama.cpp/build'):
+        return
+
+    shutil.rmtree('llama.cpp/build')
 
 
 def clean():

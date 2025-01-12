@@ -8,7 +8,21 @@ from typing import Any, Optional, Iterator
 from transformers import AutoTokenizer
 
 from .options import ModelOptions, CompletionsOptions
-from .llama_cpp import lib, ffi, lock, llama_context_p, llama_batch, llava_image_embed_p, llama_model_p, clip_ctx_p, llama_token, int_p, void_p, float_p
+from .llama_cpp import (
+    lib,
+    ffi,
+    lock,
+    int_p,
+    void_p,
+    float_p,
+    llama_model_p,
+    llama_context_p,
+    llama_batch,
+    llama_token,
+    llama_vocab_p,
+    clip_ctx_p,
+    llava_image_embed_p,
+)
 from .context import context_init, context_free
 from .clip import clip_init_context, clip_free_context
 from .sampler import sampler_init, grammar_sampler_init, sampler_free, _common_sampler_sample, _common_sampler_accept
@@ -94,6 +108,7 @@ def minicpmv_completions(model: 'Model', model_options: ModelOptions, completion
         completions_options.image = image_file.name # type: ignore
 
     _model: llama_model_p = model._model
+    vocab: llama_vocab_p = lib.llama_model_get_vocab(_model)
 
     if completions_options.verbose:
         # default llama.cpp logger
@@ -128,7 +143,7 @@ def minicpmv_completions(model: 'Model', model_options: ModelOptions, completion
     # image embeddings
     embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(
         clip_context,
-        model_options.threads,
+        model_options.n_threads,
         completions_options.image.encode(),
     )
 
@@ -148,17 +163,17 @@ def minicpmv_completions(model: 'Model', model_options: ModelOptions, completion
     prompt = prompt[:prompt.index(begin_image_token) + len(begin_image_token)]
     # print(prompt)
     prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
-    s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+    s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
 
     # eval user image
-    n_past = _process_eval_image_embed(context, clip_context, embeds, model_options.batch_size, n_past, idx)
+    n_past = _process_eval_image_embed(context, clip_context, embeds, model_options.n_batch, n_past, idx)
     idx += 1
 
     #
     prompt = end_image_token
     # print(prompt)
     prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
-    s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+    s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
 
     #
     if minicpmv_projector > 1:
@@ -170,7 +185,7 @@ def minicpmv_completions(model: 'Model', model_options: ModelOptions, completion
             prompt = '<slice>'
             # print(prompt)
             prompt_tokens = tokenizer.encode(prompt) # type: ignore
-            s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+            s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
             i = 0
 
             while i < (num_image_embeds - 1) / num_image_embeds_col:
@@ -180,27 +195,27 @@ def minicpmv_completions(model: 'Model', model_options: ModelOptions, completion
                     prompt = '<image>'
                     # print(prompt)
                     prompt_tokens = tokenizer.encode(prompt) # type: ignore
-                    s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+                    s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
                     n_past = _clip_process_eval_image_embed(context, clip_context, embeds, n_past, idx)
                     idx += 1
 
                     prompt = '</image>'
                     # print(prompt)
                     prompt_tokens = tokenizer.encode(prompt) # type: ignore
-                    s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+                    s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
 
                     j += 1
 
                 prompt = '\n'
                 prompt_tokens = tokenizer.encode(prompt) # type: ignore
-                s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+                s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
 
                 i += 1
 
             prompt = '</slice>'
             # print(prompt)
             prompt_tokens = tokenizer.encode(prompt) # type: ignore
-            s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+            s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
 
     #
     messages = [{'role': 'user', 'content': completions_options.prompt}]
@@ -208,21 +223,21 @@ def minicpmv_completions(model: 'Model', model_options: ModelOptions, completion
     prompt = prompt[prompt.index(completions_options.prompt):]
     # print(prompt)
     prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
-    s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+    s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
 
     # generate tokens
     for i in range(max_tgt_len):
         new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
         _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
 
-        if lib.llama_token_is_eog(_model, new_token_id):
+        if lib.llama_token_is_eog(vocab, new_token_id):
             break
 
         piece = _common_token_to_piece(context, new_token_id, True)
         yield piece
 
         prompt_tokens: list[int] = tokenizer.encode(piece, add_special_tokens=False) # type: ignore
-        s, n_past = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past)
+        s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
         # print(f'{n_past=}')
 
     _llava_image_embed_free(embeds)

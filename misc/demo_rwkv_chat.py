@@ -9,7 +9,7 @@ def demo_prompt(model: Model):
     print(model)
 
     options = Options(
-        ctx_size=0,
+        n_ctx=0,
         predict=-1,
         no_context_shift=True,
         model=model,
@@ -37,7 +37,7 @@ def demo_messages(model: Model):
     print(model)
 
     options = Options(
-        ctx_size=0,
+        n_ctx=0,
         predict=-1,
         no_context_shift=True,
         model=model,

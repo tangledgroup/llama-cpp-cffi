@@ -23,8 +23,8 @@ def model_init(model_options: ModelOptions) -> llama_model_p:
     model_params.n_gpu_layers = model_options.gpu_layers
     # model_params.split_mode = model_options.split_mode # FIXME: check Options
     model_params.main_gpu = model_options.main_gpu
-    model_params.use_mmap = not model_options.no_mmap # TODO: use exact field names like in structs/API
-    model_params.use_mlock = model_options.mlock
+    model_params.use_mlock = model_options.use_mlock
+    model_params.use_mmap = model_options.use_mmap
     model_params.check_tensors = model_options.check_tensors
 
     with lock:

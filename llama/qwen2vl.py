@@ -6,7 +6,19 @@ from typing import Any, Optional, Iterator
 from transformers import AutoTokenizer
 
 from .options import ModelOptions, CompletionsOptions
-from .llama_cpp import lib, ffi, lock, llama_context_p, llama_batch, llama_batch_p, llava_image_embed_p, llama_model_p, clip_ctx_p, llama_token
+from .llama_cpp import (
+    lib,
+    ffi,
+    lock,
+    llama_model_p,
+    llama_context_p,
+    llama_batch,
+    llama_batch_p,
+    llama_token,
+    llama_vocab_p,
+    clip_ctx_p,
+    llava_image_embed_p,
+)
 from .context import context_init, context_free
 from .clip import clip_init_context, clip_free_context
 from .llava import _llava_image_embed_free, _llava_image_embed_make_with_filename
@@ -132,6 +144,7 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
         completions_options.image = image_file.name # type: ignore
 
     _model: llama_model_p = model._model
+    vocab: llama_vocab_p = lib.llama_model_get_vocab(_model)
 
     if completions_options.verbose:
         # default llama.cpp logger
@@ -166,7 +179,7 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
     # image embeddings
     embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(
         clip_context,
-        model_options.threads,
+        model_options.n_threads,
         completions_options.image.encode(),
     )
 
@@ -185,31 +198,31 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False) # type: ignore
     prompt = prompt[:prompt.index(begin_vision_token) + len(begin_vision_token)]
     prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=True) # type: ignore
-    s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past, cur_pos_id)
+    s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past, cur_pos_id)
 
     # eval user image
-    s, n_past, cur_pos_id = _eval_image_embed(context, clip_context, embeds, model_options.batch_size, n_past, cur_pos_id)
+    s, n_past, cur_pos_id = _eval_image_embed(context, clip_context, embeds, model_options.n_batch, n_past, cur_pos_id)
 
     # eval generation prompt for assitent
     messages = [{'role': 'user', 'content': f'{end_vision_token}{completions_options.prompt}'}]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True) # type: ignore
     prompt = prompt[prompt.index(f'{end_vision_token}{completions_options.prompt}'):]
     prompt_tokens: list[int] = tokenizer.encode(prompt, add_special_tokens=False) # type: ignore
-    s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past, cur_pos_id)
+    s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past, cur_pos_id)
 
     # generate tokens
     for i in range(max_tgt_len):
         new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
         _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
 
-        if lib.llama_token_is_eog(_model, new_token_id):
+        if lib.llama_token_is_eog(vocab, new_token_id):
             break
 
         piece = _common_token_to_piece(context, new_token_id, True)
         yield piece
 
         prompt_tokens: list[int] = tokenizer.encode(piece) # type: ignore
-        s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.batch_size, n_past, cur_pos_id)
+        s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past, cur_pos_id)
 
     _llava_image_embed_free(embeds)
 

@@ -9,18 +9,33 @@ __all__ = [
 
 import json
 
-from .llama_cpp import lib, ffi, global_weakkeydict, llama_model_p, llama_sampler_p, llama_sampler_chain_params, char_p, llama_context_p, llama_token, llama_token_data_p, llama_token_data_array_p
+from .llama_cpp import (
+    lib,
+    ffi,
+    global_weakkeydict,
+    char_p,
+    llama_model_p,
+    llama_sampler_p,
+    llama_sampler_chain_params,
+    llama_context_p,
+    llama_token,
+    llama_token_data_p,
+    llama_token_data_array_p,
+    llama_vocab_p,
+)
+
 from .options import CompletionsOptions
 from .util import _set_logits
 
 
 def sampler_init(model: llama_model_p, completions_options: CompletionsOptions) -> llama_sampler_p:
+    vocab: llama_vocab_p = lib.llama_model_get_vocab(model)
     sampler_params: llama_sampler_chain_params = lib.llama_sampler_chain_default_params()
     sampler: llama_sampler_p = lib.llama_sampler_chain_init(sampler_params)
 
     # common
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_logit_bias(
-        lib.llama_n_vocab(model),
+        lib.llama_vocab_n_tokens(vocab),
         0,
         ffi.NULL,
     ))
@@ -30,7 +45,8 @@ def sampler_init(model: llama_model_p, completions_options: CompletionsOptions) 
     num_breakers: int = len(completions_options.dry_sequence_breaker)
 
     lib.llama_sampler_chain_add(sampler, lib.llama_sampler_init_dry(
-        model,
+        vocab,
+        lib.llama_model_n_ctx_train(model),
         completions_options.dry_multiplier,
         completions_options.dry_base,
         completions_options.dry_allowed_length,
@@ -108,9 +124,10 @@ def grammar_sampler_init(model: llama_model_p, completions_options: CompletionsO
 
     grammar_str = ffi.new('char[]', grammar)
     grammar_root = ffi.new('char[]', b'root')
+    vocab: llama_vocab_p = lib.llama_model_get_vocab(model)
 
     grmr: llama_sampler_p = lib.llama_sampler_init_grammar(
-        model,
+        vocab,
         grammar_str,
         grammar_root,
     )

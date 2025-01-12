@@ -57,7 +57,7 @@ def _clip_uhd_num_image_embeds_col(ctx_clip: clip_ctx_p) -> int:
 
 
 def clip_init_context(model_options: ModelOptions) -> clip_ctx_p:
-    assert model_options.ctx_size >= 2048
+    assert model_options.n_ctx >= 2048
     assert model_options.mmproj_hf_file
     mmproj_path: str | bytes = hf_hub_download(repo_id=model_options.hf_repo, filename=model_options.mmproj_hf_file)
     print(f'{mmproj_path=}')
@@ -124,7 +124,7 @@ def clip_completions(model: 'Model', model_options: ModelOptions, completions_op
     # image embeddings
     embeds: llava_image_embed_p = _llava_image_embed_make_with_filename(
         clip_context,
-        model_options.threads,
+        model_options.n_threads,
         completions_options.image.encode(),
     )
 

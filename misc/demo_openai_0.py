@@ -31,7 +31,7 @@ def demo_chat_completions():
 
         # llama-cpp-cffi
         extra_body=dict(
-            batch_size=512,
+            n_batch=512,
             n_gpu_layers=22,
             main_gpu=0,
             cont_batching=True,
@@ -54,7 +54,7 @@ def demo_chat_completions_stream():
 
         # llama-cpp-cffi
         extra_body=dict(
-            batch_size=512,
+            n_batch=512,
             n_gpu_layers=22,
             main_gpu=0,
             cont_batching=True,

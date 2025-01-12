@@ -34,6 +34,7 @@ from .llama_cpp import (
     llama_pos,
     llama_seq_id,
     llama_model_p,
+    llama_vocab_p,
 )
 
 
@@ -79,8 +80,11 @@ def _decode_tokens(context: llama_context_p, batch: llama_batch, prompt_tokens: 
 
 
 def _set_logits(ctx: llama_context_p, idx: int):
+    model: llama_model_p = lib.llama_get_model(ctx)
+    vocab: llama_vocab_p = lib.llama_model_get_vocab(model)
+
     logits: float_p = lib.llama_get_logits_ith(ctx, idx)
-    n_vocab: int = lib.llama_n_vocab(lib.llama_get_model(ctx))
+    n_vocab: int = lib.llama_vocab_n_tokens(vocab)
 
     cur: llama_token_data_p = ffi.new(
         'llama_token_data[]',
@@ -111,9 +115,10 @@ def _common_batch_add(batch: llama_batch, id: llama_token, pos: llama_pos, seq_i
 
 def _common_token_to_piece(ctx: llama_context_p, token: llama_token, special: bool) -> str:
     model: llama_model_p = lib.llama_get_model(ctx)
+    vocab: llama_vocab_p = lib.llama_model_get_vocab(model)
     _piece_size: int = 128
     _piece: char_p = ffi.new('char[]', _piece_size)
-    n_chars: int = lib.llama_token_to_piece(model, token, _piece, _piece_size, 0, special)
+    n_chars: int = lib.llama_token_to_piece(vocab, token, _piece, _piece_size, 0, special)
     piece: bytes | str = ffi.string(_piece)
     assert isinstance(piece, bytes)
 

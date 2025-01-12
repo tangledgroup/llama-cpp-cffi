@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## v0.4.0
+
+Changed:
+  - `llama.cpp` revision `9a483999a6fda350772aaf7bc541f1cb246f8a29`
+  - Migrate to `cmake` from `make` build system
+  - Option `ctx_size` renamed to `n_ctx`
+  - Option `batch_size` renamed to `n_batch`
+  - Option `ubatch_size` renamed to `n_ubatch`
+  - Option `threads` renamed to `n_threads`
+  - Option `threads_batch` renamed to `n_threads_batch`
+  - Option `cache_type_k` renamed to `type_k`
+  - Option `cache_type_v` renamed to `type_v`
+  - Option `mlock` renamed to `use_mlock`
+  - Option `no_mmap` renamed to `use_mmap`
+
+## v0.3.3
+
+Changed:
+  - `llama.cpp` revision `0827b2c1da299805288abbd556d869318f2b121e`
+
 ## v0.3.2
 
 Added:

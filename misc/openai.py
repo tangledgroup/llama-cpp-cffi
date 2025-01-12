@@ -41,9 +41,9 @@ async def v1_chat_completions(request):
     user = data.get('user')
 
     # llama-cpp-cffi
-    ctx_size: int = data.get('ctx_size', 0)
+    n_ctx: int = data.get('n_ctx', 0)
     predict: int = data.get('predict', max_tokens)
-    batch_size: int = data.get('batch_size')
+    n_batch: int = data.get('n_batch')
     flash_attn: Optional[bool] = data.get('flash_attn')
     cont_batching: Optional[bool] = data.get('cont_batching')
     gpu_layers: Optional[int] = data.get('gpu_layers')
@@ -67,12 +67,12 @@ async def v1_chat_completions(request):
 
     model = Model(*model.split(':'))
     # config: AutoConfig = get_config(model.creator_hf_repo)
-    # ctx_size: int = config.max_position_embeddings if max_tokens is None else max_tokens
+    # n_ctx: int = config.max_position_embeddings if max_tokens is None else max_tokens
 
     options = Options(
         seed=seed,
-        ctx_size=ctx_size,
-        batch_size=batch_size,
+        n_ctx=n_ctx,
+        n_batch=n_batch,
         predict=predict,
         prompt=prompt or messages,
         top_p=top_p,

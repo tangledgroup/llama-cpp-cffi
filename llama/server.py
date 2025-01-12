@@ -23,7 +23,7 @@ current_model = Model(
 )
 
 current_model.init(
-    ctx_size=8 * 1024,
+    n_ctx=8 * 1024,
     gpu_layers=99,
 )
 
@@ -169,7 +169,7 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
 
     # repack data for llama-cpp-cffi
     llama_cpp_cffi_data: dict = {}
-    llama_cpp_cffi_data['ctx_size'] = data.get('ctx_size', 8 * 1024) # extra_body
+    llama_cpp_cffi_data['n_ctx'] = data.get('n_ctx', 8 * 1024) # extra_body
     llama_cpp_cffi_data['gpu_layers'] = data.get('gpu_layers', 99)  # extra_body
 
     llama_cpp_cffi_data['prompt'] = prompt

@@ -4,7 +4,7 @@ from llama.cffi import llama_generate, LlamaOptions
 
 options = LlamaOptions(
     no_display_prompt=True,
-    ctx_size=1024,
+    n_ctx=1024,
     predict=512,
     # flash_attn=True,
     # cont_batching=True,

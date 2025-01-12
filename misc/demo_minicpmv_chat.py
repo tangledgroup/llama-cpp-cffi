@@ -9,7 +9,7 @@ def demo_prompt(model: Model):
 
     options = Options(
         engine='minicpmv',
-        ctx_size=config.max_position_embeddings,
+        n_ctx=config.max_position_embeddings,
         predict=-2,
         temp=0.7,
         top_p=0.8,

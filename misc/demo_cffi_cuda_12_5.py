@@ -10,9 +10,9 @@ from demo_models import models
 
 def demo_model(model: Model, messages: list[dict]):
     config = get_config(model.creator_hf_repo)
-    
+
     options = Options(
-        ctx_size=32 * 1024 if model.creator_hf_repo == 'microsoft/Phi-3-mini-128k-instruct' else config.max_position_embeddings,
+        n_ctx=32 * 1024 if model.creator_hf_repo == 'microsoft/Phi-3-mini-128k-instruct' else config.max_position_embeddings,
         predict=-2,
         gpu_layers=19 if model.creator_hf_repo == 'microsoft/Phi-3-mini-128k-instruct' else 99,
         # log_disable=False,

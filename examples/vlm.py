@@ -12,7 +12,7 @@ model = Model( # 1.87B
     mmproj_hf_file='moondream2-mmproj-f16.gguf',
 )
 
-model.init(ctx_size=8 * 1024, gpu_layers=99)
+model.init(n_ctx=8 * 1024, gpu_layers=99)
 
 #
 # prompt

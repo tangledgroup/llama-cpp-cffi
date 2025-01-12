@@ -9,7 +9,7 @@ def demo(model: Model):
     config = get_config(model.creator_hf_repo)
 
     options = Options(
-        ctx_size=config.max_position_embeddings,
+        n_ctx=config.max_position_embeddings,
         predict=-2,
         model=model,
         prompt=messages,

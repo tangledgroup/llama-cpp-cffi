@@ -9,19 +9,18 @@ from .options import ModelOptions
 
 def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_context_p:
     ctx_params: llama_context_params = lib.llama_context_default_params()
-    ctx_params.n_ctx = model_options.ctx_size # TODO: use exact field names like in structs/API
-    ctx_params.n_batch = model_options.batch_size
-    ctx_params.n_ubatch = model_options.ubatch_size
-    ctx_params.n_threads = model_options.threads
+    ctx_params.n_ctx = model_options.n_ctx
+    ctx_params.n_batch = model_options.n_batch
+    ctx_params.n_ubatch = model_options.n_ubatch
+    ctx_params.n_threads = model_options.n_threads
 
-    # TODO: use exact field names like in structs/API
-    if model_options.threads_batch is None:
-        ctx_params.n_threads_batch = model_options.threads
+    if model_options.n_threads_batch is None:
+        ctx_params.n_threads_batch = model_options.n_threads
     else:
-        ctx_params.n_threads_batch = model_options.threads_batch
+        ctx_params.n_threads_batch = model_options.n_threads_batch
 
-    ctx_params.type_k = model_options.cache_type_k.value
-    ctx_params.type_v = model_options.cache_type_v.value
+    ctx_params.type_k = model_options.type_k.value
+    ctx_params.type_v = model_options.type_v.value
     ctx_params.flash_attn = model_options.flash_attn
 
     with lock:

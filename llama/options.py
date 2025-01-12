@@ -25,8 +25,8 @@ class ModelOptions:
     tokenizer_hf_repo: Optional[str] = None
 
     verbose: bool = False # Set verbosity level to infinity (i.e. log all messages, useful for debugging)
-    threads: int = psutil.cpu_count(logical=False) or 1 # number of threads to use during generation (default: -1)
-    threads_batch: Optional[int] = None # number of threads for batch and prompt processing (default: same as --threads)
+    n_threads: int = psutil.cpu_count(logical=False) or 1 # number of threads to use during generation (default: -1)
+    n_threads_batch: Optional[int] = None # number of threads for batch and prompt processing (default: same as --threads)
     # cpu_mask: str = field(default="") # CPU affinity mask: arbitrarily long hex (default: "")
     # cpu_range: Optional[str] = field(default=None) # range of CPUs for affinity (default: "")
     # cpu_strict: int = field(default=0) # use strict CPU placement (default: 0)
@@ -37,9 +37,9 @@ class ModelOptions:
     # cpu_strict_batch: Optional[int] = field(default=None) # use strict CPU placement for batch (default: same as --cpu-strict)
     # prio_batch: int = field(default=0) # set process/thread priority for batch (default: 0)
     # poll_batch: Optional[int] = field(default=None) # use polling to wait for work for batch (default: same as --poll)
-    ctx_size: int = 4096 # size of the prompt context (default: 4096, 0 = loaded from model)
-    batch_size: int = 2048 # logical maximum batch size (default: 2048)
-    ubatch_size: int = 512 # physical maximum batch size (default: 512)
+    n_ctx: int = 4096 # size of the prompt context (default: 4096, 0 = loaded from model)
+    n_batch: int = 2048 # logical maximum batch size (default: 2048)
+    n_ubatch: int = 512 # physical maximum batch size (default: 512)
     # keep: int = field(default=0) # number of tokens to keep from initial prompt (default: 0, -1 = all)
     flash_attn: bool = False # enable Flash Attention (default: disabled)
     # no_perf: bool = field(default=False) # disable internal libllama performance timings (default: false)
@@ -54,12 +54,12 @@ class ModelOptions:
     # yarn_beta_fast: float = field(default=32.0) # YaRN: low correction dim or beta (default: 32.0)
     # dump_kv_cache: bool = field(default=False) # verbose print of the KV cache
     # no_kv_offload: bool = field(default=False) # disable KV offload
-    cache_type_k: ggml_type = ggml_type.F16 # KV cache data type for K (default: f16)
-    cache_type_v: ggml_type = ggml_type.F16 # KV cache data type for V (default: f16)
+    type_k: ggml_type = ggml_type.F16 # KV cache data type for K (default: f16)
+    type_v: ggml_type = ggml_type.F16 # KV cache data type for V (default: f16)
     # defrag_thold: float = field(default=0.1) # KV cache defragmentation threshold (default: 0.1, < 0 - disabled)
     # parallel: int = field(default=1) # number of parallel sequences to decode (default: 1)
-    mlock: bool = False # force system to keep model in RAM rather than swapping or compressing
-    no_mmap: bool = False # do not memory-map model (slower load but may reduce pageouts if not using mlock)
+    use_mlock: bool = False # force system to keep model in RAM rather than swapping or compressing
+    use_mmap: bool = True # memory-map model (slower load but may reduce pageouts if not using mlock)
     # numa: Optional[str] = field(default=None) # attempt optimizations for NUMA systems
     # device: Optional[str] = field(default=None) # comma-separated list of devices to use for offloading (default: none)
     # list_devices: bool = field(default=False) # print list of available devices and exit
@@ -86,16 +86,6 @@ class ModelOptions:
     # no_warmup: bool = field(default=False) # skip warming up the model with an empty run
     # grp_attn_n: int = field(default=1) # group-attention factor (default: 1)
     # grp_attn_w: int = field(default=512) # group-attention width (default: 512)
-
-
-    # def is_model_def_none(self) -> bool:
-    #     return all([
-    #         self.creator_hf_repo is None,
-    #         self.hf_repo is None,
-    #         self.hf_file is None,
-    #         self.mmproj_hf_file is None,
-    #         self.tokenizer_hf_repo is None,
-    #     ])
 
 
 @define

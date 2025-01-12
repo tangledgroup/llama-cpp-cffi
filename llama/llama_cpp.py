@@ -30,6 +30,8 @@ __all__ = [
     'llama_token_data_p',
     'llama_token_data_array',
     'llama_token_data_array_p',
+    'llama_vocab',
+    'llama_vocab_p',
     'clip_ctx',
     'clip_ctx_p',
     'clip_image_size',
@@ -107,6 +109,8 @@ llama_token_data: TypeAlias = ffi.typeof('struct llama_token_data') # type: igno
 llama_token_data_p: TypeAlias = ffi.typeof('struct llama_token_data*') # type: ignore
 llama_token_data_array: TypeAlias = ffi.typeof('struct llama_token_data_array') # type: ignore
 llama_token_data_array_p: TypeAlias = ffi.typeof('struct llama_token_data_array*') # type: ignore
+llama_vocab: TypeAlias = ffi.typeof('struct llama_vocab') # type: ignore
+llama_vocab_p: TypeAlias = ffi.typeof('struct llama_vocab*') # type: ignore
 clip_ctx: TypeAlias = ffi.typeof('struct clip_ctx') # type: ignore
 clip_ctx_p: TypeAlias = ffi.typeof('struct clip_ctx*') # type: ignore
 clip_image_size: TypeAlias = ffi.typeof('struct clip_image_size') # type: ignore

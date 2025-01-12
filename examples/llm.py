@@ -11,7 +11,7 @@ model = Model( # 1.71B
     hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
 )
 
-model.init(ctx_size=8 * 1024, gpu_layers=99)
+model.init(n_ctx=8 * 1024, gpu_layers=99)
 
 #
 # messages

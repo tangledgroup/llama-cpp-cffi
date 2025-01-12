@@ -12,7 +12,7 @@ from cffi import FFI
 from clean import clean_llama_cpp, clean
 
 
-LLAMA_CPP_GIT_REF = '0827b2c1da299805288abbd556d869318f2b121e'
+LLAMA_CPP_GIT_REF = '9a483999a6fda350772aaf7bc541f1cb246f8a29'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -24,7 +24,6 @@ REPLACE_CODE_ITEMS = {
     'struct ggml_cgraph * ggml_graph_import(const char * fname, struct ggml_context ** ctx_data, struct ggml_context ** ctx_eval);': '',
     'int ggml_threadpool_get_n_threads (struct ggml_threadpool * threadpool);': '',
     'struct clip_ctx * clip_model_load_cpu(const char * fname, int verbosity);': '',
-    'size_t llama_state_get_data(\nstruct llama_context * ctx,\nuint8_t * dst,\nsize_t size);\n': '/* llama_state_get_data */',
 }
 
 
@@ -63,20 +62,6 @@ def filter_library_code(source: str) -> str:
 
         if is_relevant_code:
             temp_source.append(line)
-
-    source = '\n'.join(temp_source)
-    return source
-
-
-def replace_code(source: str, items: dict[str, str]) -> str:
-    temp_source: list[str] | str = []
-
-    for i, line in enumerate(source.splitlines()):
-        for k, v in items.items():
-            if k in line:
-                line = line.replace(k, v)
-
-        temp_source.append(line)
 
     source = '\n'.join(temp_source)
     return source
@@ -222,10 +207,10 @@ def get_func_declarations(source_code: str) -> list[str]:
                 # Return type
                 (?:(?:static|extern|inline|const|volatile|unsigned|signed|struct|enum|union|long|short)\s+)*
                 [\w_]+                    # Base type
-                (?:\s*\*\s*|\s+)         # Pointers or whitespace
-                (?:const\s+)*            # Optional const after pointer
+                (?:\s*\*\s*|\s+)          # Pointers or whitespace
+                (?:const\s+)*             # Optional const after pointer
                 # Function name
-                ([\w_]+)                 # Capture function name
+                ([\w_]+)                  # Capture function name
                 \s*
                 # Parameters
                 \(
@@ -277,7 +262,7 @@ def get_func_declarations(source_code: str) -> list[str]:
     return declarations
 
 
-def replace_inline_code(source: str) -> (str, str):
+def replace_inline_code(source: str) -> str:
     temp_source: list[str] | str = []
     inline_source: list[str] | str = []
     is_inline_code = False
@@ -330,10 +315,16 @@ def cleanup_code(source: str) -> str:
     return source
 
 
+def replace_code(source: str, items: dict[str, str]) -> str:
+    for k, v in items.items():
+        source = source.replace(k, v)
+
+    return source
+
+
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['git', 'reset', '--hard', LLAMA_CPP_GIT_REF], cwd='llama.cpp', check=True)
-    subprocess.run(['patch', 'llama.cpp/Makefile', 'Makefile_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
@@ -394,7 +385,8 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC'
     print('build_cpu:')
     pprint(env)
 
@@ -419,9 +411,6 @@ def build_cpu(*args, **kwargs):
     # filter relevant header code
     _source = filter_library_code(_source)
 
-    # # patch of source
-    # _source = replace_code(_source, REPLACE_CODE_ITEMS)
-
     # filter our attribute code
     _source = remove_attribute_code(_source)
 
@@ -431,29 +420,32 @@ def build_cpu(*args, **kwargs):
     # filter our static inline code
     _source = replace_inline_code(_source)
 
-    # patch of source
-    _source = replace_code(_source, REPLACE_CODE_ITEMS)
-
     # strip empty lines
     _source = cleanup_code(_source)
+
+    # patch of source
+    _source = replace_code(_source, REPLACE_CODE_ITEMS)
     print(_source)
 
     #
     # build llama.cpp
     #
     subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
+        'cmake',
+        '-B',
+        'build',
+        '-DBUILD_SHARED_LIBS=OFF',
+        '-DGGML_OPENMP=OFF',
+    ], check=True, env=env, cwd='llama.cpp')
+
+    subprocess.run([
+        'cmake',
+        '--build',
+        'build',
+        '--config',
+        'Release',
         '-j',
-        'libggml.a',
-        'libllama.a',
-        'libllava.a',
-        'libcommon.a',
-        'LLAMA_MAKEFILE=1',
-        'GGML_NO_OPENMP=1',
-        *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
-    ], check=True, env=env)
+    ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi
@@ -500,11 +492,16 @@ def build_cpu(*args, **kwargs):
             '-O3',
             '-g',
             '-flto',
-            '-L../llama.cpp',
-            '-lggml',
-            '-lllama',
-            '-lllava',
+            '-L../llama.cpp/build/common',
+            '-L../llama.cpp/build/ggml/src',
+            '-L../llama.cpp/build/src',
+            '-L../llama.cpp/build/examples/llava',
             '-lcommon',
+            '-lggml',
+            '-lggml-base',
+            '-lggml-cpu',
+            '-lllama',
+            '-lllava_static',
         ],
     )
 
@@ -523,10 +520,12 @@ def build_cpu(*args, **kwargs):
         shutil.move(file, 'llama/')
 
 
+
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CXXFLAGS'] = '-O3'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC'
     print('build_vulkan_1_x:')
     pprint(env)
 
@@ -551,8 +550,6 @@ def build_vulkan_1_x(*args, **kwargs):
     # filter relevant header code
     _source = filter_library_code(_source)
 
-    # patch of source
-    _source = replace_code(_source, REPLACE_CODE_ITEMS)
 
     # filter our attribute code
     _source = remove_attribute_code(_source)
@@ -565,25 +562,31 @@ def build_vulkan_1_x(*args, **kwargs):
 
     # strip empty lines
     _source = cleanup_code(_source)
+
+    # patch of source
+    _source = replace_code(_source, REPLACE_CODE_ITEMS)
     print(_source)
 
     #
     # build llama.cpp
     #
     subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
+        'cmake',
+        '-B',
+        'build',
+        '-DBUILD_SHARED_LIBS=OFF',
+        '-DGGML_OPENMP=OFF',
+        '-DGGML_VULKAN=ON',
+    ], check=True, env=env, cwd='llama.cpp')
+
+    subprocess.run([
+        'cmake',
+        '--build',
+        'build',
+        '--config',
+        'Release',
         '-j',
-        'libggml.a',
-        'libllama.a',
-        'libllava.a',
-        'libcommon.a',
-        'LLAMA_MAKEFILE=1',
-        'GGML_NO_OPENMP=1',
-        'GGML_VULKAN=1',
-        *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
-    ], check=True, env=env)
+    ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi
@@ -631,11 +634,18 @@ def build_vulkan_1_x(*args, **kwargs):
             '-O3',
             '-g',
             '-flto',
-            '-L../llama.cpp',
-            '-lggml',
-            '-lllama',
-            '-lllava',
+            '-L../llama.cpp/build/common',
+            '-L../llama.cpp/build/ggml/src',
+            '-L../llama.cpp/build/ggml/src/ggml-vulkan',
+            '-L../llama.cpp/build/src',
+            '-L../llama.cpp/build/examples/llava',
             '-lcommon',
+            '-lggml',
+            '-lggml-base',
+            '-lggml-cpu',
+            '-lggml-vulkan',
+            '-lllama',
+            '-lllava_static',
         ],
     )
 
@@ -668,12 +678,14 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
     env['CC'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
     env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
-    env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/g++-13'
+    env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/g++-13 -Xcompiler -fPIC'
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
-    env['CXXFLAGS'] = '-O3'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
     env['NVCCFLAGS'] = '\
+            -fPIC \
             -gencode arch=compute_70,code=sm_70 \
             -gencode arch=compute_75,code=sm_75 \
             -gencode arch=compute_80,code=sm_80 \
@@ -705,9 +717,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     # filter relevant header code
     _source = filter_library_code(_source)
 
-    # patch of source
-    _source = replace_code(_source, REPLACE_CODE_ITEMS)
-
     # filter our attribute code
     _source = remove_attribute_code(_source)
 
@@ -719,25 +728,31 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
 
     # strip empty lines
     _source = cleanup_code(_source)
+
+    # patch of source
+    _source = replace_code(_source, REPLACE_CODE_ITEMS)
     print(_source)
 
     #
     # build llama.cpp
     #
     subprocess.run([
-        'make',
-        '-C',
-        'llama.cpp',
+        'cmake',
+        '-B',
+        'build',
+        '-DBUILD_SHARED_LIBS=OFF',
+        '-DGGML_OPENMP=OFF',
+        '-DGGML_CUDA=ON',
+    ], check=True, env=env, cwd='llama.cpp')
+
+    subprocess.run([
+        'cmake',
+        '--build',
+        'build',
+        '--config',
+        'Release',
         '-j',
-        'libggml.a',
-        'libllama.a',
-        'libllava.a',
-        'libcommon.a',
-        'LLAMA_MAKEFILE=1',
-        'GGML_NO_OPENMP=1',
-        'GGML_CUDA=1',
-        *([] if platform.machine() == 'aarch64' else ['GGML_NO_CPU_AARCH64=1']),
-    ], check=True, env=env)
+    ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi
@@ -794,11 +809,18 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             '-O3',
             '-g',
             '-flto',
-            '-L../llama.cpp',
-            '-lggml',
-            '-lllama',
-            '-lllava',
+            '-L../llama.cpp/build/common',
+            '-L../llama.cpp/build/ggml/src',
+            '-L../llama.cpp/build/ggml/src/ggml-cuda',
+            '-L../llama.cpp/build/src',
+            '-L../llama.cpp/build/examples/llava',
             '-lcommon',
+            '-lggml',
+            '-lggml-base',
+            '-lggml-cpu',
+            '-lggml-cuda',
+            '-lllama',
+            '-lllava_static',
         ],
     )
 
@@ -824,17 +846,17 @@ def build(*args, **kwargs):
     clean()
     clone_llama_cpp()
 
-    # cpu
-    if env.get('GGML_CPU', '1') != '0':
-        clean_llama_cpp()
-        build_cpu(*args, **kwargs)
+    # # cpu
+    # if env.get('GGML_CPU', '1') != '0':
+    #     clean_llama_cpp()
+    #     build_cpu(*args, **kwargs)
 
     # vulkan 1.x
-    # if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #     clean_llama_cpp()
-    #     build_vulkan_1_x(*args, **kwargs)
+    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+        clean_llama_cpp()
+        build_vulkan_1_x(*args, **kwargs)
 
-    # cuda 12.6.3
+    # # cuda 12.6.3
     # if env.get('GGML_CUDA', '1') != '0':
     #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
     #         clean_llama_cpp()

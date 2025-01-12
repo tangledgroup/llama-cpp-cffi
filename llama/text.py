@@ -6,7 +6,7 @@ from transformers import AutoTokenizer
 
 from .options import ModelOptions, CompletionsOptions
 from .formatter import get_tokenizer, format_messages
-from .llama_cpp import lib, ffi, llama_model_p, llama_batch, llama_seq_id, llama_token
+from .llama_cpp import lib, ffi, llama_model_p, llama_batch, llama_seq_id, llama_token, llama_vocab_p
 from .context import context_init, context_free
 from .sampler import sampler_init, grammar_sampler_init, sampler_free, _common_sampler_sample, _common_sampler_accept
 
@@ -26,6 +26,7 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
     assert isinstance(completions_options.prompt, str) or isinstance(completions_options.messages, list)
 
     _model: llama_model_p = model._model
+    vocab: llama_vocab_p = lib.llama_model_get_vocab(_model)
 
     if completions_options.verbose:
         # default llama.cpp logger
@@ -49,8 +50,10 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
 
     if model_options.tokenizer_hf_repo:
         tokenizer = get_tokenizer(model_options.tokenizer_hf_repo)
-    else:
+    elif model_options.creator_hf_repo:
         tokenizer = get_tokenizer(model_options.creator_hf_repo)
+    else:
+        raise ValueError()
 
     # format messages if present into prompt
     if completions_options.messages:
@@ -92,7 +95,7 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
 
         n_decode += 1
 
-        if lib.llama_token_is_eog(_model, new_token_id):
+        if lib.llama_token_is_eog(vocab, new_token_id):
             break
 
         output_tokens.append(new_token_id)

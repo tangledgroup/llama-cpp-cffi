@@ -8,13 +8,13 @@ def demo_prompt(model: Model):
     config = get_config(model.creator_hf_repo)
 
     try:
-        ctx_size = config.max_position_embeddings
+        n_ctx = config.max_position_embeddings
     except AttributeError:
-        ctx_size = 2048
+        n_ctx = 2048
 
     options = Options(
         engine='llava',
-        ctx_size=ctx_size,
+        n_ctx=n_ctx,
         predict=-2,
         temp=0.7,
         top_p=0.8,

@@ -1,17 +1,45 @@
-[tool.poetry]
+[project]
 name = "llama-cpp-cffi"
-version = "0.3.1"
+version = "0.4.0"
 description = "Python binding for llama.cpp using cffi"
+authors = [
+    { name = "Tangled Group, Inc", email = "info@tangledgroup.com" },
+    { name = "Marko Tasic", email = "mtasic85@gmail.com" },
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = [ "llama", "llama-cpp", "llama.cpp", "llama-cpp-cffi", "cffi" ]
+classifiers = [
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[project.urls]
 homepage = "https://github.com/tangledgroup/llama-cpp-cffi"
 repository = "https://github.com/tangledgroup/llama-cpp-cffi"
-authors = ["Marko Tasic <mtasic85@gmail.com>", "Tangled Group, Inc <info@tangledgroup.com>"]
-license = "MIT"
-readme = "README.md"
-packages = [{include = "llama"}]
-include = [{path = "llama/*.so"}]
+documentation = "https://github.com/tangledgroup/llama-cpp-cffi"
+"Bug Tracker" = "https://github.com/tangledgroup/llama-cpp-cffi/issues"
+
+[project.scripts]
+build = "scripts.build:build"
+clean = "scripts.clean:clean"
+
+[build-system]
+requires = ["poetry-core", "cffi", "setuptools"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{ include = "llama" }]
+include = [
+    { path = "llama/**/*.so", format = "wheel" },
+    { path = "llama/**/*.dll", format = "wheel" },
+    { path = "llama/**/*.dylib", format = "wheel" },
+]
+
+[tool.poetry.build]
+script = "scripts/build.py"
 
 [tool.poetry.dependencies]
-python = "^3.10"
 attrs = "^24.2.0"
 huggingface-hub = "^0.26.2"
 psutil = "^6.1.0"
@@ -31,18 +59,11 @@ server = ["uvloop", "aiohttp", "gunicorn", "openai"]
 
 [tool.poetry.group.dev.dependencies]
 cffi = "^1.17.1"
-setuptools = "^75.3.0"
-pyright = "^1.1.391 "
-ruff = "^0.8.4"
-cibuildwheel = "^2.21.3"
-mkdocs-material = "^9.5.43"
-
-[tool.poetry.scripts]
-build = "scripts.build:build"
-clean = "scripts.clean:clean"
-
-[tool.poetry.build]
-script = "scripts/build.py"
+setuptools = "^75.8.0 "
+# pyright = "^1.1.391 "
+# ruff = "^0.8.4"
+cibuildwheel = "^2.22.0"
+# mkdocs-material = "^9.5.43"
 
 [tool.cibuildwheel]
 
@@ -66,7 +87,7 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     ./utils/git-sync-deps
     mkdir build
     cd build
-    cmake -GNinja -DCMAKE_BUILD_TYPE=Release ../
+    cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_TESTS=ON ../
     ninja
     ninja install
     cd ../..
@@ -87,6 +108,7 @@ else
     fi
 fi
 """
+
 build = ["cp310-*", "cp312-*"]
 skip = ["*i686", "*musllinux*"]
 
@@ -122,8 +144,8 @@ repair-wheel-command = ""
 # done
 # """
 
-[tool.cibuildwheel.pyodide]
+[tool.cibuildwheel.macos]
 
-[build-system]
-requires = ["poetry-core", "cffi", "setuptools"]
-build-backend = "poetry.core.masonry.api"
+[tool.cibuildwheel.windows]
+
+[tool.cibuildwheel.pyodide]

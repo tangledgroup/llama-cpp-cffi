@@ -56,7 +56,7 @@ model = Model(
     hf_file='SmolLM2-1.7B-Instruct-Q4_K_M.gguf',
 )
 
-model.init(ctx_size=8 * 1024, gpu_layers=99)
+model.init(n_ctx=8 * 1024, gpu_layers=99)
 
 #
 # messages
@@ -115,7 +115,7 @@ model = Model( # 1.87B
     mmproj_hf_file='moondream2-mmproj-f16.gguf',
 )
 
-model.init(ctx_size=8 * 1024, gpu_layers=99)
+model.init(n_ctx=8 * 1024, gpu_layers=99)
 
 #
 # prompt
@@ -264,7 +264,7 @@ curl -XPOST 'http://localhost:11434/v1/chat/completions' \
             "content": "Evaluate 1 + 2 in Python."
         }
     ],
-    "ctx_size": 8192,
+    "n_ctx": 8192,
     "gpu_layers": 99
 }'
 
@@ -287,7 +287,7 @@ cat << EOF > /tmp/temp.json
             }
         ]}
     ],
-    "ctx_size": 8192,
+    "n_ctx": 8192,
     "gpu_layers": 99
 }
 EOF
