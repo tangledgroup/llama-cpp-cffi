@@ -8,7 +8,7 @@ from pprint import pprint
 from tempfile import NamedTemporaryFile
 
 # set the compiler programmatically in your Python code before importing CFFI:
-env = os.environ.copy()
+env = os.environ # .copy()
 env['CC'] = 'clang'
 env['CXX'] = 'clang++'
 env['LD'] = 'clang'
@@ -393,10 +393,11 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    # env['CC'] = 'clang'
-    # env['CXX'] = 'clang++'
-    # env['CFLAGS'] = '-O3 -fPIC'
-    # env['CXXFLAGS'] = '-O3 -fPIC'
+    env['CC'] = 'clang'
+    env['CXX'] = 'clang++'
+    env['LD'] = 'clang'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC'
     print('build_cpu:')
     pprint(env)
 
@@ -534,11 +535,11 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    # env['CC'] = 'clang'
-    # env['CXX'] = 'clang++'
-    # env['LD'] = 'clang'
-    # env['CFLAGS'] = '-O3 -fPIC'
-    # env['CXXFLAGS'] = '-O3 -fPIC'
+    env['CC'] = 'clang'
+    env['CXX'] = 'clang++'
+    env['LD'] = 'clang'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC'
     print('build_vulkan_1_x:')
     pprint(env)
 
@@ -691,14 +692,15 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
     # env['CC'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
     # env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
-    # env['CC'] = 'clang'
-    # env['CXX'] = 'clang++'
-    # env['LD'] = 'clang'
+    env['CC'] = 'clang'
+    env['CXX'] = 'clang++'
+    env['LD'] = 'clang'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC'
+    # env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-Xcompiler -fPIC'
     # env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/g++-13 -Xcompiler -fPIC'
-    env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-Xcompiler -fPIC'
+    env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/clang -Xcompiler -fPIC'
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
-    # env['CFLAGS'] = '-O3 -fPIC'
-    # env['CXXFLAGS'] = '-O3 -fPIC'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
     env['NVCCFLAGS'] = '\
@@ -760,6 +762,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         '-DBUILD_SHARED_LIBS=OFF',
         '-DGGML_OPENMP=OFF',
         '-DGGML_CUDA=ON',
+        '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
@@ -862,17 +865,17 @@ def build(*args, **kwargs):
     # remove all previous builds
     clean()
 
-    # # cpu
-    # if env.get('GGML_CPU', '1') != '0':
-    #     remove_llama_cpp()
-    #     clone_llama_cpp()
-    #     build_cpu(*args, **kwargs)
+    # cpu
+    if env.get('GGML_CPU', '1') != '0':
+        remove_llama_cpp()
+        clone_llama_cpp()
+        build_cpu(*args, **kwargs)
 
-    # # vulkan 1.x
-    # if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #     remove_llama_cpp()
-    #     clone_llama_cpp()
-    #     build_vulkan_1_x(*args, **kwargs)
+    # vulkan 1.x
+    if env.get('GGML_VULKAN', '1') != '0' and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+        remove_llama_cpp()
+        clone_llama_cpp()
+        build_vulkan_1_x(*args, **kwargs)
 
     # cuda 12.6.3
     if env.get('GGML_CUDA', '1') != '0':

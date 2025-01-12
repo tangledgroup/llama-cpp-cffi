@@ -83,15 +83,18 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     # dnf install -y clang-tools-extra libcurl-devel ninja-build
     dnf install -y clang clang-tools-extra ninja-build
 
-    # git clone https://github.com/google/shaderc
-    # cd shaderc
-    # ./utils/git-sync-deps
-    # mkdir build
-    # cd build
-    # cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_TESTS=ON ../
-    # ninja
-    # ninja install
-    # cd ../..
+    #
+    # build latest version of shaderc for vulkan shaders
+    #
+    git clone https://github.com/google/shaderc
+    cd shaderc
+    ./utils/git-sync-deps
+    mkdir build
+    cd build
+    cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_TESTS=ON ../
+    ninja
+    ninja install
+    cd ../..
 
     # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then

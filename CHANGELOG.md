@@ -4,6 +4,7 @@
 
 Changed:
   - `llama.cpp` revision `9a483999a6fda350772aaf7bc541f1cb246f8a29`
+  - Migrate from `gcc` to `clang` compiler/linker
   - Migrate from `make` to `cmake` build system
   - Option `ctx_size` renamed to `n_ctx`
   - Option `batch_size` renamed to `n_batch`
