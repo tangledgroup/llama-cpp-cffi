@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.4.8
+
+Changed:
+  - `llama.cpp` revision `39509fb082895d1eae2486f8ad2cbf0e905346c4`
+
 ## v0.4.7
 
 Changed:

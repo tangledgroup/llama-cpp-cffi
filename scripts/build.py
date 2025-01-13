@@ -29,7 +29,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = 'a29f0870d4846f52eda14ae28cea612ab66d903c'
+LLAMA_CPP_GIT_REF = '39509fb082895d1eae2486f8ad2cbf0e905346c4'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -522,6 +522,9 @@ def build_cpu(*args, **kwargs):
             # '-fno-discard-value-names',
             # '-fkeep-inline-functions',
             # '-fkeep-static-functions',
+            '-Wl,--no-gc-sections',
+            '-Wl,--whole-archive',
+            '-Wl,-z,muldefs',
             '-L../llama.cpp/build/src',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/common',
@@ -677,6 +680,9 @@ def build_vulkan_1_x(*args, **kwargs):
             # '-fno-discard-value-names',
             # '-fkeep-inline-functions',
             # '-fkeep-static-functions',
+            '-Wl,--no-gc-sections',
+            '-Wl,--whole-archive',
+            '-Wl,-z,muldefs',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/ggml/src/ggml-vulkan',
             '-L../llama.cpp/build/common',
@@ -868,6 +874,9 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             # '-fno-discard-value-names',
             # '-fkeep-inline-functions',
             # '-fkeep-static-functions',
+            '-Wl,--no-gc-sections',
+            '-Wl,--whole-archive',
+            '-Wl,-z,muldefs',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/ggml/src/ggml-cuda',
             '-L../llama.cpp/build/common',
