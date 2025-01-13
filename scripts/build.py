@@ -8,26 +8,28 @@ from pprint import pprint
 from tempfile import NamedTemporaryFile
 
 # set the compiler programmatically in your Python code before importing CFFI:
-# env = os.environ
-# env['CC'] = 'clang'
-# env['CXX'] = 'clang++'
-# env['LD'] = 'clang'
-# env['CFLAGS'] = '-O3 -fPIC'
-# env['CXXFLAGS'] = '-O3 -fPIC'
-#
-# env = os.environ
-# env['CC'] = 'gcc'
-# env['CXX'] = 'g++'
-# env['LD'] = 'gcc'
-# env['CFLAGS'] = '-O3 -fPIC'
-# env['CXXFLAGS'] = '-O3 -fPIC'
+env = os.environ
+CIBUILDWHEEL = int(os.environ.get('CIBUILDWHEEL', '0'))
+env['CC'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
+env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
+env['LD'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
+# env['CFLAGS'] = '-O3 -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -fvisibility=hidden'
+# env['CXXFLAGS'] = '-O3 -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -fvisibility=hidden'
+# env['CFLAGS'] = '-O3 -fPIC -static-libstdc++ -static-libgcc'
+# env['CXXFLAGS'] = '-O3 -fPIC -static-libstdc++ -static-libgcc'
+# env['LDFLAGS'] = '-O3 -fPIC -Wl,--no-gc-sections -Wl,--whole-archive -Wl,-z,muldefs -Wl,--no-undefined'
+# env['LDFLAGS'] = '-O3 -fPIC -Wl,--no-gc-sections -static-libstdc++ -static-libgcc'
+# env['LDFLAGS'] = '-O3 -fPIC -static-libstdc++ -static-libgcc'
+# env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
+# env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+# env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
 
 from cffi import FFI # type: ignore # noqa
 
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '924518e2e5726e81f3aeb2518fb85963a500e93a'
+LLAMA_CPP_GIT_REF = 'a29f0870d4846f52eda14ae28cea612ab66d903c'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -400,11 +402,9 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    # env['CC'] = 'clang'
-    # env['CXX'] = 'clang++'
-    # env['LD'] = 'clang'
-    env['CFLAGS'] = '-O3 -fPIC'
-    env['CXXFLAGS'] = '-O3 -fPIC'
+    env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
+    env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
     print('build_cpu:')
     pprint(env)
 
@@ -454,7 +454,8 @@ def build_cpu(*args, **kwargs):
         'build',
         '-DBUILD_SHARED_LIBS=OFF',
         '-DGGML_OPENMP=OFF',
-        '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
+        # '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
+        # '-DCMAKE_BUILD_TYPE=Debug',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
@@ -492,33 +493,43 @@ def build_cpu(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
-            'm',
             'pthread',
+            'm',
         ],
         extra_objects=[],
         extra_compile_args=[
-            '-O3',
-            '-g',
-            '-fPIC',
-            '-DGGML_SHARED',
-            '-DLLAMA_SHARED',
+            # *env['CFLAGS'].split(),
+            # '-g',
+            # '-O3',
+            # '-g',
+            # '-fPIC',
+            # '-fno-discard-value-names',
+            # '-fkeep-inline-functions',
+            # '-fkeep-static-functions',
+            # '-DGGML_SHARED',
+            # '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
             '-I../llama.cpp/common',
         ],
         extra_link_args=[
-            '-O3',
-            '-g',
-            '-flto',
-            '-L../llama.cpp/build/common',
-            '-L../llama.cpp/build/ggml/src',
+            # *env['LDFLAGS'].split(),
+            # '-g',
+            # '-O3',
+            # '-g',
+            # '-flto',
+            # '-fno-discard-value-names',
+            # '-fkeep-inline-functions',
+            # '-fkeep-static-functions',
             '-L../llama.cpp/build/src',
+            '-L../llama.cpp/build/ggml/src',
+            '-L../llama.cpp/build/common',
             '-L../llama.cpp/build/examples/llava',
-            '-lcommon',
             '-lggml',
             '-lggml-base',
             '-lggml-cpu',
+            '-lcommon',
             '-lllama',
             '-lllava_static',
         ],
@@ -543,11 +554,9 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    # env['CC'] = 'clang'
-    # env['CXX'] = 'clang++'
-    # env['LD'] = 'clang'
-    env['CFLAGS'] = '-O3 -fPIC'
-    env['CXXFLAGS'] = '-O3 -fPIC'
+    env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
+    env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
     print('build_vulkan_1_x:')
     pprint(env)
 
@@ -600,14 +609,15 @@ def build_vulkan_1_x(*args, **kwargs):
         '-DGGML_OPENMP=OFF',
         '-DGGML_VULKAN=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
+        '-DCMAKE_BUILD_TYPE=Debug',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
         'cmake',
         '--build',
         'build',
-        '--config',
-        'Release',
+        # '--config',
+        # 'Release',
         '-j',
     ], check=True, env=env, cwd='llama.cpp')
 
@@ -637,36 +647,46 @@ def build_vulkan_1_x(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
-            'm',
             'pthread',
+            'm',
             'vulkan',
         ],
         extra_objects=[],
         extra_compile_args=[
-            '-O3',
-            '-g',
-            '-fPIC',
-            '-DGGML_SHARED',
-            '-DLLAMA_SHARED',
+            # *env['CFLAGS'].split(),
+            # '-g',
+            # '-O3',
+            # '-g',
+            # '-fPIC',
+            # '-fno-discard-value-names',
+            # '-fkeep-inline-functions',
+            # '-fkeep-static-functions',
+            # '-DGGML_SHARED',
+            # '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
             '-I../llama.cpp/common',
         ],
         extra_link_args=[
-            '-O3',
-            '-g',
-            '-flto',
-            '-L../llama.cpp/build/common',
+            # *env['LDFLAGS'].split(),
+            # '-g',
+            # '-O3',
+            # '-g',
+            # '-flto',
+            # '-fno-discard-value-names',
+            # '-fkeep-inline-functions',
+            # '-fkeep-static-functions',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/ggml/src/ggml-vulkan',
+            '-L../llama.cpp/build/common',
             '-L../llama.cpp/build/src',
             '-L../llama.cpp/build/examples/llava',
-            '-lcommon',
             '-lggml',
             '-lggml-base',
             '-lggml-cpu',
             '-lggml-vulkan',
+            '-lcommon',
             '-lllama',
             '-lllava_static',
         ],
@@ -690,7 +710,9 @@ def build_vulkan_1_x(*args, **kwargs):
 def build_linux_cuda_12_6_3(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    CIBUILDWHEEL = int(os.environ.get('CIBUILDWHEEL', '0'))
+    env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
+    env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
 
     #
     # cuda env
@@ -699,21 +721,18 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
 
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
-    # env['CC'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
-    # env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
-    # env['CC'] = 'clang'
-    # env['CXX'] = 'clang++'
-    # env['LD'] = 'clang'
-    env['CFLAGS'] = '-O3 -fPIC'
-    env['CXXFLAGS'] = '-O3 -fPIC'
-    env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-Xcompiler -fPIC'
-    # env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/g++-13 -Xcompiler -fPIC'
-    # env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/clang -Xcompiler -fPIC'
+
+    if 'gcc' in env['CC']:
+        env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
+    elif 'clang' in env['CC']:
+        env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
+    else:
+        raise ValueError(env['CC'])
+
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
     env['NVCCFLAGS'] = '\
-            -fPIC \
             -gencode arch=compute_70,code=sm_70 \
             -gencode arch=compute_75,code=sm_75 \
             -gencode arch=compute_80,code=sm_80 \
@@ -772,14 +791,15 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         '-DGGML_OPENMP=OFF',
         '-DGGML_CUDA=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
+        '-DCMAKE_BUILD_TYPE=Debug',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
         'cmake',
         '--build',
         'build',
-        '--config',
-        'Release',
+        # '--config',
+        # 'Debug',
         '-j',
     ], check=True, env=env, cwd='llama.cpp')
 
@@ -809,8 +829,8 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
-            'm',
             'pthread',
+            'm',
             'cuda',
             'cublas',
             'culibos',
@@ -824,30 +844,40 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         ],
         extra_objects=[],
         extra_compile_args=[
-            '-O3',
-            '-g',
-            '-fPIC',
-            '-DGGML_SHARED',
-            '-DLLAMA_SHARED',
+            # *env['CFLAGS'].split(),
+            # '-g',
+            # '-O3',
+            # '-g',
+            # '-fPIC',
+            # '-fno-discard-value-names',
+            # '-fkeep-inline-functions',
+            # '-fkeep-static-functions',
+            # '-DGGML_SHARED',
+            # '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
             '-I../llama.cpp/common',
         ],
         extra_link_args=[
-            '-O3',
-            '-g',
-            '-flto',
-            '-L../llama.cpp/build/common',
+            # *env['LDFLAGS'].split(),
+            # '-g',
+            # '-O3',
+            # '-g',
+            # '-flto',
+            # '-fno-discard-value-names',
+            # '-fkeep-inline-functions',
+            # '-fkeep-static-functions',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/ggml/src/ggml-cuda',
+            '-L../llama.cpp/build/common',
             '-L../llama.cpp/build/src',
             '-L../llama.cpp/build/examples/llava',
-            '-lcommon',
             '-lggml',
             '-lggml-base',
             '-lggml-cpu',
             '-lggml-cuda',
+            '-lcommon',
             '-lllama',
             '-lllava_static',
         ],
