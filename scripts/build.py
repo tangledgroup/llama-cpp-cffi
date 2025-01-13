@@ -8,19 +8,26 @@ from pprint import pprint
 from tempfile import NamedTemporaryFile
 
 # set the compiler programmatically in your Python code before importing CFFI:
-env = os.environ # .copy()
-env['CC'] = 'clang'
-env['CXX'] = 'clang++'
-env['LD'] = 'clang'
-env['CFLAGS'] = '-O3 -fPIC'
-env['CXXFLAGS'] = '-O3 -fPIC'
+# env = os.environ
+# env['CC'] = 'clang'
+# env['CXX'] = 'clang++'
+# env['LD'] = 'clang'
+# env['CFLAGS'] = '-O3 -fPIC'
+# env['CXXFLAGS'] = '-O3 -fPIC'
+#
+# env = os.environ
+# env['CC'] = 'gcc'
+# env['CXX'] = 'g++'
+# env['LD'] = 'gcc'
+# env['CFLAGS'] = '-O3 -fPIC'
+# env['CXXFLAGS'] = '-O3 -fPIC'
 
 from cffi import FFI # type: ignore # noqa
 
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '9a483999a6fda350772aaf7bc541f1cb246f8a29'
+LLAMA_CPP_GIT_REF = '924518e2e5726e81f3aeb2518fb85963a500e93a'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -393,9 +400,9 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CC'] = 'clang'
-    env['CXX'] = 'clang++'
-    env['LD'] = 'clang'
+    # env['CC'] = 'clang'
+    # env['CXX'] = 'clang++'
+    # env['LD'] = 'clang'
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC'
     print('build_cpu:')
@@ -447,6 +454,7 @@ def build_cpu(*args, **kwargs):
         'build',
         '-DBUILD_SHARED_LIBS=OFF',
         '-DGGML_OPENMP=OFF',
+        '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
@@ -535,9 +543,9 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CC'] = 'clang'
-    env['CXX'] = 'clang++'
-    env['LD'] = 'clang'
+    # env['CC'] = 'clang'
+    # env['CXX'] = 'clang++'
+    # env['LD'] = 'clang'
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC'
     print('build_vulkan_1_x:')
@@ -591,6 +599,7 @@ def build_vulkan_1_x(*args, **kwargs):
         '-DBUILD_SHARED_LIBS=OFF',
         '-DGGML_OPENMP=OFF',
         '-DGGML_VULKAN=ON',
+        '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
@@ -692,14 +701,14 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
     # env['CC'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
     # env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
-    env['CC'] = 'clang'
-    env['CXX'] = 'clang++'
-    env['LD'] = 'clang'
+    # env['CC'] = 'clang'
+    # env['CXX'] = 'clang++'
+    # env['LD'] = 'clang'
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC'
-    # env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-Xcompiler -fPIC'
+    env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-Xcompiler -fPIC'
     # env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/g++-13 -Xcompiler -fPIC'
-    env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/clang -Xcompiler -fPIC'
+    # env['NVCC_PREPEND_FLAGS'] = ' ' if CIBUILDWHEEL else '-ccbin /usr/bin/clang -Xcompiler -fPIC'
     env['CUDA_DOCKER_ARCH'] = 'compute_61'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'

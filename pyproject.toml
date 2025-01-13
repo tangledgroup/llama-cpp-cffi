@@ -1,6 +1,6 @@
 [project]
 name = "llama-cpp-cffi"
-version = "0.4.0"
+version = "0.4.1"
 description = "Python binding for llama.cpp using cffi"
 authors = [
     { name = "Tangled Group, Inc", email = "info@tangledgroup.com" },
@@ -81,7 +81,9 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf group install -y "Development Tools"
     # dnf install -y unzip p7zip p7zip-plugins upx clang-tools-extra libcurl-devel
     # dnf install -y clang-tools-extra libcurl-devel ninja-build
-    dnf install -y clang clang-tools-extra ninja-build
+    dnf install -y clang clang-tools-extra ninja-build gcc-toolset-14
+    # scl enable gcc-toolset-14 bash
+    source /opt/rh/gcc-toolset-14/enable
 
     #
     # build latest version of shaderc for vulkan shaders
@@ -115,7 +117,7 @@ fi
 """
 
 build = ["cp310-*", "cp312-*"]
-skip = ["*i686", "*musllinux*"]
+# skip = ["*i686", "*musllinux*"]
 
 # build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]

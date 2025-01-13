@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.4.1
+
+Changed:
+  - `llama.cpp` revision `924518e2e5726e81f3aeb2518fb85963a500e93a`
+
+Fixed:
+  - Migrate from `clang` to `gcc-13` compiler/linker
+
 ## v0.4.0
 
 Changed:

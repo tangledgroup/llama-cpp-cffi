@@ -9,7 +9,7 @@ source venv/bin/activate
 pip install poetry
 
 # local build
-# poetry install --all-extras
+poetry install --all-extras --all-groups
 
 # clean build
 poetry run clean
