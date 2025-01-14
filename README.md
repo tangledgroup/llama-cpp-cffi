@@ -14,12 +14,13 @@
 [![Github Downloads](https://img.shields.io/github/downloads/tangledgroup/llama-cpp-cffi/total.svg?label=Github%20Downloads)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**Python** binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU**, **Vulkan 1.x** (AMD, Intel and Nvidia GPUs) and **CUDA 12.6** (Nvidia GPUs) runtimes, **x86_64** and **aarch64** platforms.
+**Python** 3.10+ binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU**, **Vulkan 1.x** (AMD, Intel and Nvidia GPUs) and **CUDA 12.6** (Nvidia GPUs) runtimes, **x86_64** and **aarch64** platforms.
 
 NOTE: Currently supported operating system is **Linux** (`manylinux_2_28` and `musllinux_1_2`), but we are working on both **Windows** and **macOS** versions.
 
 ## News
 
+- **Jan 14 2025, v0.4.12**: Modular llama.cpp build using `cmake` build system. Deprecated `make` build system.
 - **Jan 1 2025, v0.3.1**: OpenAI compatible API, **text** and **vision** models. Added support for **Qwen2-VL** models. Hot-swap of models on demand in server/API.
 - **Dec 9 2024, v0.2.0**: Low-level and high-level APIs: llama, llava, clip and ggml API.
 - **Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.

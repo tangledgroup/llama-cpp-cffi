@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## v0.4.12
+
+Changed:
+  - `llama.cpp` revision `44d1e796d08641e7083fcbf37b33c79842a2f01e`
+
+Fixed:
+  - `gguf_*` missing symbols from `_llama_cpp_*` shared libraries
+
+## v0.4.11
+
+Changed:
+  - `llama.cpp` revision `44d1e796d08641e7083fcbf37b33c79842a2f01e`
+
+## v0.4.10
+
+Changed:
+  - `llama.cpp` revision `44d1e796d08641e7083fcbf37b33c79842a2f01e`
+
+## v0.4.9
+
+Changed:
+  - `llama.cpp` revision `39509fb082895d1eae2486f8ad2cbf0e905346c4`
+
 ## v0.4.8
 
 Changed:

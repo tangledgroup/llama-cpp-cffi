@@ -1,6 +1,6 @@
 [project]
 name = "llama-cpp-cffi"
-version = "0.4.8"
+version = "0.4.12"
 description = "Python binding for llama.cpp using cffi"
 authors = [
     { name = "Tangled Group, Inc", email = "info@tangledgroup.com" },
@@ -8,7 +8,7 @@ authors = [
 ]
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">= 3.10"
 keywords = [ "llama", "llama-cpp", "llama.cpp", "llama-cpp-cffi", "cffi" ]
 classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules"
@@ -82,10 +82,12 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf group install -y "Development Tools"
     # dnf install -y unzip p7zip p7zip-plugins upx clang-tools-extra libcurl-devel
     # dnf install -y clang-tools-extra libcurl-devel ninja-build
-    dnf install -y clang clang-tools-extra ninja-build gcc-toolset-13 gcc-toolset-14
+    # dnf install -y clang clang-tools-extra ninja-build gcc-toolset-13 gcc-toolset-14
+    dnf install -y clang clang-tools-extra ninja-build
 
     # source /opt/rh/gcc-toolset-14/enable
-    source /opt/rh/gcc-toolset-13/enable
+    # source /opt/rh/gcc-toolset-13/enable
+    # /opt/rh/gcc-toolset-13/root/usr/bin/gcc -dumpspecs > /opt/rh/gcc-toolset-13/root/usr/lib/gcc/x86_64-redhat-linux/13/specs
 
     #
     # build latest version of shaderc for vulkan shaders

@@ -7,29 +7,19 @@ import subprocess
 from pprint import pprint
 from tempfile import NamedTemporaryFile
 
-# set the compiler programmatically in your Python code before importing CFFI:
+# set the compiler programmatically in your Python code before importing CFFI
 env = os.environ
 CIBUILDWHEEL = int(os.environ.get('CIBUILDWHEEL', '0'))
 env['CC'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
 env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
 env['LD'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
-# env['CFLAGS'] = '-O3 -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -fvisibility=hidden'
-# env['CXXFLAGS'] = '-O3 -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -fvisibility=hidden'
-# env['CFLAGS'] = '-O3 -fPIC -static-libstdc++ -static-libgcc'
-# env['CXXFLAGS'] = '-O3 -fPIC -static-libstdc++ -static-libgcc'
-# env['LDFLAGS'] = '-O3 -fPIC -Wl,--no-gc-sections -Wl,--whole-archive -Wl,-z,muldefs -Wl,--no-undefined'
-# env['LDFLAGS'] = '-O3 -fPIC -Wl,--no-gc-sections -static-libstdc++ -static-libgcc'
-# env['LDFLAGS'] = '-O3 -fPIC -static-libstdc++ -static-libgcc'
-# env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
-# env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
-# env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
 
 from cffi import FFI # type: ignore # noqa
 
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '39509fb082895d1eae2486f8ad2cbf0e905346c4'
+LLAMA_CPP_GIT_REF = '44d1e796d08641e7083fcbf37b33c79842a2f01e'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -419,6 +409,7 @@ def build_cpu(*args, **kwargs):
             './llama.cpp/common',
         ],
         files=[
+            './llama.cpp/ggml/include/gguf.h',
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
             './llama.cpp/include/llama.h',
@@ -454,8 +445,7 @@ def build_cpu(*args, **kwargs):
         'build',
         '-DBUILD_SHARED_LIBS=OFF',
         '-DGGML_OPENMP=OFF',
-        # '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
-        # '-DCMAKE_BUILD_TYPE=Debug',
+        '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
@@ -486,6 +476,7 @@ def build_cpu(*args, **kwargs):
     ffibuilder.set_source(
         '_llama_cpp_cpu',
         '''
+            #include "gguf.h"
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
@@ -493,21 +484,13 @@ def build_cpu(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
+            'c',
             'pthread',
             'm',
         ],
         extra_objects=[],
         extra_compile_args=[
             # *env['CFLAGS'].split(),
-            # '-g',
-            # '-O3',
-            # '-g',
-            # '-fPIC',
-            # '-fno-discard-value-names',
-            # '-fkeep-inline-functions',
-            # '-fkeep-static-functions',
-            # '-DGGML_SHARED',
-            # '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -515,16 +498,6 @@ def build_cpu(*args, **kwargs):
         ],
         extra_link_args=[
             # *env['LDFLAGS'].split(),
-            # '-g',
-            # '-O3',
-            # '-g',
-            # '-flto',
-            # '-fno-discard-value-names',
-            # '-fkeep-inline-functions',
-            # '-fkeep-static-functions',
-            '-Wl,--no-gc-sections',
-            '-Wl,--whole-archive',
-            '-Wl,-z,muldefs',
             '-L../llama.cpp/build/src',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/common',
@@ -574,6 +547,7 @@ def build_vulkan_1_x(*args, **kwargs):
             './llama.cpp/common',
         ],
         files=[
+            './llama.cpp/ggml/include/gguf.h',
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
             './llama.cpp/include/llama.h',
@@ -612,15 +586,14 @@ def build_vulkan_1_x(*args, **kwargs):
         '-DGGML_OPENMP=OFF',
         '-DGGML_VULKAN=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
-        '-DCMAKE_BUILD_TYPE=Debug',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
         'cmake',
         '--build',
         'build',
-        # '--config',
-        # 'Release',
+        '--config',
+        'Release',
         '-j',
     ], check=True, env=env, cwd='llama.cpp')
 
@@ -643,6 +616,7 @@ def build_vulkan_1_x(*args, **kwargs):
     ffibuilder.set_source(
         '_llama_cpp_vulkan_1_x',
         '''
+            #include "gguf.h"
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
@@ -650,6 +624,7 @@ def build_vulkan_1_x(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
+            'c',
             'pthread',
             'm',
             'vulkan',
@@ -657,15 +632,6 @@ def build_vulkan_1_x(*args, **kwargs):
         extra_objects=[],
         extra_compile_args=[
             # *env['CFLAGS'].split(),
-            # '-g',
-            # '-O3',
-            # '-g',
-            # '-fPIC',
-            # '-fno-discard-value-names',
-            # '-fkeep-inline-functions',
-            # '-fkeep-static-functions',
-            # '-DGGML_SHARED',
-            # '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -673,16 +639,6 @@ def build_vulkan_1_x(*args, **kwargs):
         ],
         extra_link_args=[
             # *env['LDFLAGS'].split(),
-            # '-g',
-            # '-O3',
-            # '-g',
-            # '-flto',
-            # '-fno-discard-value-names',
-            # '-fkeep-inline-functions',
-            # '-fkeep-static-functions',
-            '-Wl,--no-gc-sections',
-            '-Wl,--whole-archive',
-            '-Wl,-z,muldefs',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/ggml/src/ggml-vulkan',
             '-L../llama.cpp/build/common',
@@ -760,6 +716,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
             './llama.cpp/common',
         ],
         files=[
+            './llama.cpp/ggml/include/gguf.h',
             './llama.cpp/examples/llava/clip.h',
             './llama.cpp/examples/llava/llava.h',
             './llama.cpp/include/llama.h',
@@ -797,15 +754,14 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         '-DGGML_OPENMP=OFF',
         '-DGGML_CUDA=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
-        '-DCMAKE_BUILD_TYPE=Debug',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
         'cmake',
         '--build',
         'build',
-        # '--config',
-        # 'Debug',
+        '--config',
+        'Release',
         '-j',
     ], check=True, env=env, cwd='llama.cpp')
 
@@ -828,6 +784,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     ffibuilder.set_source(
         '_llama_cpp_cuda_12_6_3',
         '''
+            #include "gguf.h"
             #include "llama.h"
             #include "llava/clip.h"
             #include "llava/llava.h"
@@ -835,6 +792,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         ''',
         libraries=[
             'stdc++',
+            'c',
             'pthread',
             'm',
             'cuda',
@@ -851,15 +809,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         extra_objects=[],
         extra_compile_args=[
             # *env['CFLAGS'].split(),
-            # '-g',
-            # '-O3',
-            # '-g',
-            # '-fPIC',
-            # '-fno-discard-value-names',
-            # '-fkeep-inline-functions',
-            # '-fkeep-static-functions',
-            # '-DGGML_SHARED',
-            # '-DLLAMA_SHARED',
             '-I../llama.cpp/ggml/include',
             '-I../llama.cpp/include',
             '-I../llama.cpp/examples',
@@ -867,16 +816,6 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         ],
         extra_link_args=[
             # *env['LDFLAGS'].split(),
-            # '-g',
-            # '-O3',
-            # '-g',
-            # '-flto',
-            # '-fno-discard-value-names',
-            # '-fkeep-inline-functions',
-            # '-fkeep-static-functions',
-            '-Wl,--no-gc-sections',
-            '-Wl,--whole-archive',
-            '-Wl,-z,muldefs',
             '-L../llama.cpp/build/ggml/src',
             '-L../llama.cpp/build/ggml/src/ggml-cuda',
             '-L../llama.cpp/build/common',
