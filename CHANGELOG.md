@@ -3,10 +3,11 @@
 ## v0.4.12
 
 Changed:
-  - `llama.cpp` revision `44d1e796d08641e7083fcbf37b33c79842a2f01e`
+  - `llama.cpp` revision `091592d758cb55af7bfadd6c397f61db387aa8f3`
 
 Fixed:
   - `gguf_*` missing symbols from `_llama_cpp_*` shared libraries
+  - CUDA default arch `-arch=sm_61`
 
 ## v0.4.11
 

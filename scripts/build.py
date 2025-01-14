@@ -19,7 +19,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '44d1e796d08641e7083fcbf37b33c79842a2f01e'
+LLAMA_CPP_GIT_REF = '091592d758cb55af7bfadd6c397f61db387aa8f3'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -695,6 +695,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
     env['NVCCFLAGS'] = '\
+            -arch=sm_61 \
             -gencode arch=compute_70,code=sm_70 \
             -gencode arch=compute_75,code=sm_75 \
             -gencode arch=compute_80,code=sm_80 \
@@ -754,6 +755,8 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         '-DGGML_OPENMP=OFF',
         '-DGGML_CUDA=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
+        '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
+        '-DGGML_CUDA_FA_ALL_QUANTS=ON',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([
