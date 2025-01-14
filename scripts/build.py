@@ -19,7 +19,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '091592d758cb55af7bfadd6c397f61db387aa8f3'
+LLAMA_CPP_GIT_REF = 'bbf3e55e352d309573bdafee01a014b0a2492155'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -672,9 +672,12 @@ def build_vulkan_1_x(*args, **kwargs):
 def build_linux_cuda_12_6_3(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
-    env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
-    env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    # env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
+    # env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    # env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    env['CFLAGS'] = '-O3 -g -fPIC'
+    env['CXXFLAGS'] = '-O3 -g -fPIC'
+    env['LDFLAGS'] = '-O3 -g -fPIC'
 
     #
     # cuda env
@@ -684,24 +687,28 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
     env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
 
-    if 'gcc' in env['CC']:
-        env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
-    elif 'clang' in env['CC']:
-        env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
-    else:
-        raise ValueError(env['CC'])
+    # if 'gcc' in env['CC']:
+    #     env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
+    # elif 'clang' in env['CC']:
+    #     env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
+    # else:
+    #     raise ValueError(env['CC'])
 
-    env['CUDA_DOCKER_ARCH'] = 'compute_61'
+    # env['CUDA_DOCKER_ARCH'] = 'compute_61'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
-    env['NVCCFLAGS'] = '\
-            -arch=sm_61 \
-            -gencode arch=compute_70,code=sm_70 \
-            -gencode arch=compute_75,code=sm_75 \
-            -gencode arch=compute_80,code=sm_80 \
-            -gencode arch=compute_86,code=sm_86 \
-            -gencode arch=compute_89,code=sm_89 \
-            -gencode arch=compute_90,code=sm_90'
+    # env['NVCCFLAGS'] = '\
+    # env['NVCCFLAGS'] = '\
+    #         -gencode arch=compute_61,code=sm_61 \
+    #         -gencode arch=compute_70,code=sm_70 \
+    #         -gencode arch=compute_75,code=sm_75 \
+    #         -gencode arch=compute_80,code=sm_80 \
+    #         -gencode arch=compute_86,code=sm_86 \
+    #         -gencode arch=compute_89,code=sm_89 \
+    #         -gencode arch=compute_90,code=sm_90'
+    #
+    # env['NVCCFLAGS'] += '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
+    env['NVCCFLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
 
     print('build_linux_cuda_12_6_3:')
     pprint(env)
@@ -757,6 +764,8 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
         '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
         '-DGGML_CUDA_FA_ALL_QUANTS=ON',
+        '-DGGML_NATIVE=OFF',
+        '-DCMAKE_CUDA_ARCHITECTURES="61;70;75;80;86;89;90"',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([

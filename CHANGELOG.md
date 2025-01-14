@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v0.4.14
+
+Changed:
+  - `llama.cpp` revision `bbf3e55e352d309573bdafee01a014b0a2492155`
+
+Fixed:
+  - CUDA architectures: 61, 70, 75, 80, 86, 89, 90
+
+## v0.4.13
+
+Changed:
+  - `llama.cpp` revision `bbf3e55e352d309573bdafee01a014b0a2492155`
+
 ## v0.4.12
 
 Changed:
