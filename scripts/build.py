@@ -10,16 +10,22 @@ from tempfile import NamedTemporaryFile
 # set the compiler programmatically in your Python code before importing CFFI
 env = os.environ
 CIBUILDWHEEL = int(os.environ.get('CIBUILDWHEEL', '0'))
-env['CC'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
-env['CXX'] = 'g++' if CIBUILDWHEEL else 'g++-13'
-env['LD'] = 'gcc' if CIBUILDWHEEL else 'gcc-13'
+
+if CIBUILDWHEEL:
+    gcc_toolset_path = '/opt/rh/gcc-toolset-12'
+    env['DEVTOOLSET_ROOTPATH'] = '/opt/rh/gcc-toolset-12/root'
+    env['PATH'] = f'{gcc_toolset_path}/root/usr/bin:{env["PATH"]}'
+
+env['CC'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-13') # type: ignore
+env['CXX'] = shutil.which('g++' if CIBUILDWHEEL else 'g++-13') # type: ignore
+env['LD'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-13') # type: ignore
 
 from cffi import FFI # type: ignore # noqa
 
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = 'bbf3e55e352d309573bdafee01a014b0a2492155'
+LLAMA_CPP_GIT_REF = '0ccd7f3eb2debe477ffe3c44d5353cc388c9418d'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -114,17 +120,17 @@ def remove_duplicate_decls_and_defs(source: str) -> str:
         ], text=True, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         output: str = p.stdout
-        print(f'{f.name=}')
+        # print(f'{f.name=}')
 
     # print(f'{type(output)=} {output=}')
-    print(output)
+    # print(output)
 
     re_defs_decls = [
         n
         for n in output.splitlines()
         if 'error' in n and ('redefinition' in n or 'redeclared' in n)
     ]
-    print(f'{re_defs_decls=}')
+    # print(f'{re_defs_decls=}')
     source_lines = source.splitlines()
     # raise 1
 
@@ -392,9 +398,9 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
-    env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
-    env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
+    env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
     print('build_cpu:')
     pprint(env)
 
@@ -434,7 +440,7 @@ def build_cpu(*args, **kwargs):
 
     # patch of source
     _source = replace_code(_source, REPLACE_CODE_ITEMS)
-    print(_source)
+    # print(_source)
 
     #
     # build llama.cpp
@@ -530,9 +536,9 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
-    env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
-    env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
+    env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
     print('build_vulkan_1_x:')
     pprint(env)
 
@@ -573,7 +579,7 @@ def build_vulkan_1_x(*args, **kwargs):
 
     # patch of source
     _source = replace_code(_source, REPLACE_CODE_ITEMS)
-    print(_source)
+    # print(_source)
 
     #
     # build llama.cpp
@@ -670,46 +676,21 @@ def build_vulkan_1_x(*args, **kwargs):
 
 
 def build_linux_cuda_12_6_3(*args, **kwargs):
-    # build static and shared library
-    env = os.environ.copy()
-    # env['CFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0'
-    # env['CXXFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
-    # env['LDFLAGS'] = '-O3 -g -fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++17 -frtti'
-    env['CFLAGS'] = '-O3 -g -fPIC'
-    env['CXXFLAGS'] = '-O3 -g -fPIC'
-    env['LDFLAGS'] = '-O3 -g -fPIC'
-
     #
     # cuda env
     #
     cuda_output_dir = cuda_12_6_3_setup()
 
-    env['PATH'] =  f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
+    # build static and shared library
+    env = os.environ.copy()
+    env['CFLAGS'] = '-O3 -fPIC'
+    env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
+    env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
+    env['PATH'] = f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
-
-    # if 'gcc' in env['CC']:
-    #     env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
-    # elif 'clang' in env['CC']:
-    #     env['NVCC_PREPEND_FLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
-    # else:
-    #     raise ValueError(env['CC'])
-
-    # env['CUDA_DOCKER_ARCH'] = 'compute_61'
     env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
     env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
-    # env['NVCCFLAGS'] = '\
-    # env['NVCCFLAGS'] = '\
-    #         -gencode arch=compute_61,code=sm_61 \
-    #         -gencode arch=compute_70,code=sm_70 \
-    #         -gencode arch=compute_75,code=sm_75 \
-    #         -gencode arch=compute_80,code=sm_80 \
-    #         -gencode arch=compute_86,code=sm_86 \
-    #         -gencode arch=compute_89,code=sm_89 \
-    #         -gencode arch=compute_90,code=sm_90'
-    #
-    # env['NVCCFLAGS'] += '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
-    env['NVCCFLAGS'] = '-Xcompiler -fPIC' if CIBUILDWHEEL else f'-ccbin {env["CC"]} -Xcompiler -fPIC'
-
+    env['NVCC_PREPEND_FLAGS'] = f'-ccbin {env["CC"]} -Xcompiler -fPIC'
     print('build_linux_cuda_12_6_3:')
     pprint(env)
 
@@ -749,7 +730,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
 
     # patch of source
     _source = replace_code(_source, REPLACE_CODE_ITEMS)
-    print(_source)
+    # print(_source)
 
     #
     # build llama.cpp
@@ -762,10 +743,16 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         '-DGGML_OPENMP=OFF',
         '-DGGML_CUDA=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
-        '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
-        '-DGGML_CUDA_FA_ALL_QUANTS=ON',
-        '-DGGML_NATIVE=OFF',
-        '-DCMAKE_CUDA_ARCHITECTURES="61;70;75;80;86;89;90"',
+        # '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
+        # '-DGGML_CUDA_FA_ALL_QUANTS=ON',
+        # '-DGGML_NATIVE=OFF',
+        # * a semicolon-separated list of integers, each optionally
+        #   followed by '-real' or '-virtual'
+        # * a special value: all, all-major, native
+        # '-DCMAKE_CUDA_ARCHITECTURES=61;70;75;80;86;89;90',
+        '-DCMAKE_CUDA_ARCHITECTURES=all',
+        # '-DCMAKE_CUDA_ARCHITECTURES=all-major',
+        # '-DCMAKE_CUDA_ARCHITECTURES=86',
     ], check=True, env=env, cwd='llama.cpp')
 
     subprocess.run([

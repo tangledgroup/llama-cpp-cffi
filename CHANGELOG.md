@@ -3,10 +3,10 @@
 ## v0.4.14
 
 Changed:
-  - `llama.cpp` revision `bbf3e55e352d309573bdafee01a014b0a2492155`
+  - `llama.cpp` revision `0ccd7f3eb2debe477ffe3c44d5353cc388c9418d`
 
 Fixed:
-  - CUDA architectures: 61, 70, 75, 80, 86, 89, 90
+  - CUDA architectures: all (including: 61, 70, 75, 80, 86, 89, 90)
 
 ## v0.4.13
 

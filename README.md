@@ -20,7 +20,7 @@ NOTE: Currently supported operating system is **Linux** (`manylinux_2_28` and `m
 
 ## News
 
-- **Jan 14 2025, v0.4.12+**: Modular llama.cpp build using `cmake` build system. Deprecated `make` build system.
+- **Jan 14 2025, v0.4.14**: Modular llama.cpp build using `cmake` build system. Deprecated `make` build system.
 - **Jan 1 2025, v0.3.1**: OpenAI compatible API, **text** and **vision** models. Added support for **Qwen2-VL** models. Hot-swap of models on demand in server/API.
 - **Dec 9 2024, v0.2.0**: Low-level and high-level APIs: llama, llava, clip and ggml API.
 - **Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.
