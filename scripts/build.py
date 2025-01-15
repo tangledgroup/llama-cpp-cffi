@@ -10,8 +10,9 @@ from tempfile import NamedTemporaryFile
 # set the compiler programmatically in your Python code before importing CFFI
 env = os.environ
 CIBUILDWHEEL = int(os.environ.get('CIBUILDWHEEL', '0'))
+AUDITWHEEL_ARCH = os.environ.get('AUDITWHEEL_ARCH', None)
 
-if CIBUILDWHEEL:
+if CIBUILDWHEEL and AUDITWHEEL_ARCH not in (None, 'aarch64'):
     gcc_toolset_path = '/opt/rh/gcc-toolset-12'
     env['DEVTOOLSET_ROOTPATH'] = '/opt/rh/gcc-toolset-12/root'
     env['PATH'] = f'{gcc_toolset_path}/root/usr/bin:{env["PATH"]}'
@@ -25,7 +26,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '0ccd7f3eb2debe477ffe3c44d5353cc388c9418d'
+LLAMA_CPP_GIT_REF = 'adc5dd92e8aea98f5e7ac84f6e1bc15de35130b5'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -863,12 +864,12 @@ def build(*args, **kwargs):
         clone_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 
-    # cuda 12.6.3
-    if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-            remove_llama_cpp()
-            clone_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+    # # cuda 12.6.3
+    # if env.get('GGML_CUDA', '1') != '0':
+    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+    #         remove_llama_cpp()
+    #         clone_llama_cpp()
+    #         build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':

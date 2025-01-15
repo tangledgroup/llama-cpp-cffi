@@ -35,7 +35,7 @@ demo_models = {
     'arcee-ai/Llama-3.1-SuperNova-Lite': Model( # 8B
         creator_hf_repo='arcee-ai/Llama-3.1-SuperNova-Lite',
         hf_repo='arcee-ai/Llama-3.1-SuperNova-Lite-GGUF',
-        hf_file='supernova-lite-v1.Q5_K_M.gguf',
+        hf_file='supernova-lite-v1.Q4_K_M.gguf',
     ),
     'HuggingFaceTB/SmolLM2-360M-Instruct': Model(
         creator_hf_repo='HuggingFaceTB/SmolLM2-360M-Instruct',

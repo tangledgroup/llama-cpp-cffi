@@ -149,7 +149,7 @@ Run server first:
 ```bash
 python -m llama.server
 # or
-python -B -u -m gunicorn --bind '0.0.0.0:11434' --timeout 300 --workers 1 --worker-class aiohttp.GunicornWebWorker 'llama.server:build_app()'
+python -B -u -m gunicorn --bind '0.0.0.0:11434' --timeout 900 --workers 1 --worker-class aiohttp.GunicornWebWorker 'llama.server:build_app()'
 ```
 
 ### Client - llama-cpp-cffi API / curl

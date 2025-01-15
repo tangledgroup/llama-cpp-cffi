@@ -26,6 +26,7 @@ def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_con
     with lock:
         context: llama_context_p = lib.llama_new_context_with_model(model, ctx_params)
 
+    assert context != ffi.NULL
     return context
 
 

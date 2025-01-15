@@ -28,8 +28,9 @@ def model_init(model_options: ModelOptions) -> llama_model_p:
     model_params.check_tensors = model_options.check_tensors
 
     with lock:
-        model: llama_model_p = lib.llama_load_model_from_file(model_path.encode(), model_params)
+        model: llama_model_p = lib.llama_model_load_from_file(model_path.encode(), model_params)
 
+    assert model != ffi.NULL
     return model
 
 
@@ -107,6 +108,10 @@ class Model:
     def init(self, **kwargs):
         self.options = ModelOptions(**(asdict(self.options) | kwargs))
         self._model = model_init(self.options)
+        print(f'init {self._model=}')
+
+        if self._model == ffi.NULL:
+            raise MemoryError(f'Could not load model: {self.options}')
 
 
     def free(self):
