@@ -749,7 +749,7 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         # * a semicolon-separated list of integers, each optionally
         #   followed by '-real' or '-virtual'
         # * a special value: all, all-major, native
-        '-DCMAKE_CUDA_ARCHITECTURES=61;70;75;80;86;89;90;100',
+        '-DCMAKE_CUDA_ARCHITECTURES=61;70;75;80;86;89;90',
         # '-DCMAKE_CUDA_ARCHITECTURES=all',
         # '-DCMAKE_CUDA_ARCHITECTURES=all-major',
         # '-DCMAKE_CUDA_ARCHITECTURES=86',

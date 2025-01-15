@@ -6,7 +6,7 @@ Changed:
   - `llama.cpp` revision `0ccd7f3eb2debe477ffe3c44d5353cc388c9418d`
 
 Fixed:
-  - CUDA architectures: 61, 70, 75, 80, 86, 89, 90, 100
+  - CUDA architectures: 61, 70, 75, 80, 86, 89, 90
 
 ## v0.4.14
 
