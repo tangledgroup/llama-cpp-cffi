@@ -18,7 +18,7 @@ poetry run clean
 poetry run cibuildwheel --output-dir wheelhouse --platform linux --arch x86_64 .
 
 # aarch64
-docker run --rm --privileged linuxkit/binfmt:v0.8
+docker run --rm --privileged linuxkit/binfmt:v1.0.0
 poetry run cibuildwheel --output-dir wheelhouse --platform linux --arch aarch64 .
 
 # pyodide, pyscript, wasm (NOTE: cannot be published to PyPI)

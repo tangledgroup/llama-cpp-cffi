@@ -3,7 +3,6 @@ __all__ = ['routes', 'build_app']
 import os
 import json
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from pprint import pprint
 from typing import Any, Optional, AsyncIterator
 
@@ -17,133 +16,22 @@ from .util import base64_image_to_tempfile
 
 routes = web.RouteTableDef()
 
-load_model_lock = asyncio.Lock()
-loaded_models: list[tuple[ModelOptions, tuple[Model, asyncio.Lock]]] = []
+current_model = Model(
+    'Qwen/Qwen2.5-1.5B-Instruct',
+    'Qwen/Qwen2.5-1.5B-Instruct-GGUF',
+    'qwen2.5-1.5b-instruct-q4_k_m.gguf',
+)
 
+current_model.init(
+    n_ctx=8 * 1024,
+    gpu_layers=99,
+)
 
-async def load_model(model_options: ModelOptions) -> tuple[Model, asyncio.Lock]:
-    global loaded_models
-    model: Model
-    lock: asyncio.Lock
-    lasy_model_options: ModelOptions
-    last_model: Model
-    last_lock: asyncio.Lock
-
-    async with load_model_lock:
-        # check if model already loaded
-        model_already_loaded: bool = False
-
-        for mo, (model, lock) in loaded_models:
-            if mo == model_options:
-                model_already_loaded = True
-                break
-
-        if model_already_loaded:
-            print('model already loaded, reusing it', model_options, model, lock, '\n\n')
-        else:
-            # try to load model
-            model = Model(options=model_options)
-            lock = asyncio.Lock()
-
-            while True:
-                try:
-                    print('trying to load model', model_options, '\n\n')
-
-                    async with lock:
-                        model.init(**asdict(model_options))
-
-                    print('loaded model', model_options, model, lock, '\n\n')
-                    break
-                except MemoryError as e:
-                    print('there wasn\'t enough space to load model', e, '\n\n')
-
-                    if not loaded_models:
-                        print('loaded_models is empty, skipping...', '\n\n')
-                        await asyncio.sleep(5.0)
-                        continue
-
-                    # unload by LIFO order
-                    lasy_model_options, (last_model, last_lock) = loaded_models.pop()
-
-                    async with last_lock:
-                        last_model.free()
-                        print('unloaded model', lasy_model_options, last_model, last_lock, '\n\n')
-
-                    await asyncio.sleep(1.0)
-                    continue
-
-            loaded_models.append((model_options, (model, lock)))
-
-    print('currently loaded models:')
-
-    for i, mo in enumerate(loaded_models):
-        print(i, ':',  mo)
-
-    print('\n\n')
-    return model, lock
-
-
-async def load_model_one_at_the_time(model_options: ModelOptions) -> tuple[Model, asyncio.Lock]:
-    global loaded_models
-    model: Model
-    lock: asyncio.Lock
-    lasy_model_options: ModelOptions
-    last_model: Model
-    last_lock: asyncio.Lock
-
-    async with load_model_lock:
-        # check if model already loaded
-        model_already_loaded: bool = False
-
-        for mo, (model, lock) in loaded_models:
-            if mo == model_options:
-                model_already_loaded = True
-                break
-
-        if model_already_loaded:
-            print('model already loaded, reusing it', model_options, model, lock, '\n\n')
-        else:
-            # unload all models
-            while loaded_models:
-                mo, (model, lock) = loaded_models.pop()
-
-                async with lock:
-                    model.free()
-                    print('unloaded model', mo, model, lock, '\n\n')
-
-            # try to load model
-            model = Model(options=model_options)
-            lock = asyncio.Lock()
-
-            async with lock:
-                model.init(**asdict(model_options))
-
-            loaded_models.append((model_options, (model, lock)))
-
-    print('currently loaded models:')
-
-    for i, mo in enumerate(loaded_models):
-        print(i, ':',  mo)
-
-    print('\n\n')
-    return model, lock
-
-
-def sync_completions(model, completions_options):
-    for token in model.completions(**asdict(completions_options)):
-        yield token
-
-
-async def async_completions(model, completions_options):
-    loop = asyncio.get_running_loop()
-
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        for token in await loop.run_in_executor(pool, sync_completions, model, completions_options):
-            yield token
+lock = asyncio.Lock()
 
 
 async def process_completions(data: dict) -> AsyncIterator[str]:
-    # global current_model
+    global current_model
 
     # pprint(data)
     # print('=' * 80)
@@ -168,70 +56,85 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
     # pprint(completions_options)
     # print('=' * 80)
 
-    model, lock = await load_model(model_options)
-    # model, lock = await load_model_one_at_the_time(model_options)
+    model = Model(options=model_options)
+    # pprint(model)
+    # print('=' * 80)
 
-    # for token in model.completions(**asdict(completions_options)):
-    #     yield token
+    # print(repr(current_model))
+    # print('=' * 80)
 
-    async with lock:
-        async for token in async_completions(model, completions_options):
-            yield token
-            await asyncio.sleep(0.0)
+    if current_model == model or (model.options and model.options.creator_hf_repo is None):
+        # print('1')
+        model = current_model
+    else:
+        # print('2')
+        current_model.free()
+        model.init(**asdict(model_options))
+        current_model = model
+
+    for token in model.completions(**asdict(completions_options)):
+        yield token
 
     # remove temp image file
     if image and image_file:
         image_file.close()
         os.unlink(image_file.name)
 
+
 #
 # llama-cpp-cffi API
 #
 @routes.post('/api/1.0/completions')
 async def api_1_0_completions(request: web.Request) -> web.Response | web.StreamResponse:
+    global current_model
+
     data: dict = await request.json()
     # print('api_1_0_completions data:')
     stream: bool = data.pop('stream', False)
 
-    if stream:
-        response = web.StreamResponse()
-        response.headers['Content-Type'] = 'text/event-stream'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Connection'] = 'keep-alive'
-        await response.prepare(request)
-        chunk_bytes: bytes
+    async with lock:
+        if stream:
+            response = web.StreamResponse()
+            response.headers['Content-Type'] = 'text/event-stream'
+            response.headers['Cache-Control'] = 'no-cache'
+            response.headers['Connection'] = 'keep-alive'
+            await response.prepare(request)
+            chunk_bytes: bytes
 
-        async for token in process_completions(data):
-            event_data = {
+            try:
+                async for token in process_completions(data):
+                    event_data = {
+                        'choices': [{
+                            'delta': {'content': token},
+                            'finish_reason': None,
+                            'index': 0
+                        }]
+                    }
+
+                    chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
+                    await response.write(chunk_bytes)
+            except Exception as e:
+                print('api_1_0_completions error:', e)
+
+            # Send the final message
+            chunk_bytes = b'data: [DONE]\n\n'
+            await response.write(chunk_bytes)
+            return response
+        else:
+            full_response: list[str] | str = []
+
+            async for token in process_completions(data):
+                full_response.append(token)
+
+            full_response = ''.join(full_response)
+
+            return web.json_response({
                 'choices': [{
-                    'delta': {'content': token},
-                    'finish_reason': None,
+                    'message': {'content': full_response},
+                    'finish_reason': 'stop',
                     'index': 0
                 }]
-            }
-
-            chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-            await response.write(chunk_bytes)
-
-        # Send the final message
-        chunk_bytes = b'data: [DONE]\n\n'
-        await response.write(chunk_bytes)
-        return response
-    else:
-        full_response: list[str] | str = []
-
-        async for token in process_completions(data):
-            full_response.append(token)
-
-        full_response = ''.join(full_response)
-
-        return web.json_response({
-            'choices': [{
-                'message': {'content': full_response},
-                'finish_reason': 'stop',
-                'index': 0
-            }]
-        })
+            })
 
 
 #
@@ -239,6 +142,8 @@ async def api_1_0_completions(request: web.Request) -> web.Response | web.Stream
 #
 @routes.post('/v1/chat/completions')
 async def v1_chat_completions(request: web.Request) -> web.Response | web.StreamResponse:
+    global current_model
+
     data: dict = await request.json()
     # print('api_1_0_completions data:')
     prompt: Optional[str] = data.get('prompt')
@@ -294,45 +199,49 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
     llama_cpp_cffi_data['json_schema'] = data.get('json_schema', None)
     llama_cpp_cffi_data['chat_template'] = data.get('chat_template', None)
 
-    if stream:
-        response = web.StreamResponse()
-        response.headers['Content-Type'] = 'text/event-stream'
-        response.headers['Cache-Control'] = 'no-cache'
-        response.headers['Connection'] = 'keep-alive'
-        await response.prepare(request)
-        chunk_bytes: bytes
+    async with lock:
+        if stream:
+            response = web.StreamResponse()
+            response.headers['Content-Type'] = 'text/event-stream'
+            response.headers['Cache-Control'] = 'no-cache'
+            response.headers['Connection'] = 'keep-alive'
+            await response.prepare(request)
+            chunk_bytes: bytes
 
-        async for token in process_completions(llama_cpp_cffi_data):
-            event_data = {
+            try:
+                async for token in process_completions(llama_cpp_cffi_data):
+                    event_data = {
+                        'choices': [{
+                            'delta': {'content': token},
+                            'finish_reason': None,
+                            'index': 0
+                        }]
+                    }
+
+                    chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
+                    await response.write(chunk_bytes)
+            except Exception as e:
+                print('v1_chat_completions error:', e)
+
+            # Send the final message
+            chunk_bytes = b'data: [DONE]\n\n'
+            await response.write(chunk_bytes)
+            return response
+        else:
+            full_response: list[str] | str = []
+
+            async for token in process_completions(llama_cpp_cffi_data):
+                full_response.append(token)
+
+            full_response = ''.join(full_response)
+
+            return web.json_response({
                 'choices': [{
-                    'delta': {'content': token},
-                    'finish_reason': None,
+                    'message': {'content': full_response},
+                    'finish_reason': 'stop',
                     'index': 0
                 }]
-            }
-
-            chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-            await response.write(chunk_bytes)
-
-        # Send the final message
-        chunk_bytes = b'data: [DONE]\n\n'
-        await response.write(chunk_bytes)
-        return response
-    else:
-        full_response: list[str] | str = []
-
-        async for token in process_completions(llama_cpp_cffi_data):
-            full_response.append(token)
-
-        full_response = ''.join(full_response)
-
-        return web.json_response({
-            'choices': [{
-                'message': {'content': full_response},
-                'finish_reason': 'stop',
-                'index': 0
-            }]
-        })
+            })
 
 
 def build_app():

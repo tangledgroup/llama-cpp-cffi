@@ -1,0 +1,21 @@
+--- llama.cpp-master/common/json-schema-to-grammar.cpp	2025-01-22 18:26:47.628379203 +0100
++++ llama.cpp/common/json-schema-to-grammar.cpp	2025-01-22 18:33:43.484435269 +0100
+@@ -13,6 +13,18 @@
+ 
+ using json = nlohmann::ordered_json;
+ 
++char * llama_json_schema_to_grammar(const char * c_value) {
++    std::string value(c_value);
++    std::string grammar = json_schema_to_grammar(json::parse(value));
++
++    // Allocate memory for the result string, including space for the null terminator
++    char* result = new char[grammar.length() + 1];
++    std::strcpy(result, grammar.c_str());
++
++    // The caller is now responsible for deleting this memory
++    return result;
++}
++
+ static std::string build_repetition(const std::string & item_rule, int min_items, int max_items, const std::string & separator_rule = "") {
+     auto has_max = max_items != std::numeric_limits<int>::max();
+ 

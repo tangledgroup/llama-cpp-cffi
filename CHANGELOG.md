@@ -1,6 +1,18 @@
 # CHANGELOG
 
+## v0.4.17
+
+Changed:
+  - `llama.cpp` revision `6152129d05870cb38162c422c6ba80434e021e9f`
+
+Fixed:
+  - Fixed build process, json patches.
+  - Reverted server code to previous version due to bug.
+
 ## v0.4.16
+
+Added:
+  - Dynamically load/unload models while executing prompts in parallel.
 
 Changed:
   - `llama.cpp` revision `adc5dd92e8aea98f5e7ac84f6e1bc15de35130b5`

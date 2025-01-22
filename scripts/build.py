@@ -26,7 +26,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = 'adc5dd92e8aea98f5e7ac84f6e1bc15de35130b5'
+LLAMA_CPP_GIT_REF = '6152129d05870cb38162c422c6ba80434e021e9f'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -339,8 +339,9 @@ def replace_code(source: str, items: dict[str, str]) -> str:
 def clone_llama_cpp():
     subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
     subprocess.run(['git', 'reset', '--hard', LLAMA_CPP_GIT_REF], cwd='llama.cpp', check=True)
-    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_6.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_7.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_7.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json.hpp', 'json_hpp_7.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
 
 
@@ -864,12 +865,12 @@ def build(*args, **kwargs):
         clone_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 
-    # # cuda 12.6.3
-    # if env.get('GGML_CUDA', '1') != '0':
-    #     if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
-    #         remove_llama_cpp()
-    #         clone_llama_cpp()
-    #         build_linux_cuda_12_6_3(*args, **kwargs)
+    # cuda 12.6.3
+    if env.get('GGML_CUDA', '1') != '0':
+        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+            remove_llama_cpp()
+            clone_llama_cpp()
+            build_linux_cuda_12_6_3(*args, **kwargs)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 [project]
 name = "llama-cpp-cffi"
-version = "0.4.16"
+version = "0.4.17"
 description = "Python binding for llama.cpp using cffi"
 authors = [
     { name = "Tangled Group, Inc", email = "info@tangledgroup.com" },
@@ -8,7 +8,7 @@ authors = [
 ]
 license = { text = "MIT" }
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<4.0"
 keywords = [ "llama", "llama-cpp", "llama.cpp", "llama-cpp-cffi", "cffi" ]
 classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -33,7 +33,7 @@ build = "scripts.build:build"
 clean = "scripts.clean:clean"
 
 [build-system]
-requires = ["poetry-core", "cffi", "setuptools"]
+requires = ["poetry-core>=2.0.0,<3.0.0", "cffi", "setuptools"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
@@ -67,11 +67,12 @@ openai = {version = "^1.53.0", optional = true}
 server = ["uvloop", "aiohttp", "gunicorn", "openai"]
 
 [tool.poetry.group.dev.dependencies]
+poetry = "^2.0.1"
 cffi = "^1.17.1"
 setuptools = "^75.8.0 "
+cibuildwheel = "^2.22.0"
 # pyright = "^1.1.391 "
 # ruff = "^0.8.4"
-cibuildwheel = "^2.22.0"
 # mkdocs-material = "^9.5.43"
 
 [tool.cibuildwheel]
@@ -132,7 +133,7 @@ fi
 # build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
 
 build = ["cp312-*"]
-# skip = ["*i686", "*musllinux*"]
+skip = ["*i686", "*musllinux*"]
 
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]

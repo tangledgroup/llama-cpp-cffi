@@ -1,0 +1,19 @@
+--- llama.cpp-master/common/json.hpp	2025-01-13 19:24:51.610146960 +0100
++++ llama.cpp/common/json.hpp	2025-01-22 18:47:26.842856380 +0100
+@@ -18,6 +18,8 @@
+ #ifndef INCLUDE_NLOHMANN_JSON_HPP_
+ #define INCLUDE_NLOHMANN_JSON_HPP_
+ 
++#ifdef __cplusplus
++
+ #include <algorithm> // all_of, find, for_each
+ #include <cstddef> // nullptr_t, ptrdiff_t, size_t
+ #include <functional> // hash, less
+@@ -24761,6 +24763,6 @@
+ #undef JSON_HEDLEY_WARN_UNUSED_RESULT_MSG
+ #undef JSON_HEDLEY_FALL_THROUGH
+ 
+-
++#endif // __cplusplus
+ 
+ #endif  // INCLUDE_NLOHMANN_JSON_HPP_

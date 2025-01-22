@@ -7,7 +7,8 @@ from demo_models import demo_models
 
 
 client = OpenAI(
-    base_url = 'http://localhost:11434/v1',
+    # base_url = 'http://localhost:11434/v1',
+    base_url = 'http://openai.tangledlabs.com/v1',
     api_key='llama-cpp-cffi',
 )
 
@@ -49,7 +50,7 @@ def demo_text_chat_completions_stream():
             # llama-cpp-cffi
             extra_body=dict( # type: ignore
                 n_ctx=4 * 1024,
-                gpu_layers=99,
+                gpu_layers=5,
                 predict=512,
             ),
         )
@@ -98,7 +99,7 @@ def demo_text_chat_completions_stream_threads():
             # llama-cpp-cffi
             extra_body=dict( # type: ignore
                 n_ctx=4 * 1024,
-                gpu_layers=99,
+                gpu_layers=5,
                 predict=512,
             ),
         )
