@@ -3,7 +3,9 @@
 ## v0.4.19
 
 Changed:
-  - `llama.cpp` revision `aa6fb1321333fae8853d0cdc26bcb5d438e650a1`
+  - `llama.cpp` revision `d774ab3acc4fee41fbed6dbfc192b57d5f79f34b`
+  - Build process `manylinux_2_28` -> `manylinux_2_34`
+  - Build for `aarch64` platform WIP
 
 ## v0.4.18
 

@@ -21,12 +21,16 @@ env['CC'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-13') # type: ignore
 env['CXX'] = shutil.which('g++' if CIBUILDWHEEL else 'g++-13') # type: ignore
 env['LD'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-13') # type: ignore
 
+# env['GGML_CPU'] = '0'
+# env['GGML_VULKAN'] = '0'
+# env['GGML_CUDA'] = '0'
+
 from cffi import FFI # type: ignore # noqa
 
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = 'aa6fb1321333fae8853d0cdc26bcb5d438e650a1'
+LLAMA_CPP_GIT_REF = 'd774ab3acc4fee41fbed6dbfc192b57d5f79f34b'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -44,6 +48,15 @@ REPLACE_CODE_ITEMS = {
 # if 'PYODIDE' in env and env['PYODIDE'] == '1':
 #     env['CXXFLAGS'] += ' -msimd128 -fno-rtti -DNDEBUG -flto=full -s INITIAL_MEMORY=2GB -s MAXIMUM_MEMORY=4GB -s ALLOW_MEMORY_GROWTH '
 #     env['UNAME_M'] = 'wasm'
+
+
+def clone_llama_cpp():
+    subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
+    subprocess.run(['git', 'reset', '--hard', LLAMA_CPP_GIT_REF], cwd='llama.cpp', check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_7.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_8.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/common/json.hpp', 'json_hpp_7.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
 
 
 def preprocess_library_code(cc: str, cflags: list[str], include_dirs: list[str], files: list[str]) -> str:
@@ -336,15 +349,6 @@ def replace_code(source: str, items: dict[str, str]) -> str:
     return source
 
 
-def clone_llama_cpp():
-    subprocess.run(['git', 'clone', 'https://github.com/ggerganov/llama.cpp.git'], check=True)
-    subprocess.run(['git', 'reset', '--hard', LLAMA_CPP_GIT_REF], cwd='llama.cpp', check=True)
-    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_7.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_7.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/common/json.hpp', 'json_hpp_7.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
-
-
 def cuda_12_6_3_setup(*args, **kwargs):
     #
     # cuda env
@@ -400,6 +404,8 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
+    env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
+    env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
     env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
@@ -454,16 +460,42 @@ def build_cpu(*args, **kwargs):
         '-DBUILD_SHARED_LIBS=OFF',
         '-DGGML_OPENMP=OFF',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
+        # *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a+dotprod'] if platform.machine() == 'aarch64' else []),
+        *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a'] if platform.machine() == 'aarch64' else []),
     ], check=True, env=env, cwd='llama.cpp')
 
-    subprocess.run([
-        'cmake',
-        '--build',
-        'build',
-        '--config',
-        'Release',
-        '-j',
-    ], check=True, env=env, cwd='llama.cpp')
+    targets = ['ggml', 'ggml-base', 'ggml-cpu', 'common', 'llama', 'llava_static']
+
+    for target in targets:
+        subprocess.run([
+            'cmake',
+            '--build',
+            'build',
+            '--config',
+            'Release',
+            '-j',
+            '--target',
+            target,
+        ], check=True, env=env, cwd='llama.cpp')
+
+    # targets = [
+    #     '--target', 'ggml',
+    #     '--target', 'ggml-base',
+    #     '--target', 'ggml-cpu',
+    #     '--target', 'common',
+    #     '--target', 'llama',
+    #     '--target', 'llava_static',
+    # ]
+    #
+    # subprocess.run([
+    #     'cmake',
+    #     '--build',
+    #     'build',
+    #     '--config',
+    #     'Release',
+    #     '-j',
+    #     *targets,
+    # ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi
@@ -538,6 +570,8 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
+    env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
+    env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
     env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
@@ -594,16 +628,43 @@ def build_vulkan_1_x(*args, **kwargs):
         '-DGGML_OPENMP=OFF',
         '-DGGML_VULKAN=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
+        # *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a+dotprod'] if platform.machine() == 'aarch64' else []),
+        *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a'] if platform.machine() == 'aarch64' else []),
     ], check=True, env=env, cwd='llama.cpp')
 
-    subprocess.run([
-        'cmake',
-        '--build',
-        'build',
-        '--config',
-        'Release',
-        '-j',
-    ], check=True, env=env, cwd='llama.cpp')
+    targets = ['ggml', 'ggml-base', 'ggml-cpu', 'ggml-vulkan', 'common', 'llama', 'llava_static']
+
+    for target in targets:
+        subprocess.run([
+            'cmake',
+            '--build',
+            'build',
+            '--config',
+            'Release',
+            '-j',
+            '--target',
+            target,
+        ], check=True, env=env, cwd='llama.cpp')
+
+    # targets = [
+    #     '--target', 'ggml',
+    #     '--target', 'ggml-base',
+    #     '--target', 'ggml-cpu',
+    #     '--target', 'ggml-vulkan',
+    #     '--target', 'common',
+    #     '--target', 'llama',
+    #     '--target', 'llava_static',
+    # ]
+    #
+    # subprocess.run([
+    #     'cmake',
+    #     '--build',
+    #     'build',
+    #     '--config',
+    #     'Release',
+    #     '-j',
+    #     *targets,
+    # ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi
@@ -685,6 +746,8 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
 
     # build static and shared library
     env = os.environ.copy()
+    env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
+    env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
     env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
@@ -755,16 +818,43 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         # '-DCMAKE_CUDA_ARCHITECTURES=all',
         # '-DCMAKE_CUDA_ARCHITECTURES=all-major',
         # '-DCMAKE_CUDA_ARCHITECTURES=86',
+        # *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a+dotprod'] if platform.machine() == 'aarch64' else []),
+        *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a'] if platform.machine() == 'aarch64' else []),
     ], check=True, env=env, cwd='llama.cpp')
 
-    subprocess.run([
-        'cmake',
-        '--build',
-        'build',
-        '--config',
-        'Release',
-        '-j',
-    ], check=True, env=env, cwd='llama.cpp')
+    targets = ['ggml', 'ggml-base', 'ggml-cpu', 'ggml-cuda', 'common', 'llama', 'llava_static']
+
+    for target in targets:
+        subprocess.run([
+            'cmake',
+            '--build',
+            'build',
+            '--config',
+            'Release',
+            '-j',
+            '--target',
+            target,
+        ], check=True, env=env, cwd='llama.cpp')
+
+    # targets = [
+    #     '--target', 'ggml',
+    #     '--target', 'ggml-base',
+    #     '--target', 'ggml-cpu',
+    #     '--target', 'ggml-cuda',
+    #     '--target', 'common',
+    #     '--target', 'llama',
+    #     '--target', 'llava_static',
+    # ]
+    #
+    # subprocess.run([
+    #     'cmake',
+    #     '--build',
+    #     'build',
+    #     '--config',
+    #     'Release',
+    #     '-j',
+    #     *targets,
+    # ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi
@@ -867,7 +957,7 @@ def build(*args, **kwargs):
 
     # cuda 12.6.3
     if env.get('GGML_CUDA', '1') != '0':
-        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
+        if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', 'manylinux_2_34', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
             remove_llama_cpp()
             clone_llama_cpp()
             build_linux_cuda_12_6_3(*args, **kwargs)

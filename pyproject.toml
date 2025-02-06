@@ -90,42 +90,22 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf update -y
     dnf group install -y "Development Tools"
     # dnf install -y unzip p7zip p7zip-plugins upx clang-tools-extra libcurl-devel
-    # dnf install -y clang-tools-extra libcurl-devel ninja-build
-    # dnf install -y clang clang-tools-extra ninja-build gcc-toolset-13 gcc-toolset-14
     dnf install -y clang clang-tools-extra ninja-build gcc-toolset-12
 
-    # source /opt/rh/gcc-toolset-14/enable
-    # source /opt/rh/gcc-toolset-13/enable
+    # cuda requires gcc 12
     source /opt/rh/gcc-toolset-12/enable
-    # /opt/rh/gcc-toolset-13/root/usr/bin/gcc -dumpspecs > /opt/rh/gcc-toolset-13/root/usr/lib/gcc/x86_64-redhat-linux/13/specs
-
-    #
-    # build latest version of shaderc for vulkan shaders
-    #
-    git clone https://github.com/google/shaderc
-    cd shaderc
-    ./utils/git-sync-deps
-    mkdir build
-    cd build
-    cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DSHADERC_SKIP_TESTS=ON ../
-    ninja
-    ninja install
-    cd ../..
 
     # vulkan
-    if [[ "$ARCH" == "x86_64" ]]; then
-        # vulkan packages only on x86_64
-        dnf install -y vulkan-tools vulkan-headers vulkan-loader vulkan-loader-devel vulkan-validation-layers spirv-tools
-        dnf install -y https://pkgs.sysadmins.ws/el8/extras/x86_64/glslc-2023.1-3.el8.x86_64.rpm https://pkgs.sysadmins.ws/el8/extras/x86_64/glslang-12.0.0-1.el8.x86_64.rpm
-    fi
+    dnf install -y vulkan-tools vulkan-headers vulkan-loader vulkan-loader-devel vulkan-validation-layers spirv-tools libshaderc libshaderc-devel glslc glslang
 else
     # apk -U add unzip 7zip upx clang-extra-tools
-    # apk -U add clang-extra-tools curl-dev ninja-build
     apk -U add clang clang-extra-tools ninja-build
 
     # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then
         apk -U add mesa-vulkan-ati mesa-vulkan-intel mesa-vulkan-layers mesa-vulkan-swrast vulkan-headers vulkan-loader vulkan-loader-dev vulkan-tools vulkan-validation-layers vulkan-validation-layers-dev vulkan-validation-layers-static shaderc glslang glslang-dev glslang-libs glslang-static
+    else
+        apk -U add mesa-vulkan-ati mesa-vulkan-layers mesa-vulkan-swrast vulkan-headers vulkan-loader vulkan-loader-dev vulkan-tools vulkan-validation-layers vulkan-validation-layers-dev vulkan-validation-layers-static shaderc glslang glslang-dev glslang-libs glslang-static
     fi
 fi
 """
@@ -142,12 +122,12 @@ build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
 
-manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
-manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
-manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64:latest"
-manylinux-pypy_aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64:latest"
-musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:latest"
-musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:latest"
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_34_x86_64:2025.02.02-1"
+manylinux-aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64:2025.02.02-1"
+manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_34_x86_64:2025.02.02-1"
+manylinux-pypy_aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64:2025.02.02-1"
+musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:2025.02.02-1"
+musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:2025.02.02-1"
 build-verbosity=3
 repair-wheel-command = ""
 # repair-wheel-command = """
