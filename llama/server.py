@@ -1,9 +1,11 @@
 __all__ = ['routes', 'build_app']
 
+import gc
 import os
 import json
 import asyncio
-from pprint import pprint
+import traceback
+# from pprint import pprint
 from typing import Any, Optional, AsyncIterator
 
 from attrs import asdict
@@ -32,53 +34,69 @@ lock = asyncio.Lock()
 
 async def process_completions(data: dict) -> AsyncIterator[str]:
     global current_model
+    global lock
 
-    # pprint(data)
-    # print('=' * 80)
+    async with lock:
+        # pprint(data)
+        # print('=' * 80)
 
-    image: Optional[str] = data.pop('image', None)
-    image_file: Optional[Any] = None
+        image: Optional[str] = data.pop('image', None)
+        image_file: Optional[Any] = None
 
-    if image:
-        image_file = base64_image_to_tempfile(image)
+        if image:
+            image_file = base64_image_to_tempfile(image)
 
-    model_kwargs = {k: data[k] for k in ModelOptions.__annotations__.keys() if k in data}
-    model_options = ModelOptions(**model_kwargs)
-    # pprint(model_options)
-    # print('=' * 80)
+        model_kwargs = {k: data[k] for k in ModelOptions.__annotations__.keys() if k in data}
+        model_options = ModelOptions(**model_kwargs)
+        # pprint(model_options)
+        # print('=' * 80)
 
-    completions_kwargs = {k: data[k] for k in CompletionsOptions.__annotations__ if k in data}
-    completions_options = CompletionsOptions(**completions_kwargs)
+        completions_kwargs = {k: data[k] for k in CompletionsOptions.__annotations__ if k in data}
+        completions_options = CompletionsOptions(**completions_kwargs)
 
-    if image and image_file:
-        completions_options.image = image_file.name
+        if image and image_file:
+            completions_options.image = image_file.name
 
-    # pprint(completions_options)
-    # print('=' * 80)
+        # pprint(completions_options)
+        # print('=' * 80)
 
-    model = Model(options=model_options)
-    # pprint(model)
-    # print('=' * 80)
+        model = Model(options=model_options)
+        # pprint(model)
+        # print('=' * 80)
 
-    # print(repr(current_model))
-    # print('=' * 80)
+        # print(repr(current_model))
+        # print('=' * 80)
 
-    if current_model == model or (model.options and model.options.creator_hf_repo is None):
-        # print('1')
-        model = current_model
-    else:
-        # print('2')
-        current_model.free()
-        model.init(**asdict(model_options))
-        current_model = model
+        if current_model == model or (model.options and model.options.creator_hf_repo is None):
+            # print('1')
+            model = current_model
+        else:
+            # print('2')
+            current_model.free()
+            current_model = None
+            gc.collect()
 
-    for token in model.completions(**asdict(completions_options)):
-        yield token
+            model.init(**asdict(model_options))
+            current_model = model
 
-    # remove temp image file
-    if image and image_file:
-        image_file.close()
-        os.unlink(image_file.name)
+        try:
+            for token in model.completions(**asdict(completions_options)):
+                yield token
+                await asyncio.sleep(0.0)
+        except Exception as e:
+            print('-' * 80)
+            traceback.print_exc()
+            print('-' * 80)
+            print('process_completions[0] error:', e)
+            model.free()
+            model = None
+            current_model = None
+            gc.collect()
+
+        # remove temp image file
+        if image and image_file:
+            image_file.close()
+            os.unlink(image_file.name)
 
 
 #
@@ -86,55 +104,77 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
 #
 @routes.post('/api/1.0/completions')
 async def api_1_0_completions(request: web.Request) -> web.Response | web.StreamResponse:
-    global current_model
+    # global current_model
 
     data: dict = await request.json()
     # print('api_1_0_completions data:')
     stream: bool = data.pop('stream', False)
 
-    async with lock:
-        if stream:
-            response = web.StreamResponse()
-            response.headers['Content-Type'] = 'text/event-stream'
-            response.headers['Cache-Control'] = 'no-cache'
-            response.headers['Connection'] = 'keep-alive'
-            await response.prepare(request)
-            chunk_bytes: bytes
+    if stream:
+        response = web.StreamResponse()
+        response.headers['Content-Type'] = 'text/event-stream'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Connection'] = 'keep-alive'
+        await response.prepare(request)
+        chunk_bytes: bytes
 
-            try:
-                async for token in process_completions(data):
-                    event_data = {
-                        'choices': [{
-                            'delta': {'content': token},
-                            'finish_reason': None,
-                            'index': 0
-                        }]
-                    }
-
-                    chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-                    await response.write(chunk_bytes)
-            except Exception as e:
-                print('api_1_0_completions error:', e)
-
-            # Send the final message
-            chunk_bytes = b'data: [DONE]\n\n'
-            await response.write(chunk_bytes)
-            return response
-        else:
-            full_response: list[str] | str = []
-
-            async for token in process_completions(data):
-                full_response.append(token)
-
-            full_response = ''.join(full_response)
-
-            return web.json_response({
+        # try:
+        #     async for token in process_completions(data):
+        #         event_data = {
+        #             'choices': [{
+        #                 'delta': {'content': token},
+        #                 'finish_reason': None,
+        #                 'index': 0
+        #             }]
+        #         }
+        #
+        #         chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
+        #         await response.write(chunk_bytes)
+        # except Exception as e:
+        #     print('-' * 80)
+        #     traceback.print_exc()
+        #     print('-' * 80)
+        #     print('api_1_0_completions[0] error:', e)
+        async for token in process_completions(data):
+            event_data = {
                 'choices': [{
-                    'message': {'content': full_response},
-                    'finish_reason': 'stop',
+                    'delta': {'content': token},
+                    'finish_reason': None,
                     'index': 0
                 }]
-            })
+            }
+
+            chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
+            await response.write(chunk_bytes)
+
+        # Send the final message
+        chunk_bytes = b'data: [DONE]\n\n'
+        await response.write(chunk_bytes)
+        return response
+    else:
+        full_response: list[str] | str = []
+
+        # try:
+        #     async for token in process_completions(data):
+        #         full_response.append(token)
+        # except Exception as e:
+        #     print('-' * 80)
+        #     traceback.print_exc()
+        #     print('-' * 80)
+        #     print('api_1_0_completions[1] error:', e)
+        #     raise e
+        async for token in process_completions(data):
+            full_response.append(token)
+
+        full_response = ''.join(full_response)
+
+        return web.json_response({
+            'choices': [{
+                'message': {'content': full_response},
+                'finish_reason': 'stop',
+                'index': 0
+            }]
+        })
 
 
 #
@@ -142,7 +182,7 @@ async def api_1_0_completions(request: web.Request) -> web.Response | web.Stream
 #
 @routes.post('/v1/chat/completions')
 async def v1_chat_completions(request: web.Request) -> web.Response | web.StreamResponse:
-    global current_model
+    # global current_model
 
     data: dict = await request.json()
     # print('api_1_0_completions data:')
@@ -199,49 +239,71 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
     llama_cpp_cffi_data['json_schema'] = data.get('json_schema', None)
     llama_cpp_cffi_data['chat_template'] = data.get('chat_template', None)
 
-    async with lock:
-        if stream:
-            response = web.StreamResponse()
-            response.headers['Content-Type'] = 'text/event-stream'
-            response.headers['Cache-Control'] = 'no-cache'
-            response.headers['Connection'] = 'keep-alive'
-            await response.prepare(request)
-            chunk_bytes: bytes
+    if stream:
+        response = web.StreamResponse()
+        response.headers['Content-Type'] = 'text/event-stream'
+        response.headers['Cache-Control'] = 'no-cache'
+        response.headers['Connection'] = 'keep-alive'
+        await response.prepare(request)
+        chunk_bytes: bytes
 
-            try:
-                async for token in process_completions(llama_cpp_cffi_data):
-                    event_data = {
-                        'choices': [{
-                            'delta': {'content': token},
-                            'finish_reason': None,
-                            'index': 0
-                        }]
-                    }
-
-                    chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-                    await response.write(chunk_bytes)
-            except Exception as e:
-                print('v1_chat_completions error:', e)
-
-            # Send the final message
-            chunk_bytes = b'data: [DONE]\n\n'
-            await response.write(chunk_bytes)
-            return response
-        else:
-            full_response: list[str] | str = []
-
-            async for token in process_completions(llama_cpp_cffi_data):
-                full_response.append(token)
-
-            full_response = ''.join(full_response)
-
-            return web.json_response({
+        # try:
+        #     async for token in process_completions(llama_cpp_cffi_data):
+        #         event_data = {
+        #             'choices': [{
+        #                 'delta': {'content': token},
+        #                 'finish_reason': None,
+        #                 'index': 0
+        #             }]
+        #         }
+        #
+        #         chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
+        #         await response.write(chunk_bytes)
+        # except Exception as e:
+        #     print('-' * 80)
+        #     traceback.print_exc()
+        #     print('-' * 80)
+        #     print('v1_chat_completions[0] error:', e)
+        async for token in process_completions(llama_cpp_cffi_data):
+            event_data = {
                 'choices': [{
-                    'message': {'content': full_response},
-                    'finish_reason': 'stop',
+                    'delta': {'content': token},
+                    'finish_reason': None,
                     'index': 0
                 }]
-            })
+            }
+
+            chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
+            await response.write(chunk_bytes)
+
+        # Send the final message
+        chunk_bytes = b'data: [DONE]\n\n'
+        await response.write(chunk_bytes)
+        return response
+    else:
+        full_response: list[str] | str = []
+
+        # try:
+        #     async for token in process_completions(llama_cpp_cffi_data):
+        #         full_response.append(token)
+        # except Exception as e:
+        #     print('-' * 80)
+        #     traceback.print_exc()
+        #     print('-' * 80)
+        #     print('v1_chat_completions[1] error:', e)
+        #     raise e
+        async for token in process_completions(llama_cpp_cffi_data):
+            full_response.append(token)
+
+        full_response = ''.join(full_response)
+
+        return web.json_response({
+            'choices': [{
+                'message': {'content': full_response},
+                'finish_reason': 'stop',
+                'index': 0
+            }]
+        })
 
 
 def build_app():

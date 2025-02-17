@@ -12,14 +12,40 @@ env = os.environ
 CIBUILDWHEEL = int(os.environ.get('CIBUILDWHEEL', '0'))
 AUDITWHEEL_ARCH = os.environ.get('AUDITWHEEL_ARCH', None)
 
-if CIBUILDWHEEL and AUDITWHEEL_ARCH not in (None, 'aarch64'):
-    gcc_toolset_path = '/opt/rh/gcc-toolset-12'
-    env['DEVTOOLSET_ROOTPATH'] = '/opt/rh/gcc-toolset-12/root'
-    env['PATH'] = f'{gcc_toolset_path}/root/usr/bin:{env["PATH"]}'
+CUDA_VERSION = os.environ.get('CUDA_VERSION', '12.8.0')
+CUDA_FILE = os.environ.get('CUDA_FILE', 'cuda_12.8.0_570.86.10_linux.run')
+CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90;100;101;120')
 
-env['CC'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-13') # type: ignore
-env['CXX'] = shutil.which('g++' if CIBUILDWHEEL else 'g++-13') # type: ignore
-env['LD'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-13') # type: ignore
+# CUDA_VERSION = os.environ.get('CUDA_VERSION', '12.6.3')
+# CUDA_FILE = os.environ.get('CUDA_FILE', 'cuda_12.6.3_560.35.05_linux.run')
+# CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90')
+# # CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90;100;101;120')
+
+# CUDA_VERSION = os.environ.get('CUDA_VERSION', '12.4.1')
+# CUDA_FILE = os.environ.get('CUDA_FILE', 'cuda_12.4.1_550.54.15_linux.run')
+# CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90')
+# # CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90;100;101;120')
+
+# if CIBUILDWHEEL and AUDITWHEEL_ARCH not in (None, 'aarch64'):
+#     gcc_toolset_path = '/opt/rh/gcc-toolset-12'
+#     env['DEVTOOLSET_ROOTPATH'] = '/opt/rh/gcc-toolset-12/root'
+#     env['PATH'] = f'{gcc_toolset_path}/root/usr/bin:{env["PATH"]}'
+
+# env['CC'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-12') # type: ignore
+# env['CXX'] = shutil.which('g++' if CIBUILDWHEEL else 'g++-12') # type: ignore
+# env['LD'] = shutil.which('gcc' if CIBUILDWHEEL else 'gcc-12') # type: ignore
+# env['CC'] = shutil.which('clang' if CIBUILDWHEEL else 'clang') # type: ignore
+# env['CXX'] = shutil.which('clang++' if CIBUILDWHEEL else 'clang++') # type: ignore
+# env['LD'] = shutil.which('clang' if CIBUILDWHEEL else 'clang') # type: ignore
+# env['CC'] = shutil.which('gcc-12') # type: ignore
+# env['CXX'] = shutil.which('g++-12') # type: ignore
+# env['LD'] = shutil.which('gcc-12') # type: ignore
+env['CC'] = shutil.which('gcc') # type: ignore
+env['CXX'] = shutil.which('g++') # type: ignore
+env['LD'] = shutil.which('gcc') # type: ignore
+# env['CC'] = shutil.which('clang') # type: ignore
+# env['CXX'] = shutil.which('clang++') # type: ignore
+# env['LD'] = shutil.which('clang') # type: ignore
 
 # env['GGML_CPU'] = '0'
 # env['GGML_VULKAN'] = '0'
@@ -30,7 +56,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = 'd774ab3acc4fee41fbed6dbfc192b57d5f79f34b'
+LLAMA_CPP_GIT_REF = '73e2ed3ce3492d3ed70193dd09ae8aa44779651d'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -349,13 +375,65 @@ def replace_code(source: str, items: dict[str, str]) -> str:
     return source
 
 
-def cuda_12_6_3_setup(*args, **kwargs):
+# def cuda_12_6_3_setup(*args, **kwargs):
+#     #
+#     # cuda env
+#     #
+#     cuda_file = 'cuda_12.6.3_560.35.05_linux.run'
+#     cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/{cuda_file}'
+#     cuda_output_dir = os.path.abspath('./cuda-12.6.3')
+#     cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
+#
+#     # download cuda file
+#     if not os.path.exists(cuda_file_path):
+#         cmd = ['mkdir', '-p', f'{cuda_output_dir}']
+#
+#         subprocess.run(cmd, check=True)
+#         subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
+#
+#     # extract cuda file
+#     cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
+#     subprocess.run(cmd, check=True)
+#
+#     cmd = [
+#         f'{cuda_output_dir}/{cuda_file}',
+#         '--tar',
+#         'mxf',
+#         '--wildcards',
+#         './builds/cuda_cccl/*',
+#         './builds/cuda_cudart/*',
+#         './builds/cuda_nvcc/*',
+#         './builds/libcublas/*',
+#         '-C',
+#         cuda_output_dir,
+#     ]
+#     subprocess.run(cmd, cwd=cuda_output_dir, check=True)
+#
+#     cmd = ['mkdir', '-p', f'{cuda_output_dir}/dist']
+#     subprocess.run(cmd, check=True)
+#
+#     cmd = f'cp -r {cuda_output_dir}/builds/cuda_cccl/* {cuda_output_dir}/dist'
+#     subprocess.run(cmd, shell=True, check=True)
+#
+#     cmd = f'cp -r {cuda_output_dir}/builds/cuda_cudart/* {cuda_output_dir}/dist'
+#     subprocess.run(cmd, shell=True, check=True)
+#
+#     cmd = f'cp -r {cuda_output_dir}/builds/cuda_nvcc/* {cuda_output_dir}/dist'
+#     subprocess.run(cmd, shell=True, check=True)
+#
+#     cmd = f'cp -r {cuda_output_dir}/builds/libcublas/* {cuda_output_dir}/dist'
+#     subprocess.run(cmd, shell=True, check=True)
+#
+#     return cuda_output_dir
+
+
+def cuda_setup(*args, **kwargs):
     #
     # cuda env
     #
-    cuda_file = 'cuda_12.6.3_560.35.05_linux.run'
-    cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/{cuda_file}'
-    cuda_output_dir = os.path.abspath('./cuda-12.6.3')
+    cuda_file = CUDA_FILE
+    cuda_url = f'https://developer.download.nvidia.com/compute/cuda/{CUDA_VERSION}/local_installers/{cuda_file}'
+    cuda_output_dir = os.path.abspath(f'./cuda-{CUDA_VERSION}')
     cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
 
     # download cuda file
@@ -404,8 +482,8 @@ def cuda_12_6_3_setup(*args, **kwargs):
 def build_cpu(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
-    env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
+    # env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
+    # env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
     env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
@@ -464,7 +542,14 @@ def build_cpu(*args, **kwargs):
         *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a'] if platform.machine() == 'aarch64' else []),
     ], check=True, env=env, cwd='llama.cpp')
 
-    targets = ['ggml', 'ggml-base', 'ggml-cpu', 'common', 'llama', 'llava_static']
+    targets = [
+        'ggml',
+        'ggml-base',
+        'ggml-cpu',
+        'common',
+        'llama',
+        'llava_static',
+    ]
 
     for target in targets:
         subprocess.run([
@@ -570,8 +655,8 @@ def build_cpu(*args, **kwargs):
 def build_vulkan_1_x(*args, **kwargs):
     # build static and shared library
     env = os.environ.copy()
-    env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
-    env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
+    # env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
+    # env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
     env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
@@ -632,7 +717,15 @@ def build_vulkan_1_x(*args, **kwargs):
         *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a'] if platform.machine() == 'aarch64' else []),
     ], check=True, env=env, cwd='llama.cpp')
 
-    targets = ['ggml', 'ggml-base', 'ggml-cpu', 'ggml-vulkan', 'common', 'llama', 'llava_static']
+    targets = [
+        'ggml',
+        'ggml-base',
+        'ggml-cpu',
+        'ggml-vulkan',
+        'common',
+        'llama',
+        'llava_static',
+    ]
 
     for target in targets:
         subprocess.run([
@@ -738,25 +831,29 @@ def build_vulkan_1_x(*args, **kwargs):
         shutil.move(file, 'llama/')
 
 
-def build_linux_cuda_12_6_3(*args, **kwargs):
+def build_linux_cuda_12_x_y(*args, **kwargs):
     #
     # cuda env
     #
-    cuda_output_dir = cuda_12_6_3_setup()
+    # cuda_output_dir = cuda_12_6_3_setup()
+    # cuda_output_dir = cuda_12_8_0_setup()
+    cuda_output_dir = cuda_setup()
 
     # build static and shared library
     env = os.environ.copy()
-    env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
-    env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
+    # env['CC'] = 'clang' # if platform.machine() == 'aarch64' else env.get('CC', 'gcc')
+    # env['CXX'] = 'clang++' # if platform.machine() == 'aarch64' else env.get('CC', 'g++')
     env['CFLAGS'] = '-O3 -fPIC'
     env['CXXFLAGS'] = '-O3 -fPIC -std=c++17'
     env['LDFLAGS'] = '-O3 -fPIC -std=c++17'
     env['PATH'] = f'{cuda_output_dir}/dist/bin:{env["PATH"]}'
     env['CUDA_PATH'] = f'{cuda_output_dir}/dist'
-    env['LD_LIBRARY_PATH'] = '/project/cuda-12.6.3/dist/lib64:/project/cuda-12.6.3/dist/targets/x86_64-linux/lib:/project/cuda-12.6.3/dist/lib64/stubs:$LD_LIBRARY_PATH'
-    env['CUDA_HOME'] = '/project/cuda-12.6.3/dist'
-    env['NVCC_PREPEND_FLAGS'] = f'-ccbin {env["CC"]} -Xcompiler -fPIC'
-    print('build_linux_cuda_12_6_3:')
+    env['LD_LIBRARY_PATH'] = f'/project/cuda-{CUDA_VERSION}/dist/lib64:/project/cuda-{CUDA_VERSION}/dist/targets/x86_64-linux/lib:/project/cuda-{CUDA_VERSION}/dist/lib64/stubs:$LD_LIBRARY_PATH'
+    env['CUDA_HOME'] = f'/project/cuda-{CUDA_VERSION}/dist'
+    env['NVCC_PREPEND_FLAGS'] = f'-ccbin {env.get("CC", "gcc")} -Xcompiler -fPIC -Wno-deprecated-gpu-targets'
+    # env['NVCC_CCBIN'] = env['CXX']
+    # env['NVCC_PREPEND_FLAGS'] = '-Wno-deprecated-gpu-targets'
+    print(f'build_linux_cuda_{CUDA_VERSION}:')
     pprint(env)
 
     # pre-process header code
@@ -810,19 +907,27 @@ def build_linux_cuda_12_6_3(*args, **kwargs):
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
         # '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
         # '-DGGML_CUDA_FA_ALL_QUANTS=ON',
-        # '-DGGML_NATIVE=OFF',
+        '-DGGML_NATIVE=OFF',
+        'GGML_CCACHE=OFF',
         # * a semicolon-separated list of integers, each optionally
         #   followed by '-real' or '-virtual'
         # * a special value: all, all-major, native
-        '-DCMAKE_CUDA_ARCHITECTURES=61;70;75;80;86;89;90',
-        # '-DCMAKE_CUDA_ARCHITECTURES=all',
-        # '-DCMAKE_CUDA_ARCHITECTURES=all-major',
-        # '-DCMAKE_CUDA_ARCHITECTURES=86',
+        f'-DCMAKE_CUDA_ARCHITECTURES={CUDA_ARCHITECTURES}',
+        f'CMAKE_CUDA_COMPILER={env["CUDA_HOME"]}/bin/nvcc',
+        # f'CMAKE_CUDA_HOST_COMPILER={env["CXX"]}',
         # *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a+dotprod'] if platform.machine() == 'aarch64' else []),
-        *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a'] if platform.machine() == 'aarch64' else []),
+        # *(['-DGGML_NATIVE=OFF', '-DGGML_CPU_ARM_ARCH=armv8-a'] if platform.machine() == 'aarch64' else []),
     ], check=True, env=env, cwd='llama.cpp')
 
-    targets = ['ggml', 'ggml-base', 'ggml-cpu', 'ggml-cuda', 'common', 'llama', 'llava_static']
+    targets = [
+        'ggml',
+        'ggml-base',
+        'ggml-cpu',
+        'ggml-cuda',
+        'common',
+        'llama',
+        'llava_static',
+    ]
 
     for target in targets:
         subprocess.run([
@@ -955,12 +1060,12 @@ def build(*args, **kwargs):
         clone_llama_cpp()
         build_vulkan_1_x(*args, **kwargs)
 
-    # cuda 12.6.3
+    # cuda 12.x.y
     if env.get('GGML_CUDA', '1') != '0':
         if env.get('AUDITWHEEL_POLICY') in ('manylinux2014', 'manylinux_2_28', 'manylinux_2_34', None) and env.get('AUDITWHEEL_ARCH') in ('x86_64', None):
             remove_llama_cpp()
             clone_llama_cpp()
-            build_linux_cuda_12_6_3(*args, **kwargs)
+            build_linux_cuda_12_x_y(*args, **kwargs)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v0.4.21
+
+Changed:
+  - CUDA 12.8.0 for x86_64
+  - CUDA_ARCHITECTURES `61;70;75;80;86;89;90;100;101;120`
+  - `llama.cpp` revision `73e2ed3ce3492d3ed70193dd09ae8aa44779651d`
+
+## v0.4.20
+
+Changed:
+  - New repo at https://github.com/ggml-org/llama.cpp.git
+  - `llama.cpp` revision `0f2bbe656473177538956d22b6842bcaa0449fab`
+
 ## v0.4.19
 
 Changed:

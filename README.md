@@ -20,6 +20,7 @@ NOTE: Currently supported operating system is **Linux** (`manylinux_2_28` and `m
 
 ## News
 
+- **Feb 17 2025, v0.4.21**: CUDA 12.8.0 for x86_64; CUDA ARCHITECTURES: `61, 70, 75, 80, 86, 89, 90, 100, 101, 120`
 - **Jan 15 2025, v0.4.15**: Dynamically load/unload models while executing prompts in parallel.
 - **Jan 14 2025, v0.4.14**: Modular llama.cpp build using `cmake` build system. Deprecated `make` build system.
 - **Jan 1 2025, v0.3.1**: OpenAI compatible API, **text** and **vision** models. Added support for **Qwen2-VL** models. Hot-swap of models on demand in server/API.
@@ -40,9 +41,9 @@ In case you want [OpenAI © Chat Completions API](https://platform.openai.com/do
 pip install llama-cpp-cffi[openai]
 ```
 
-**IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12**. If you don't have CUDA 12.X installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
+**IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12**. If you don't have `CUDA 12.X.Y` installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
 
-GPU Compute Capability: `compute_61`, `compute_70`, `compute_75`, `compute_80`, `compute_86`, `compute_89` covering from most of GPUs from **GeForce GTX 1050** to **NVIDIA H100**. [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
+GPU Compute Capability: `61;70;75;80;86;89;90;100;101;120` covering from most of GPUs from **GeForce GTX 1050** to **Nvidia H100** and **Nvidia Blackwell**. [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
 
 ## LLM Example
 

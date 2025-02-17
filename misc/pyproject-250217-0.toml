@@ -89,19 +89,17 @@ if [[ $AUDITWHEEL_PLAT == manylinux* ]]; then
     dnf install -y epel-release
     dnf update -y
     dnf group install -y "Development Tools"
-    # # dnf install -y unzip p7zip p7zip-plugins upx clang-tools-extra libcurl-devel
-    # dnf install -y clang clang-tools-extra ninja-build gcc-toolset-12
-    dnf install -y clang-tools-extra ninja-build
+    # dnf install -y unzip p7zip p7zip-plugins upx clang-tools-extra libcurl-devel
+    dnf install -y clang clang-tools-extra ninja-build gcc-toolset-12
 
-    # # cuda requires gcc 12
-    # source /opt/rh/gcc-toolset-12/enable
+    # cuda requires gcc 12
+    source /opt/rh/gcc-toolset-12/enable
 
     # vulkan
     dnf install -y vulkan-tools vulkan-headers vulkan-loader vulkan-loader-devel vulkan-validation-layers spirv-tools libshaderc libshaderc-devel glslc glslang
 else
-    # # apk -U add unzip 7zip upx clang-extra-tools
-    # apk -U add clang clang-extra-tools ninja-build
-    apk -U add clang-extra-tools ninja-build
+    # apk -U add unzip 7zip upx clang-extra-tools
+    apk -U add clang clang-extra-tools ninja-build
 
     # vulkan
     if [[ "$ARCH" == "x86_64" ]]; then
@@ -112,9 +110,9 @@ else
 fi
 """
 
-build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
-# build = ["cp312-*"]
-# skip = ["*i686", "*musllinux*"]
+# build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
+build = ["cp312-*"]
+skip = ["*i686", "*musllinux*"]
 
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
