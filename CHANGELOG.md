@@ -1,12 +1,17 @@
 # CHANGELOG
 
+## v0.4.28
+
+Fixed:
+  - In `server.py`, lock is now used correctly
+
 ## v0.4.27
 
 Added:
   - `CompletionsOptions.stop` is optional strgin which triggers stop of generation
 
 Changed:
-  - In `llama_cpp.py`, Use `threading.Lock` instead of `DummyLock`
+  - In `llama_cpp.py`, use `threading.Lock` instead of `DummyLock`
   - In `server.py`, use `asyncio.Lock` instead of `threading.Lock`
 
 ## v0.4.26

@@ -30,16 +30,16 @@ current_model.init(
     gpu_layers=99,
 )
 
-lock = asyncio.Lock()
 # lock = threading.Lock()
+lock = asyncio.Lock()
 
 
 async def process_completions(data: dict) -> AsyncIterator[str]:
     global current_model
     global lock
 
-    # async with lock:
-    with lock:
+    # with lock:
+    async with lock:
         # pprint(data)
         # print('=' * 80)
 
