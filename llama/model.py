@@ -153,16 +153,19 @@ class Model:
             yield token
 
             # check if should stop
+            if not completions_options.stop:
+                continue
+
             if len(last_n_tokens_buffer) >= last_n_tokens:
                 last_n_tokens_buffer = last_n_tokens_buffer[1:]
 
             last_n_tokens_buffer.append(token)
 
-            if completions_options.stop is not None:
-                try:
-                    buffer = ''.join(last_n_tokens_buffer)
-                except Exception:
-                    continue
+            try:
+                buffer = ''.join(last_n_tokens_buffer)
+            except Exception:
+                continue
 
-                if completions_options.stop in buffer:
-                    break
+            if completions_options.stop in buffer:
+                print('[BREAK]')
+                break
