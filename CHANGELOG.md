@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.4.23
+
+Changed:
+  - Use `DummyLock` instead of `threading.Lock`
+  - `llama.cpp` revision `63ac12856303108ee46635e6c9e751f81415ee64`
+
 ## v0.4.22
 
 Changed:
