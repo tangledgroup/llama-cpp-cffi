@@ -1,6 +1,6 @@
 [project]
 name = "llama-cpp-cffi"
-version = "0.4.29"
+version = "0.4.30"
 description = "Python binding for llama.cpp using cffi"
 authors = [
     { name = "Tangled Group, Inc", email = "info@tangledgroup.com" },

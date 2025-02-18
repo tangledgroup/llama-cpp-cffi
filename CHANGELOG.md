@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.4.30
+
+Fixed:
+  - Stop condition in `Model.completions`
+
 ## v0.4.29
 
 Fixed:

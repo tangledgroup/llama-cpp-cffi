@@ -146,8 +146,12 @@ class Model:
         model_options: ModelOptions = self.options
         completions_options = CompletionsOptions(**kwargs)
 
+        # used for stop
         last_n_tokens: int = 32
         last_n_tokens_buffer: list = []
+
+        print(f'{model_options=}')
+        print(f'{completions_options=}')
 
         for token in completions_func(self, model_options, completions_options):
             yield token
