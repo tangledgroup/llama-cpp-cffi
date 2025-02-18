@@ -49,7 +49,7 @@ env['LD'] = shutil.which('gcc') # type: ignore
 
 # env['GGML_CPU'] = '0'
 # env['GGML_VULKAN'] = '0'
-# env['GGML_CUDA'] = '0'
+env['GGML_CUDA'] = '0'
 
 from cffi import FFI # type: ignore # noqa
 

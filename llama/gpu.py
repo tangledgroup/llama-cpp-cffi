@@ -3,6 +3,9 @@ __all__ = [
     'is_vulkan_available',
 ]
 
+import subprocess
+
+"""
 try:
     from numba import cuda
 except Exception:
@@ -14,7 +17,7 @@ except Exception:
     vk = None
 
 
-def is_cuda_available():
+def is_cuda_available() -> bool:
     cuda_available: bool = False
 
     if cuda is None:
@@ -28,7 +31,7 @@ def is_cuda_available():
     return cuda_available
 
 
-def is_vulkan_available():
+def is_vulkan_available() -> bool:
     vulkan_available: bool = False
 
     if vk is None:
@@ -62,3 +65,33 @@ def is_vulkan_available():
         pass
 
     return vulkan_available
+"""
+
+def is_cuda_available() -> bool:
+    """
+    Check if CUDA is available by verifying the presence of the `nvidia-smi` command.
+    Returns True if CUDA is available, False otherwise.
+    """
+    try:
+        # Run the `nvidia-smi` command to check for CUDA support
+        result = subprocess.run(['nvidia-smi'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # If `nvidia-smi` is not found or fails, CUDA is not available
+        return False
+
+    return True
+
+
+def is_vulkan_available() -> bool:
+    """
+    Check if Vulkan is available by verifying the presence of the `vulkaninfo` command.
+    Returns True if Vulkan is available, False otherwise.
+    """
+    try:
+        # Run the `vulkaninfo` command to check for Vulkan support
+        result = subprocess.run(['vulkaninfo'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # If `vulkaninfo` is not found or fails, Vulkan is not available
+        return False
+
+    return True

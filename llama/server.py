@@ -316,5 +316,8 @@ def build_app():
 
 
 if __name__ == '__main__':
+    LLAMA_CPP_HOST = os.environ.get('LLAMA_CPP_HOST', '0.0.0.0')
+    LLAMA_CPP_PORT = int(os.environ.get('LLAMA_CPP_PORT', '11434'))
+
     app = build_app()
-    web.run_app(app, host='0.0.0.0', port=11434)
+    web.run_app(app, host=LLAMA_CPP_HOST, port=LLAMA_CPP_PORT)

@@ -149,7 +149,7 @@ for chunk in completions:
 Run server first:
 
 ```bash
-python -m llama.server
+python -B -u -m llama.server
 # or
 python -B -u -m gunicorn --bind '0.0.0.0:11434' --timeout 900 --workers 1 --worker-class aiohttp.GunicornWebWorker 'llama.server:build_app()'
 ```

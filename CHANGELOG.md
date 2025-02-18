@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v0.4.26
+
+Changed:
+  - Updated all requirements
+
+## v0.4.25
+
+Changed:
+  - Reimplemented `is_cuda_available` and `is_vulkan_available`
+
+## v0.4.24
+
+Changed:
+  - `llama.server` now uses env vars `LLAMA_CPP_HOST` and `LLAMA_CPP_PORT`
+
 ## v0.4.23
 
 Changed:
