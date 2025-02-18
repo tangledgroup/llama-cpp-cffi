@@ -1,5 +1,6 @@
 __all__ = ['text_completions']
 
+import gc
 from typing import Iterator
 
 from transformers import AutoTokenizer
@@ -121,9 +122,20 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
         pass
 
     lib.llama_batch_free(batch)
+    batch = None
 
     if grammar_sampler:
         sampler_free(grammar_sampler)
+        grammar_sampler = None
 
     sampler_free(sampler)
+    sampler = None
+
+    lib.llama_kv_cache_clear(context)
+
     context_free(context)
+    context = None
+
+    vocab = None
+    _model = None
+    gc.collect()

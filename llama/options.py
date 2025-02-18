@@ -135,3 +135,4 @@ class CompletionsOptions:
     chat_template: Optional[str] = None # set custom jinja chat template (default: from model's metadata)
 
     stop: Optional[str] = None # stop string is max 32 tokens long
+    force_model_reload: bool = False # force model to reload on every request

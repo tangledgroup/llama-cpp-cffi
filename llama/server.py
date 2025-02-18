@@ -19,30 +19,28 @@ from .util import base64_image_to_tempfile
 
 routes = web.RouteTableDef()
 
-current_model = Model(
-    'Qwen/Qwen2.5-1.5B-Instruct',
-    'Qwen/Qwen2.5-1.5B-Instruct-GGUF',
-    'qwen2.5-1.5b-instruct-q4_k_m.gguf',
-)
-
-current_model.init(
-    n_ctx=8 * 1024,
-    gpu_layers=99,
-)
-
 # lock = threading.Lock()
 lock = asyncio.Lock()
 
+# current_model = Model(
+#     'Qwen/Qwen2.5-1.5B-Instruct',
+#     'Qwen/Qwen2.5-1.5B-Instruct-GGUF',
+#     'qwen2.5-1.5b-instruct-q4_k_m.gguf',
+# )
+#
+# current_model.init(
+#     n_ctx=8 * 1024,
+#     gpu_layers=99,
+# )
+current_model = None
+
 
 async def process_completions(data: dict) -> AsyncIterator[str]:
-    global current_model
     global lock
+    global current_model
 
     # with lock:
     async with lock:
-        # pprint(data)
-        # print('=' * 80)
-
         image: Optional[str] = data.pop('image', None)
         image_file: Optional[Any] = None
 
@@ -51,8 +49,6 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
 
         model_kwargs = {k: data[k] for k in ModelOptions.__annotations__.keys() if k in data}
         model_options = ModelOptions(**model_kwargs)
-        # pprint(model_options)
-        # print('=' * 80)
 
         completions_kwargs = {k: data[k] for k in CompletionsOptions.__annotations__ if k in data}
         completions_options = CompletionsOptions(**completions_kwargs)
@@ -60,27 +56,28 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
         if image and image_file:
             completions_options.image = image_file.name
 
-        # pprint(completions_options)
-        # print('=' * 80)
+        if completions_options.force_model_reload:
+            if current_model:
+                current_model.free()
+                current_model = None
+                gc.collect()
 
-        model = Model(options=model_options)
-        # pprint(model)
-        # print('=' * 80)
-
-        # print(repr(current_model))
-        # print('=' * 80)
-
-        if current_model == model or (model.options and model.options.creator_hf_repo is None):
-            # print('1')
-            model = current_model
-        else:
-            # print('2')
-            current_model.free()
-            current_model = None
-            gc.collect()
-
+            model = Model(options=model_options)
             model.init(**asdict(model_options))
             current_model = model
+        else:
+            model = Model(options=model_options)
+
+            if current_model == model or (model.options and model.options.creator_hf_repo is None):
+                model = current_model
+            else:
+                if current_model:
+                    current_model.free()
+                    current_model = None
+                    gc.collect()
+
+                model.init(**asdict(model_options))
+                current_model = model
 
         try:
             for token in model.completions(**asdict(completions_options)):
@@ -91,15 +88,22 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
             traceback.print_exc()
             print('-' * 80)
             print('process_completions[0] error:', e)
-            model.free()
-            model = None
-            current_model = None
-            gc.collect()
 
         # remove temp image file
         if image and image_file:
             image_file.close()
             os.unlink(image_file.name)
+
+        if completions_options.force_model_reload:
+            if model:
+                model.free()
+                model = None
+                gc.collect()
+
+            if current_model:
+                current_model.free()
+                current_model = None
+                gc.collect()
 
 
 #
@@ -111,7 +115,10 @@ async def api_1_0_completions(request: web.Request) -> web.Response | web.Stream
 
     data: dict = await request.json()
     # print('api_1_0_completions data:')
+    # print(f'{data=}')
+
     stream: bool = data.pop('stream', False)
+    error_occurred = False
 
     if stream:
         response = web.StreamResponse()
@@ -148,11 +155,18 @@ async def api_1_0_completions(request: web.Request) -> web.Response | web.Stream
             }
 
             chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-            await response.write(chunk_bytes)
+
+            try:
+                await response.write(chunk_bytes)
+            except Exception:
+                error_occurred = True
+                break
 
         # Send the final message
-        chunk_bytes = b'data: [DONE]\n\n'
-        await response.write(chunk_bytes)
+        if not error_occurred:
+            chunk_bytes = b'data: [DONE]\n\n'
+            await response.write(chunk_bytes)
+
         return response
     else:
         full_response: list[str] | str = []
@@ -189,6 +203,8 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
 
     data: dict = await request.json()
     # print('api_1_0_completions data:')
+    # print(f'{data=}')
+
     prompt: Optional[str] = data.get('prompt')
     image: Optional[str] = data.get('image')
     messages: Optional[list[dict]] = data.get('messages')
@@ -203,7 +219,7 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
     # response_format = data.get('response_format')
     seed = data.get('seed', 23)
     # service_tier = data.get('service_tier')
-    # stop = data.get('stop')
+    stop = data.get('stop')
     stream = data.get('stream', False)
     # stream_options = data.get('stream_options')
     temperature: float = data.get('temperature', 0.0) # NOTE: https://platform.openai.com/docs/api-reference/chat/create#chat-create-temperature
@@ -241,6 +257,10 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
     llama_cpp_cffi_data['grammar'] = data.get('grammar', None)
     llama_cpp_cffi_data['json_schema'] = data.get('json_schema', None)
     llama_cpp_cffi_data['chat_template'] = data.get('chat_template', None)
+    llama_cpp_cffi_data['stop'] = stop
+    llama_cpp_cffi_data['force_model_reload'] = data.get('force_model_reload', False)
+
+    error_occurred = False
 
     if stream:
         response = web.StreamResponse()
@@ -277,11 +297,18 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
             }
 
             chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-            await response.write(chunk_bytes)
+
+            try:
+                await response.write(chunk_bytes)
+            except Exception:
+                error_occurred = True
+                break
 
         # Send the final message
-        chunk_bytes = b'data: [DONE]\n\n'
-        await response.write(chunk_bytes)
+        if not error_occurred:
+            chunk_bytes = b'data: [DONE]\n\n'
+            await response.write(chunk_bytes)
+
         return response
     else:
         full_response: list[str] | str = []

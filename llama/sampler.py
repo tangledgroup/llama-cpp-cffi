@@ -7,6 +7,7 @@ __all__ = [
     '_common_sampler_accept',
 ]
 
+import gc
 import json
 
 from .llama_cpp import (
@@ -137,6 +138,7 @@ def grammar_sampler_init(model: llama_model_p, completions_options: CompletionsO
 
 def sampler_free(sampler: llama_sampler_p):
     lib.llama_sampler_free(sampler)
+    gc.collect()
 
 
 def _llama_sampler_sample(smpl: llama_sampler_p, ctx: llama_context_p, idx: int):

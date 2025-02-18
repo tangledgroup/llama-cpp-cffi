@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## v0.4.31
+
+Added:
+  - `CompletionsOptions.force_model_reload` to force model reload on every server request
+
+Fixed:
+  - Stop condition in `Model.completions`
+  - Fixed (Vulkan related) GPU memory leaks
+
 ## v0.4.30
 
 Fixed:

@@ -1,5 +1,6 @@
 __all__ = ['Model']
 
+import gc
 from typing import Optional, Iterator
 
 from attrs import define, field, asdict
@@ -36,7 +37,7 @@ def model_init(model_options: ModelOptions) -> llama_model_p:
 
 def model_free(model: llama_model_p):
     with lock:
-        lib.llama_free_model(model)
+        lib.llama_model_free(model)
 
 
 @define
@@ -78,12 +79,12 @@ class Model:
         ])
 
 
-    def __del__(self):
-        self.options = None
-
-        if self._model:
-            model_free(self._model)
-            self._model = None
+    # def __del__(self):
+    #     self.options = None
+    #
+    #     if self._model:
+    #         model_free(self._model)
+    #         self._model = None
 
 
     @classmethod
@@ -108,18 +109,21 @@ class Model:
     def init(self, **kwargs):
         self.options = ModelOptions(**(asdict(self.options) | kwargs))
         self._model = model_init(self.options)
-        print(f'init {self._model=}')
 
         if self._model == ffi.NULL:
             raise MemoryError(f'Could not load model: {self.options}')
 
+        print(f'Model.init {self._model=}')
+
 
     def free(self):
+        print(f'Model.free {self._model=}')
         self.options = None
 
         if self._model:
             model_free(self._model)
             self._model = None
+            gc.collect()
 
 
     def completions(self, **kwargs) -> Iterator[str]:
@@ -150,8 +154,8 @@ class Model:
         last_n_tokens: int = 32
         last_n_tokens_buffer: list = []
 
-        print(f'{model_options=}')
-        print(f'{completions_options=}')
+        # print(f'{model_options=}')
+        # print(f'{completions_options=}')
 
         for token in completions_func(self, model_options, completions_options):
             yield token

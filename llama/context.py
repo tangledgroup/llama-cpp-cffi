@@ -3,6 +3,8 @@ __all__ = [
     'context_free',
 ]
 
+import gc
+
 from .llama_cpp import lib, ffi, lock, llama_model_p, llama_context_p, llama_context_params
 from .options import ModelOptions
 
@@ -24,7 +26,7 @@ def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_con
     ctx_params.flash_attn = model_options.flash_attn
 
     with lock:
-        context: llama_context_p = lib.llama_new_context_with_model(model, ctx_params)
+        context: llama_context_p = lib.llama_init_from_model(model, ctx_params)
 
     assert context != ffi.NULL
     return context
@@ -33,3 +35,4 @@ def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_con
 def context_free(context: llama_context_p):
     with lock:
         lib.llama_free(context)
+        gc.collect()
