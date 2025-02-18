@@ -4,7 +4,7 @@ import gc
 import os
 import json
 import asyncio
-import threading
+# import threading
 import traceback
 # from pprint import pprint
 from typing import Any, Optional, AsyncIterator
@@ -30,8 +30,8 @@ current_model.init(
     gpu_layers=99,
 )
 
-# lock = asyncio.Lock()
-lock = threading.Lock()
+lock = asyncio.Lock()
+# lock = threading.Lock()
 
 
 async def process_completions(data: dict) -> AsyncIterator[str]:

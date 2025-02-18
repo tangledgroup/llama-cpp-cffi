@@ -47,8 +47,8 @@ os.environ['TOKENIZERS_PARALLELISM'] = os.getenv('TOKENIZERS_PARALLELISM', 'true
 os.environ['TRANSFORMERS_NO_ADVISORY_WARNINGS'] = os.getenv('TRANSFORMERS_NO_ADVISORY_WARNINGS', '1')
 
 import atexit
+import threading
 from enum import Enum
-# from threading import Lock
 from typing import TypeAlias
 from weakref import WeakKeyDictionary
 
@@ -161,26 +161,26 @@ class ggml_type(Enum):
     # IQ4_NL_8_8 = 38
     # COUNT   = 39
 
-# lock = Lock()
 
-class DummyLock:
-    def __init__(self):
-        pass
-
-    def acquire(self, blocking=True, timeout=-1):
-        return True
-
-    def release(self):
-        pass
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-
-lock = DummyLock()
+# class DummyLock:
+#     def __init__(self):
+#         pass
+#
+#     def acquire(self, blocking=True, timeout=-1):
+#         return True
+#
+#     def release(self):
+#         pass
+#
+#     def __enter__(self):
+#         return self
+#
+#     def __exit__(self, exc_type, exc_val, exc_tb):
+#         pass
+#
+#
+# lock = DummyLock()
+lock = threading.Lock()
 
 
 # Set callback for all future logging events.

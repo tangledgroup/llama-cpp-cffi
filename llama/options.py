@@ -133,3 +133,5 @@ class CompletionsOptions:
     # grammar_file: Optional[str] = field(default=None) # file to read grammar from
     json_schema: Optional[str | bytes | dict] = None # JSON schema to constrain generations
     chat_template: Optional[str] = None # set custom jinja chat template (default: from model's metadata)
+
+    stop: Optional[str] = None # stop string is max 32 tokens long

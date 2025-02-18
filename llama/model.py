@@ -146,5 +146,23 @@ class Model:
         model_options: ModelOptions = self.options
         completions_options = CompletionsOptions(**kwargs)
 
+        last_n_tokens: int = 32
+        last_n_tokens_buffer: list = []
+
         for token in completions_func(self, model_options, completions_options):
             yield token
+
+            # check if should stop
+            if len(last_n_tokens_buffer) >= last_n_tokens:
+                last_n_tokens_buffer = last_n_tokens_buffer[1:]
+
+            last_n_tokens_buffer.append(token)
+
+            if completions_options.stop is not None:
+                try:
+                    buffer = ''.join(last_n_tokens_buffer)
+                except Exception:
+                    continue
+
+                if completions_options.stop in buffer:
+                    break

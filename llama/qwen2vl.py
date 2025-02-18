@@ -211,18 +211,21 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
     s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past, cur_pos_id)
 
     # generate tokens
-    for i in range(max_tgt_len):
-        new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
-        _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
+    try:
+        for i in range(max_tgt_len):
+            new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
+            _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
 
-        if lib.llama_token_is_eog(vocab, new_token_id):
-            break
+            if lib.llama_token_is_eog(vocab, new_token_id):
+                break
 
-        piece = _common_token_to_piece(context, new_token_id, True)
-        yield piece
+            piece = _common_token_to_piece(context, new_token_id, True)
+            yield piece
 
-        prompt_tokens: list[int] = tokenizer.encode(piece) # type: ignore
-        s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past, cur_pos_id)
+            prompt_tokens: list[int] = tokenizer.encode(piece) # type: ignore
+            s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past, cur_pos_id)
+    finally:
+        pass
 
     _llava_image_embed_free(embeds)
 

@@ -84,38 +84,41 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
     n_decode: int = 0
     output_tokens: list[int] = []
 
-    while n_cur < n_ctx and n_decode < completions_options.predict:
-        if grammar_sampler:
-            new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
-            _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
-        else:
-            # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
-            # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
-            new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+    try:
+        while n_cur < n_ctx and n_decode < completions_options.predict:
+            if grammar_sampler:
+                new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
+                _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
+            else:
+                # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+                # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
+                new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
 
-        n_decode += 1
+            n_decode += 1
 
-        if lib.llama_token_is_eog(vocab, new_token_id):
-            break
+            if lib.llama_token_is_eog(vocab, new_token_id):
+                break
 
-        output_tokens.append(new_token_id)
+            output_tokens.append(new_token_id)
 
-        # piece: str = tokenizer.decode(new_token_id)
-        piece = _common_token_to_piece(context, new_token_id, True)
-        yield piece
+            # piece: str = tokenizer.decode(new_token_id)
+            piece = _common_token_to_piece(context, new_token_id, True)
+            yield piece
 
-        _common_batch_clear(batch)
-        _common_batch_add(batch, new_token_id, n_past, seq_ids, True)
-        batch.logits[batch.n_tokens] = True
-        n_past += 1
-        n_cur += 1
+            _common_batch_clear(batch)
+            _common_batch_add(batch, new_token_id, n_past, seq_ids, True)
+            batch.logits[batch.n_tokens] = True
+            n_past += 1
+            n_cur += 1
 
-        r = _llama_decode(context, batch)
+            r = _llama_decode(context, batch)
 
-        if r < 0:
-            raise Exception('llama_decode failed')
-        elif r > 0:
-            break
+            if r < 0:
+                raise Exception('llama_decode failed')
+            elif r > 0:
+                break
+    finally:
+        pass
 
     lib.llama_batch_free(batch)
 

@@ -183,19 +183,22 @@ def llava_completions(model: 'Model', model_options: ModelOptions, completions_o
     s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
 
     # generate tokens
-    for i in range(max_tgt_len):
-        new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
-        _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
+    try:
+        for i in range(max_tgt_len):
+            new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
+            _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
 
-        if lib.llama_token_is_eog(vocab, new_token_id):
-            break
+            if lib.llama_token_is_eog(vocab, new_token_id):
+                break
 
-        piece = _common_token_to_piece(context, new_token_id, True)
-        yield piece
+            piece = _common_token_to_piece(context, new_token_id, True)
+            yield piece
 
-        prompt_tokens: list[int] = tokenizer.encode(piece, add_special_tokens=False) # type: ignore
-        s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
-        # print(f'{n_past=}')
+            prompt_tokens: list[int] = tokenizer.encode(piece, add_special_tokens=False) # type: ignore
+            s, n_past = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past)
+            # print(f'{n_past=}')
+    finally:
+        pass
 
     _llava_image_embed_free(embeds)
 
