@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.4.22
+
+Changed:
+  - Async to sync lock in server
+  - `llama.cpp` revision `5137da7b8c3eaa090476a632888ca178ba109f8a`
+
 ## v0.4.21
 
 Changed:
