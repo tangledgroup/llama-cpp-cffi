@@ -49,14 +49,14 @@ env['LD'] = shutil.which('gcc') # type: ignore
 
 # env['GGML_CPU'] = '0'
 # env['GGML_VULKAN'] = '0'
-env['GGML_CUDA'] = '0'
+# env['GGML_CUDA'] = '0'
 
 from cffi import FFI # type: ignore # noqa
 
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '63ac12856303108ee46635e6c9e751f81415ee64'
+LLAMA_CPP_GIT_REF = '9626d9351a6dfb665400d9fccbda876a0a96ef67'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',

@@ -35,7 +35,15 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
     else:
         lib.llama_log_set(lib.llama_cpp_cffi_ggml_log_callback, ffi.NULL)
 
-    context = context_init(_model, model_options)
+    # context = context_init(_model, model_options)
+    try:
+        context = context_init(_model, model_options)
+    except MemoryError as e:
+        print('MemoryError:', e)
+        context = None
+        gc.collect()
+        return
+
     sampler = sampler_init(_model, completions_options)
     # print(f'{sampler=}')
 

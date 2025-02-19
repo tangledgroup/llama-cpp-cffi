@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## v0.4.33
+
+Fixed:
+  - Handle `MemoryError` in `context_init`
+
+## v0.4.32
+
+Changed:
+  - `llama.cpp` revision `9626d9351a6dfb665400d9fccbda876a0a96ef67`
+
 ## v0.4.31
 
 Added:

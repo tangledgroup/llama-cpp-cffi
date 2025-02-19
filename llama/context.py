@@ -28,7 +28,11 @@ def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_con
     with lock:
         context: llama_context_p = lib.llama_init_from_model(model, ctx_params)
 
-    assert context != ffi.NULL
+    # assert context != ffi.NULL
+
+    if context == ffi.NULL:
+        raise MemoryError(f'Could not create context: {model=} {model_options=} {context=}')
+
     return context
 
 

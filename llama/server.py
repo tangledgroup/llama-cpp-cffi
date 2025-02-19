@@ -63,7 +63,16 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
                 gc.collect()
 
             model = Model(options=model_options)
-            model.init(**asdict(model_options))
+
+            try:
+                model.init(**asdict(model_options))
+            except MemoryError as e:
+                print('MemoryError:', e)
+                model = None
+                current_model = None
+                gc.collect()
+                return
+
             current_model = model
         else:
             model = Model(options=model_options)
@@ -76,7 +85,15 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
                     current_model = None
                     gc.collect()
 
-                model.init(**asdict(model_options))
+                try:
+                    model.init(**asdict(model_options))
+                except MemoryError as e:
+                    print('MemoryError:', e)
+                    model = None
+                    current_model = None
+                    gc.collect()
+                    return
+
                 current_model = model
 
         try:
