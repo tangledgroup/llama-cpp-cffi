@@ -31,7 +31,7 @@ def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_con
     # assert context != ffi.NULL
 
     if context == ffi.NULL:
-        raise MemoryError(f'Could not create context: {model=} {model_options=} {context=}')
+        raise MemoryError(f'Could not init context: {model=} {model_options=} {context=}')
 
     return context
 

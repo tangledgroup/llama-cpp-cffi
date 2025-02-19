@@ -3,6 +3,7 @@
 ## v0.4.33
 
 Fixed:
+  - Handle `MemoryError` in `model_init`
   - Handle `MemoryError` in `context_init`
 
 ## v0.4.32

@@ -31,7 +31,11 @@ def model_init(model_options: ModelOptions) -> llama_model_p:
     with lock:
         model: llama_model_p = lib.llama_model_load_from_file(model_path.encode(), model_params)
 
-    assert model != ffi.NULL
+    # assert model != ffi.NULL
+
+    if model == ffi.NULL:
+        raise MemoryError(f'Could not init model: {model_options=} {model=}')
+
     return model
 
 
@@ -79,39 +83,20 @@ class Model:
         ])
 
 
-    # def __del__(self):
-    #     self.options = None
-    #
-    #     if self._model:
-    #         model_free(self._model)
-    #         self._model = None
-
-
     @classmethod
     def from_str(cls, s: str) -> 'Model':
         model: Model = Model(*s.split(':'))
         return model
 
 
-    # def are_models_defs_equal(self, other: 'Model') -> bool:
-    #     if not self.options or not other.options:
-    #         return False
-
-    #     return all([
-    #         self.options.creator_hf_repo == other.options.creator_hf_repo,
-    #         self.options.hf_repo == other.options.hf_repo,
-    #         self.options.hf_file == other.options.hf_file,
-    #         self.options.mmproj_hf_file == other.options.mmproj_hf_file,
-    #         self.options.tokenizer_hf_repo == other.options.tokenizer_hf_repo,
-    #     ])
-
-
     def init(self, **kwargs):
         self.options = ModelOptions(**(asdict(self.options) | kwargs))
-        self._model = model_init(self.options)
 
-        if self._model == ffi.NULL:
-            raise MemoryError(f'Could not load model: {self.options}')
+        # self._model = model_init(self.options)
+        #
+        # if self._model == ffi.NULL:
+        #     raise MemoryError(f'Could not load model: {self.options}')
+        self._model = model_init(self.options)
 
         print(f'Model.init {self._model=}')
 
