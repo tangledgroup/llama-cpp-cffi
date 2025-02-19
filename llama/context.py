@@ -33,10 +33,12 @@ def context_init(model: llama_model_p, model_options: ModelOptions) -> llama_con
     if context == ffi.NULL:
         raise MemoryError(f'Could not init context: {model=} {model_options=} {context=}')
 
+    print(f'context_init: {context=}')
     return context
 
 
 def context_free(context: llama_context_p):
     with lock:
+        print(f'context_free: {context=}')
         lib.llama_free(context)
         gc.collect()

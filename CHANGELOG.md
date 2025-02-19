@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## v0.4.34
+
+Fixed:
+  - Memory leak on stopping iteration/completion
+
 ## v0.4.33
 
 Fixed:

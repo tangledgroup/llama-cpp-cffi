@@ -234,13 +234,11 @@ def qwen2vl_completions(model: 'Model', model_options: ModelOptions, completions
             prompt_tokens: list[int] = tokenizer.encode(piece) # type: ignore
             s, n_past, cur_pos_id = _eval_tokens(context, prompt_tokens, model_options.n_batch, n_past, cur_pos_id)
     finally:
-        pass
+        _llava_image_embed_free(embeds)
 
-    _llava_image_embed_free(embeds)
+        if grammar_sampler:
+            sampler_free(grammar_sampler)
 
-    if grammar_sampler:
-        sampler_free(grammar_sampler)
-
-    sampler_free(sampler)
-    clip_free_context(clip_context)
-    context_free(context)
+        sampler_free(sampler)
+        clip_free_context(clip_context)
+        context_free(context)
