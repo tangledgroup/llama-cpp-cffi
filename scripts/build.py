@@ -14,7 +14,7 @@ AUDITWHEEL_ARCH = os.environ.get('AUDITWHEEL_ARCH', None)
 
 CUDA_VERSION = os.environ.get('CUDA_VERSION', '12.8.0')
 CUDA_FILE = os.environ.get('CUDA_FILE', 'cuda_12.8.0_570.86.10_linux.run')
-CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90;100;101;120')
+CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '50;61;70;75;80;86;89;90;100;101;120')
 
 # CUDA_VERSION = os.environ.get('CUDA_VERSION', '12.6.3')
 # CUDA_FILE = os.environ.get('CUDA_FILE', 'cuda_12.6.3_560.35.05_linux.run')
@@ -56,7 +56,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '9626d9351a6dfb665400d9fccbda876a0a96ef67'
+LLAMA_CPP_GIT_REF = '51f311e057723b7454d0ebe20f545a1a2c4db6b2'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -906,9 +906,10 @@ def build_linux_cuda_12_x_y(*args, **kwargs):
         '-DGGML_CUDA=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
         # '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
-        # '-DGGML_CUDA_FA_ALL_QUANTS=ON',
+        '-DGGML_CUDA_GRAPHS=ON',
+        '-DGGML_CUDA_FA_ALL_QUANTS=ON',
         '-DGGML_NATIVE=OFF',
-        'GGML_CCACHE=OFF',
+        '-DGGML_CCACHE=OFF',
         # * a semicolon-separated list of integers, each optionally
         #   followed by '-real' or '-virtual'
         # * a special value: all, all-major, native
@@ -940,26 +941,6 @@ def build_linux_cuda_12_x_y(*args, **kwargs):
             '--target',
             target,
         ], check=True, env=env, cwd='llama.cpp')
-
-    # targets = [
-    #     '--target', 'ggml',
-    #     '--target', 'ggml-base',
-    #     '--target', 'ggml-cpu',
-    #     '--target', 'ggml-cuda',
-    #     '--target', 'common',
-    #     '--target', 'llama',
-    #     '--target', 'llava_static',
-    # ]
-    #
-    # subprocess.run([
-    #     'cmake',
-    #     '--build',
-    #     'build',
-    #     '--config',
-    #     'Release',
-    #     '-j',
-    #     *targets,
-    # ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v0.4.35
+
+Changed:
+  - CUDA_ARCHITECTURES `50;61;70;75;80;86;89;90;100;101;120`
+  - `llama.cpp` revision `51f311e057723b7454d0ebe20f545a1a2c4db6b2`
+
 ## v0.4.34
 
 Fixed:
