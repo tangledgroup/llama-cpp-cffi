@@ -18,13 +18,13 @@ CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '50;61;70;75;80;86;89;
 
 # CUDA_VERSION = os.environ.get('CUDA_VERSION', '12.6.3')
 # CUDA_FILE = os.environ.get('CUDA_FILE', 'cuda_12.6.3_560.35.05_linux.run')
-# CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90')
-# # CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90;100;101;120')
+# CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '50;61;70;75;80;86;89;90')
+# # CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '50;61;70;75;80;86;89;90;100;101;120')
 
 # CUDA_VERSION = os.environ.get('CUDA_VERSION', '12.4.1')
 # CUDA_FILE = os.environ.get('CUDA_FILE', 'cuda_12.4.1_550.54.15_linux.run')
-# CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90')
-# # CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '61;70;75;80;86;89;90;100;101;120')
+# CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '50;61;70;75;80;86;89;90')
+# # CUDA_ARCHITECTURES = os.environ.get('CUDA_ARCHITECTURES', '50;61;70;75;80;86;89;90;100;101;120')
 
 # if CIBUILDWHEEL and AUDITWHEEL_ARCH not in (None, 'aarch64'):
 #     gcc_toolset_path = '/opt/rh/gcc-toolset-12'
@@ -56,7 +56,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '51f311e057723b7454d0ebe20f545a1a2c4db6b2'
+LLAMA_CPP_GIT_REF = '08d5986290cc42d2c52739e046642b8252f97e4b'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -82,7 +82,8 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_7.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_8.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json.hpp', 'json_hpp_7.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
+    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_9.patch'], check=True)
+    # subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
 
 
 def preprocess_library_code(cc: str, cflags: list[str], include_dirs: list[str], files: list[str]) -> str:
@@ -375,58 +376,6 @@ def replace_code(source: str, items: dict[str, str]) -> str:
     return source
 
 
-# def cuda_12_6_3_setup(*args, **kwargs):
-#     #
-#     # cuda env
-#     #
-#     cuda_file = 'cuda_12.6.3_560.35.05_linux.run'
-#     cuda_url = f'https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/{cuda_file}'
-#     cuda_output_dir = os.path.abspath('./cuda-12.6.3')
-#     cuda_file_path = os.path.join(cuda_output_dir, cuda_file)
-#
-#     # download cuda file
-#     if not os.path.exists(cuda_file_path):
-#         cmd = ['mkdir', '-p', f'{cuda_output_dir}']
-#
-#         subprocess.run(cmd, check=True)
-#         subprocess.run(['curl', '-o', cuda_file_path, cuda_url], check=True)
-#
-#     # extract cuda file
-#     cmd = ['chmod', '+x', f'{cuda_output_dir}/{cuda_file}']
-#     subprocess.run(cmd, check=True)
-#
-#     cmd = [
-#         f'{cuda_output_dir}/{cuda_file}',
-#         '--tar',
-#         'mxf',
-#         '--wildcards',
-#         './builds/cuda_cccl/*',
-#         './builds/cuda_cudart/*',
-#         './builds/cuda_nvcc/*',
-#         './builds/libcublas/*',
-#         '-C',
-#         cuda_output_dir,
-#     ]
-#     subprocess.run(cmd, cwd=cuda_output_dir, check=True)
-#
-#     cmd = ['mkdir', '-p', f'{cuda_output_dir}/dist']
-#     subprocess.run(cmd, check=True)
-#
-#     cmd = f'cp -r {cuda_output_dir}/builds/cuda_cccl/* {cuda_output_dir}/dist'
-#     subprocess.run(cmd, shell=True, check=True)
-#
-#     cmd = f'cp -r {cuda_output_dir}/builds/cuda_cudart/* {cuda_output_dir}/dist'
-#     subprocess.run(cmd, shell=True, check=True)
-#
-#     cmd = f'cp -r {cuda_output_dir}/builds/cuda_nvcc/* {cuda_output_dir}/dist'
-#     subprocess.run(cmd, shell=True, check=True)
-#
-#     cmd = f'cp -r {cuda_output_dir}/builds/libcublas/* {cuda_output_dir}/dist'
-#     subprocess.run(cmd, shell=True, check=True)
-#
-#     return cuda_output_dir
-
-
 def cuda_setup(*args, **kwargs):
     #
     # cuda env
@@ -562,25 +511,6 @@ def build_cpu(*args, **kwargs):
             '--target',
             target,
         ], check=True, env=env, cwd='llama.cpp')
-
-    # targets = [
-    #     '--target', 'ggml',
-    #     '--target', 'ggml-base',
-    #     '--target', 'ggml-cpu',
-    #     '--target', 'common',
-    #     '--target', 'llama',
-    #     '--target', 'llava_static',
-    # ]
-    #
-    # subprocess.run([
-    #     'cmake',
-    #     '--build',
-    #     'build',
-    #     '--config',
-    #     'Release',
-    #     '-j',
-    #     *targets,
-    # ], check=True, env=env, cwd='llama.cpp')
 
     #
     # cffi
@@ -739,26 +669,6 @@ def build_vulkan_1_x(*args, **kwargs):
             target,
         ], check=True, env=env, cwd='llama.cpp')
 
-    # targets = [
-    #     '--target', 'ggml',
-    #     '--target', 'ggml-base',
-    #     '--target', 'ggml-cpu',
-    #     '--target', 'ggml-vulkan',
-    #     '--target', 'common',
-    #     '--target', 'llama',
-    #     '--target', 'llava_static',
-    # ]
-    #
-    # subprocess.run([
-    #     'cmake',
-    #     '--build',
-    #     'build',
-    #     '--config',
-    #     'Release',
-    #     '-j',
-    #     *targets,
-    # ], check=True, env=env, cwd='llama.cpp')
-
     #
     # cffi
     #
@@ -906,7 +816,7 @@ def build_linux_cuda_12_x_y(*args, **kwargs):
         '-DGGML_CUDA=ON',
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
         # '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
-        '-DGGML_CUDA_GRAPHS=ON',
+        # '-DGGML_CUDA_GRAPHS=ON',
         '-DGGML_CUDA_FA_ALL_QUANTS=ON',
         '-DGGML_NATIVE=OFF',
         '-DGGML_CCACHE=OFF',

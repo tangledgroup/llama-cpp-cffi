@@ -1,0 +1,11 @@
+--- llama.cpp-master/examples/llava/clip.h	2025-02-24 16:53:05.524074787 +0100
++++ llama.cpp/examples/llava/clip.h	2025-02-24 16:53:10.910194673 +0100
+@@ -74,7 +74,7 @@
+ CLIP_API void clip_image_f32_batch_free(struct clip_image_f32_batch * batch);
+ 
+ /** build image from pixels decoded by other libraries instead of stb_image.h for better performance. The memory layout is RGBRGBRGB..., input buffer length must be 3*nx*ny bytes */
+-CLIP_API void clip_build_img_from_pixels(const unsigned char * rgb_pixels, int nx, int ny, clip_image_u8 * img);
++CLIP_API void clip_build_img_from_pixels(const unsigned char * rgb_pixels, int nx, int ny, struct clip_image_u8 * img);
+ 
+ CLIP_API bool clip_image_load_from_file(const char * fname, struct clip_image_u8 * img);
+ 

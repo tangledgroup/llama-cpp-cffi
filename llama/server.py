@@ -4,9 +4,7 @@ import gc
 import os
 import json
 import asyncio
-# import threading
 import traceback
-# from pprint import pprint
 from typing import Any, Optional, AsyncIterator
 
 from attrs import asdict
@@ -18,20 +16,7 @@ from .util import base64_image_to_tempfile
 
 
 routes = web.RouteTableDef()
-
-# lock = threading.Lock()
 lock = asyncio.Lock()
-
-# current_model = Model(
-#     'Qwen/Qwen2.5-1.5B-Instruct',
-#     'Qwen/Qwen2.5-1.5B-Instruct-GGUF',
-#     'qwen2.5-1.5b-instruct-q4_k_m.gguf',
-# )
-#
-# current_model.init(
-#     n_ctx=8 * 1024,
-#     gpu_layers=99,
-# )
 current_model = None
 
 
@@ -99,7 +84,7 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
         try:
             for token in model.completions(**asdict(completions_options)):
                 yield token
-                await asyncio.sleep(0.0)
+                # await asyncio.sleep(0.0)
         except Exception as e:
             print('-' * 80)
             traceback.print_exc()
@@ -145,23 +130,6 @@ async def api_1_0_completions(request: web.Request) -> web.Response | web.Stream
         await response.prepare(request)
         chunk_bytes: bytes
 
-        # try:
-        #     async for token in process_completions(data):
-        #         event_data = {
-        #             'choices': [{
-        #                 'delta': {'content': token},
-        #                 'finish_reason': None,
-        #                 'index': 0
-        #             }]
-        #         }
-        #
-        #         chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-        #         await response.write(chunk_bytes)
-        # except Exception as e:
-        #     print('-' * 80)
-        #     traceback.print_exc()
-        #     print('-' * 80)
-        #     print('api_1_0_completions[0] error:', e)
         async for token in process_completions(data):
             event_data = {
                 'choices': [{
@@ -182,21 +150,16 @@ async def api_1_0_completions(request: web.Request) -> web.Response | web.Stream
         # Send the final message
         if not error_occurred:
             chunk_bytes = b'data: [DONE]\n\n'
-            await response.write(chunk_bytes)
+
+            try:
+                await response.write(chunk_bytes)
+            except Exception:
+                error_occurred = True
 
         return response
     else:
         full_response: list[str] | str = []
 
-        # try:
-        #     async for token in process_completions(data):
-        #         full_response.append(token)
-        # except Exception as e:
-        #     print('-' * 80)
-        #     traceback.print_exc()
-        #     print('-' * 80)
-        #     print('api_1_0_completions[1] error:', e)
-        #     raise e
         async for token in process_completions(data):
             full_response.append(token)
 
