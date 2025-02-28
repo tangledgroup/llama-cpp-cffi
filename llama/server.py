@@ -3,6 +3,7 @@ __all__ = ['routes', 'build_app']
 import gc
 import os
 import json
+import random
 import asyncio
 import traceback
 from typing import Any, Optional, AsyncIterator
@@ -84,7 +85,9 @@ async def process_completions(data: dict) -> AsyncIterator[str]:
         try:
             for token in model.completions(**asdict(completions_options)):
                 yield token
-                # await asyncio.sleep(0.0)
+
+                if random.random() > 0.9:
+                    await asyncio.sleep(0.0)
         except Exception as e:
             print('-' * 80)
             traceback.print_exc()
@@ -250,23 +253,6 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
         await response.prepare(request)
         chunk_bytes: bytes
 
-        # try:
-        #     async for token in process_completions(llama_cpp_cffi_data):
-        #         event_data = {
-        #             'choices': [{
-        #                 'delta': {'content': token},
-        #                 'finish_reason': None,
-        #                 'index': 0
-        #             }]
-        #         }
-        #
-        #         chunk_bytes = f'data: {json.dumps(event_data)}\n\n'.encode('utf-8')
-        #         await response.write(chunk_bytes)
-        # except Exception as e:
-        #     print('-' * 80)
-        #     traceback.print_exc()
-        #     print('-' * 80)
-        #     print('v1_chat_completions[0] error:', e)
         async for token in process_completions(llama_cpp_cffi_data):
             event_data = {
                 'choices': [{
@@ -293,15 +279,6 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
     else:
         full_response: list[str] | str = []
 
-        # try:
-        #     async for token in process_completions(llama_cpp_cffi_data):
-        #         full_response.append(token)
-        # except Exception as e:
-        #     print('-' * 80)
-        #     traceback.print_exc()
-        #     print('-' * 80)
-        #     print('v1_chat_completions[1] error:', e)
-        #     raise e
         async for token in process_completions(llama_cpp_cffi_data):
             full_response.append(token)
 

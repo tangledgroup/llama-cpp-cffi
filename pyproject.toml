@@ -1,6 +1,6 @@
 [project]
 name = "llama-cpp-cffi"
-version = "0.4.35"
+version = "0.4.36"
 description = "Python binding for llama.cpp using cffi"
 authors = [
     { name = "Tangled Group, Inc", email = "info@tangledgroup.com" },
@@ -110,9 +110,9 @@ else
 fi
 """
 
-# build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
-build = ["cp312-*"]
-skip = ["*i686", "*musllinux*"]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
+# build = ["cp312-*"]
+# skip = ["*i686", "*musllinux*"]
 
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]

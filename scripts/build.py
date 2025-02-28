@@ -56,7 +56,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '08d5986290cc42d2c52739e046642b8252f97e4b'
+LLAMA_CPP_GIT_REF = '06c2b1561d8b882bc018554591f8c35eb04ad30e'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -82,7 +82,7 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_7.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_8.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json.hpp', 'json_hpp_7.patch'], check=True)
-    subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_9.patch'], check=True)
+    # subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_9.patch'], check=True)
     # subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
 
 
@@ -817,7 +817,7 @@ def build_linux_cuda_12_x_y(*args, **kwargs):
         '-DCMAKE_POSITION_INDEPENDENT_CODE=ON',
         # '-DGGML_CUDA_ENABLE_UNIFIED_MEMORY=1',
         # '-DGGML_CUDA_GRAPHS=ON',
-        '-DGGML_CUDA_FA_ALL_QUANTS=ON',
+        # '-DGGML_CUDA_FA_ALL_QUANTS=ON',
         '-DGGML_NATIVE=OFF',
         '-DGGML_CCACHE=OFF',
         # * a semicolon-separated list of integers, each optionally
