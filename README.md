@@ -20,6 +20,7 @@ NOTE: Currently supported operating system is **Linux** (`manylinux_2_28` and `m
 
 ## News
 
+- **Feb 28 2025, v0.4.36**: CUDA 12.8.0 for x86_64; CUDA ARCHITECTURES: `50; 61, 70, 75, 80, 86, 89, 90, 100, 101, 120`
 - **Feb 17 2025, v0.4.21**: CUDA 12.8.0 for x86_64; CUDA ARCHITECTURES: `61, 70, 75, 80, 86, 89, 90, 100, 101, 120`
 - **Jan 15 2025, v0.4.15**: Dynamically load/unload models while executing prompts in parallel.
 - **Jan 14 2025, v0.4.14**: Modular llama.cpp build using `cmake` build system. Deprecated `make` build system.
