@@ -56,7 +56,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = 'cc473cac7cea1484c1f870231073b0bf0352c6f9'
+LLAMA_CPP_GIT_REF = '1a24c4621f0280306b0d53a4fa474fc65d3f1b2e'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',

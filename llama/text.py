@@ -92,15 +92,16 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
     n_ctx: int = lib.llama_n_ctx(context)
     n_decode: int = 0
     output_tokens: list[int] = []
+    grammar_ignore_until_reached: bool = False
 
     try:
         while n_cur < n_ctx and n_decode < completions_options.predict:
-            if grammar_sampler:
+            if completions_options.grammar_ignore_until and not grammar_ignore_until_reached:
+                new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
+            elif grammar_sampler:
                 new_token_id: llama_token = _common_sampler_sample(grammar_sampler, sampler, context, -1, False)
                 _common_sampler_accept(grammar_sampler, sampler, new_token_id, True)
             else:
-                # new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
-                # new_token_id: llama_token = _llama_sampler_sample(sampler, context, -1)
                 new_token_id: llama_token = lib.llama_sampler_sample(sampler, context, -1)
 
             n_decode += 1
@@ -109,9 +110,11 @@ def text_completions(model: 'Model', model_options: ModelOptions, completions_op
                 break
 
             output_tokens.append(new_token_id)
-
-            # piece: str = tokenizer.decode(new_token_id)
             piece = _common_token_to_piece(context, new_token_id, True)
+
+            if completions_options.grammar_ignore_until == piece:
+                grammar_ignore_until_reached = True
+
             yield piece
 
             _common_batch_clear(batch)

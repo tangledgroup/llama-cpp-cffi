@@ -7,6 +7,11 @@ demo_models = {
     #
     # llm
     #
+    'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B': Model(
+        creator_hf_repo='deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B',
+        hf_repo='bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF',
+        hf_file='DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf',
+    ),
     'Qwen/Qwen2.5-0.5B-Instruct': Model(
         creator_hf_repo='Qwen/Qwen2.5-0.5B-Instruct',
         hf_repo='Qwen/Qwen2.5-0.5B-Instruct-GGUF',

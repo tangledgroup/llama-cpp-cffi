@@ -20,12 +20,13 @@ NOTE: Currently supported operating system is **Linux** (`manylinux_2_28` and `m
 
 ## News
 
+- **Mar 04 2025, v0.4.38**: Conditional Structured Output
 - **Feb 28 2025, v0.4.36**: CUDA 12.8.0 for x86_64; CUDA ARCHITECTURES: `50; 61, 70, 75, 80, 86, 89, 90, 100, 101, 120`
 - **Feb 17 2025, v0.4.21**: CUDA 12.8.0 for x86_64; CUDA ARCHITECTURES: `61, 70, 75, 80, 86, 89, 90, 100, 101, 120`
 - **Jan 15 2025, v0.4.15**: Dynamically load/unload models while executing prompts in parallel.
 - **Jan 14 2025, v0.4.14**: Modular llama.cpp build using `cmake` build system. Deprecated `make` build system.
-- **Jan 1 2025, v0.3.1**: OpenAI compatible API, **text** and **vision** models. Added support for **Qwen2-VL** models. Hot-swap of models on demand in server/API.
-- **Dec 9 2024, v0.2.0**: Low-level and high-level APIs: llama, llava, clip and ggml API.
+- **Jan 01 2025, v0.3.1**: OpenAI compatible API, **text** and **vision** models. Added support for **Qwen2-VL** models. Hot-swap of models on demand in server/API.
+- **Dec 09 2024, v0.2.0**: Low-level and high-level APIs: llama, llava, clip and ggml API.
 - **Nov 27 2024, v0.1.22**: Support for Multimodal models such as **llava** and **minicpmv**.
 
 ## Install
@@ -44,7 +45,7 @@ pip install llama-cpp-cffi[openai]
 
 **IMPORTANT:** If you want to take advantage of **Nvidia** GPU acceleration, make sure that you have installed **CUDA 12**. If you don't have `CUDA 12.X.Y` installed follow instructions here: https://developer.nvidia.com/cuda-downloads .
 
-GPU Compute Capability: `61;70;75;80;86;89;90;100;101;120` covering from most of GPUs from **GeForce GTX 1050** to **Nvidia H100** and **Nvidia Blackwell**. [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
+GPU Compute Capability: `50;61;70;75;80;86;89;90;100;101;120` covering from most of GPUs from **GeForce GTX 1050** to **Nvidia H100** and **Nvidia Blackwell**. [GPU Compute Capability](https://developer.nvidia.com/cuda-gpus).
 
 ## LLM Example
 

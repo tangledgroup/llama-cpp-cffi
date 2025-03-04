@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## v0.4.38
+
+Added:
+  - Conditional Structured Output for `DeepSeek R1`-like models
+
+Changed:
+  - `llama.cpp` revision `1a24c4621f0280306b0d53a4fa474fc65d3f1b2e`
+
 ## v0.4.37
 
 Changed:
