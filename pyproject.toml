@@ -1,6 +1,6 @@
 [project]
 name = "llama-cpp-cffi"
-version = "0.4.38"
+version = "0.4.40"
 description = "Python binding for llama.cpp using cffi"
 authors = [
     { name = "Tangled Group, Inc", email = "info@tangledgroup.com" },
@@ -110,9 +110,9 @@ else
 fi
 """
 
-# build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
-build = ["cp312-*"]
-skip = ["*i686", "*musllinux*"]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*", "pp310-*"]
+# build = ["cp312-*"]
+# skip = ["*i686", "*musllinux*"]
 
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "*i686"]
@@ -122,12 +122,12 @@ skip = ["*i686", "*musllinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
 # skip = ["cp36-*", "cp37-*", "cp38-*", "cp39-*", "cp310-*", "cp311-*", "cp313-*", "pp37-*", "pp38-*", "pp39-*", "pp310-*", "*i686", "*musllinux*"]
 
-manylinux-x86_64-image = "quay.io/pypa/manylinux_2_34_x86_64:2025.02.02-1"
-manylinux-aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64:2025.02.02-1"
-manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_34_x86_64:2025.02.02-1"
-manylinux-pypy_aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64:2025.02.02-1"
-musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:2025.02.02-1"
-musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:2025.02.02-1"
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_34_x86_64:2025.02.28-1"
+manylinux-aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64:2025.02.28-1"
+manylinux-pypy_x86_64-image = "quay.io/pypa/manylinux_2_34_x86_64:2025.02.28-1"
+manylinux-pypy_aarch64-image = "quay.io/pypa/manylinux_2_34_aarch64:2025.02.28-1"
+musllinux-x86_64-image = "quay.io/pypa/musllinux_1_2_x86_64:2025.02.28-1"
+musllinux-aarch64-image = "quay.io/pypa/musllinux_1_2_aarch64:2025.02.28-1"
 build-verbosity=3
 repair-wheel-command = ""
 # repair-wheel-command = """

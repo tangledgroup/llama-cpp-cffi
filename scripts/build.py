@@ -56,7 +56,7 @@ from cffi import FFI # type: ignore # noqa
 from clean import remove_llama_cpp, clean # type: ignore # noqa
 
 
-LLAMA_CPP_GIT_REF = '1a24c4621f0280306b0d53a4fa474fc65d3f1b2e'
+LLAMA_CPP_GIT_REF = '3d652bfddfba09022525067e672c3c145c074649'
 
 REPLACE_CODE_ITEMS = {
     'extern': ' ',
@@ -82,8 +82,6 @@ def clone_llama_cpp():
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.cpp', 'json_schema_to_grammar_cpp_7.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json-schema-to-grammar.h', 'json_schema_to_grammar_h_8.patch'], check=True)
     subprocess.run(['patch', 'llama.cpp/common/json.hpp', 'json_hpp_7.patch'], check=True)
-    # subprocess.run(['patch', 'llama.cpp/examples/llava/clip.h', 'clip_h_9.patch'], check=True)
-    # subprocess.run(['patch', 'llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c', 'ggml_cpu_c_6.patch'], check=True)
 
 
 def preprocess_library_code(cc: str, cflags: list[str], include_dirs: list[str], files: list[str]) -> str:

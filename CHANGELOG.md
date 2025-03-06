@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## v0.4.40
+
+Changed:
+  - `llama.cpp` revision `3d652bfddfba09022525067e672c3c145c074649`
+
+## v0.4.39
+
+Changed:
+  - `llama.cpp` revision `1a24c4621f0280306b0d53a4fa474fc65d3f1b2e`
+
+Fixed:
+  - Server accepts parameter `grammar_ignore_until`
+
 ## v0.4.38
 
 Added:

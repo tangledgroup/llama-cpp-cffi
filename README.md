@@ -14,13 +14,13 @@
 [![Github Downloads](https://img.shields.io/github/downloads/tangledgroup/llama-cpp-cffi/total.svg?label=Github%20Downloads)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-**Python** 3.10+ binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU**, **Vulkan 1.x** (AMD, Intel and Nvidia GPUs) and **CUDA 12.6** (Nvidia GPUs) runtimes, **x86_64** and **aarch64** platforms.
+**Python** 3.10+ binding for [llama.cpp](https://github.com/ggerganov/llama.cpp) using **cffi**. Supports **CPU**, **Vulkan 1.x** (AMD, Intel and Nvidia GPUs) and **CUDA 12.8** (Nvidia GPUs) runtimes, **x86_64** (and soon **aarch64**) platforms.
 
 NOTE: Currently supported operating system is **Linux** (`manylinux_2_28` and `musllinux_1_2`), but we are working on both **Windows** and **macOS** versions.
 
 ## News
 
-- **Mar 04 2025, v0.4.38**: Conditional Structured Output
+- **Mar 04 2025, v0.4.38**: Conditional Structured Output using `CompletionsOptions.grammar_ignore_until`
 - **Feb 28 2025, v0.4.36**: CUDA 12.8.0 for x86_64; CUDA ARCHITECTURES: `50; 61, 70, 75, 80, 86, 89, 90, 100, 101, 120`
 - **Feb 17 2025, v0.4.21**: CUDA 12.8.0 for x86_64; CUDA ARCHITECTURES: `61, 70, 75, 80, 86, 89, 90, 100, 101, 120`
 - **Jan 15 2025, v0.4.15**: Dynamically load/unload models while executing prompts in parallel.

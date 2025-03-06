@@ -241,6 +241,7 @@ async def v1_chat_completions(request: web.Request) -> web.Response | web.Stream
     llama_cpp_cffi_data['json_schema'] = data.get('json_schema', None)
     llama_cpp_cffi_data['chat_template'] = data.get('chat_template', None)
     llama_cpp_cffi_data['stop'] = stop
+    llama_cpp_cffi_data['grammar_ignore_until'] = data.get('grammar_ignore_until', None)
     llama_cpp_cffi_data['force_model_reload'] = data.get('force_model_reload', False)
 
     error_occurred = False
