@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v0.4.42
+
+Changed:
+  - `llama.cpp` revision `b3298fa47a2d56ae892127ea038942ab1cada190`
+
+## v0.4.41
+
+Changed:
+  - Updated cibuildwheel build images
+  - `llama.cpp` revision `3d652bfddfba09022525067e672c3c145c074649`
+
 ## v0.4.40
 
 Changed:
